@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sukacita, Acara 1-2 Mei 2026 di Solo</title>
+    <title>Perbauran Gembala, Acara 1-2 Mei 2026 di Solo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
@@ -28,6 +28,9 @@
         nav button.active { border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
         .content-area { flex: 1; overflow-y: auto; padding: 15px; }
+        /* Module: Awal */
+        .awal-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .awal-time { color: var(--accent); font-weight: bold; }
 
         /* Module: Kidung */
         .kidung-controls { position: sticky; top: 0; background: white; padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid #eee; }
@@ -51,18 +54,18 @@
 <body>
 
     <div id="login-screen">
-        <h2>Acara 1-2 Mei 2026 di Solo</h2>
+        <h2>Acara 1-2 Mei 2026,Solo</h2>
         <div class="login-box">
             User : <input type="text" id="user" placeholder="Username">
             Pass : <input type="password" id="pass" placeholder="Password">
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 6 @2026</h4>
+        <h4>versi 7 @2026</h4>
     </div>
 
     <div id="main-app">
-        <header><h3 id="app-title">Dashboard</h3></header>
+        <header><h3 id="app-title">Acara 1-2 Mei 2026, Solo</h3></header>
         <nav id="main-nav"></nav>
         <div class="content-area" id="app-content"></div>
     </div>
@@ -136,13 +139,26 @@
         content.innerHTML = "Memuat...";
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
         event.target.classList.add('active');
-
+        renderAwal();
         if (name === 'Kidung') renderKidung();
         else if (name === 'Acara') renderAcara();
         else if (name === 'kegiatan') renderKegiatan();
         else if (name === 'Jemaat') renderJemaat();
     }
 
+    // --- RENDER MODUL AWAL DASHBOARD ---
+    function renderAwal() {
+        const content = document.getElementById('app-content');
+        content.innerHTML = "";
+        db.Awal.forEach(a => {
+            content.innerHTML += `
+                <div class="awal-card">
+                    <div class="awal-time">${a.username}</div>
+                    <h3>${a['username']}</h3>
+                </div>
+            `;
+        });
+    }
     // --- RENDER MODUL KIDUNG ---
     function renderKidung() {
         const content = document.getElementById('app-content');
@@ -159,7 +175,7 @@
         db.Kidung.forEach(k => {
             const div = document.createElement('div');
             div.className = 'kidung-item';
-            div.innerHTML = `<strong>${k['user']} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
+            div.innerHTML = `<strong>${k['u']} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
             div.onclick = () => {
                 const body = `
                     <h2>${k['no kidung']}</h2>
@@ -207,6 +223,7 @@
                 <h4>${k.nama}</h4>
             `;
             card.onclick = () => showModal(`
+                <h2>${k.username}</h2>
                 <h2>${k.nama}</h2>
                 <img src="${k.gambar}" style="width:100%; border-radius:10px;">
                 <p>${k.tujuan}</p>
