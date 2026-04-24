@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 1.4 @2026</h4>
+        <h4>versi 1.7 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -151,8 +151,8 @@
     // --- RENDER MODUL AWAL DASHBOARD ---
     function renderAwal() {
         const content = document.getElementById('app-content');
-            content.innerHTML += `
-               username : ${currentUser} font Size : ${currentFontSize}
+            content.innerHTML = `
+               Font Size : ${currentFontSize}, User : ${currentUser}
             `;
     }
     // --- RENDER MODUL KIDUNG ---
@@ -171,7 +171,7 @@
         db.Kidung.forEach(k => {
             const div = document.createElement('div');
             div.className = 'kidung-item';
-            div.innerHTML += `<strong>${currentUser} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
+            div.innerHTML += `<strong> ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
             div.onclick = () => {
                 const body = `
                     <h2>${k['no kidung']}</h2>
