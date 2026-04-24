@@ -61,11 +61,11 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 7 @2026</h4>
+        <h4>versi 8 @2026</h4>
     </div>
 
     <div id="main-app">
-        <header><h3 id="app-title">Acara 1-2 Mei 2026, Solo</h3></header>
+        <header><h3 id="app-title">Dashboard, Acara 1-2 Mei 2026, Solo</h3></header>
         <nav id="main-nav"></nav>
         <div class="content-area" id="app-content"></div>
     </div>
@@ -153,16 +153,16 @@
         db.Awal.forEach(a => {
             content.innerHTML += `
                 <div class="awal-card">
-                    <div class="awal-time">${a.username}</div>
                     <h3>${a['username']}</h3>
                 </div>
+               <div class="awal-time">${a.username}</div>
             `;
         });
     }
     // --- RENDER MODUL KIDUNG ---
     function renderKidung() {
         const content = document.getElementById('app-content');
-        content.innerHTML = `
+        content.innerHTML += `
             <div class="kidung-controls">
                 <button onclick="changeFontSize(15)">A++</button>
                 <button onclick="changeFontSize(2)">A+</button>
@@ -175,7 +175,7 @@
         db.Kidung.forEach(k => {
             const div = document.createElement('div');
             div.className = 'kidung-item';
-            div.innerHTML = `<strong>${k['u']} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
+            div.innerHTML += `<strong>${k['u']} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
             div.onclick = () => {
                 const body = `
                     <h2>${k['no kidung']}</h2>
@@ -198,7 +198,7 @@
     // --- RENDER MODUL ACARA ---
     function renderAcara() {
         const content = document.getElementById('app-content');
-        content.innerHTML = "";
+        content.innerHTML += "";
         db.Acara.forEach(a => {
             content.innerHTML += `
                 <div class="acara-card">
@@ -214,7 +214,7 @@
     // --- RENDER MODUL KEGIATAN ---
     function renderKegiatan() {
         const content = document.getElementById('app-content');
-        content.innerHTML = `<div class="grid" id="keg-grid"></div>`;
+        content.innerHTML += `<div class="grid" id="keg-grid"></div>`;
         db.Kegiatan.forEach(k => {
             const card = document.createElement('div');
             card.className = 'card';
