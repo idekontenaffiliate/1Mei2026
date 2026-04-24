@@ -58,7 +58,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 5 @2026</h4>
+        <h4>versi 6 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -69,7 +69,7 @@
 
     <div id="itemModal" class="modal">
         <div class="modal-content" id="modalBody"></div>
-        <button class="close-btn" onclick="closeModal()">Kembali</button>
+        <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
 
 <script>
@@ -148,8 +148,10 @@
         const content = document.getElementById('app-content');
         content.innerHTML = `
             <div class="kidung-controls">
+                <button onclick="changeFontSize(15)">A++</button>
                 <button onclick="changeFontSize(2)">A+</button>
                 <button onclick="changeFontSize(-2)">A-</button>
+                <button onclick="changeFontSize(-15)">A--</button>
                 <small>Ketuk lagu untuk baca</small>
             </div>
             <div id="kidung-list"></div>
@@ -157,7 +159,7 @@
         db.Kidung.forEach(k => {
             const div = document.createElement('div');
             div.className = 'kidung-item';
-            div.innerHTML = `<strong>${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
+            div.innerHTML = `<strong>${k['user']} ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
             div.onclick = () => {
                 const body = `
                     <h2>${k['no kidung']}</h2>
