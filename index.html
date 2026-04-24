@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 1.2 @2026</h4>
+        <h4>versi 1.3 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -74,6 +74,8 @@
         <div class="modal-content" id="modalBody"></div>
         <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
+
+<script src="script.js"></script>
 
 <script>
     // MASUKKAN LINK CSV ANDA DISINI
@@ -149,19 +151,9 @@
     // --- RENDER MODUL AWAL DASHBOARD ---
     function renderAwal() {
         const content = document.getElementById('app-content');
-        content.innerHTML += "";
-        const u = document.getElementById('user').value;
-        const p = document.getElementById('pass').value;
-        const userFound = db.Awal.find(row => row.username === u && row.password === p);
-        if (userFound) {
-            currentUser = userFound;
             content.innerHTML += `
                username : ${currentUser}
             `;
-        } else {
-            alert("Username atau Password belum diketemukan!");
-        }
-
     }
     // --- RENDER MODUL KIDUNG ---
     function renderKidung() {
