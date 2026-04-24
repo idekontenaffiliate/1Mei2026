@@ -74,7 +74,7 @@
     // MASUKKAN LINK CSV ANDA DISINI
     const URLS = {
         Awal: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6N6cAL1OoX2hCBXmL3MAmQcgxMTglDN2LtCseQdOC8zkWdDwRDCRDjKnI9NE3vMGSaXgWesgcdvGV/pub?output=csv",
-        Kidung: "LINK_CSV_SHEET_KIDUNG",
+        Kidung: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSasN_qIm_FKLGkh4t-clscJXdiuZJENUa0JgC3_-lwpmggsQ_xqF8DH_m-3wxCFU99j1WIj0n8nNhy/pub?output=csv",
         Acara: "LINK_CSV_SHEET_ACARA",
         Kegiatan: "LINK_CSV_SHEET_KEGIATAN",
         Jemaat: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv"
@@ -159,6 +159,7 @@
             div.onclick = () => {
                 const body = `
                     <h2>${k['no kidung']}</h2>
+                    <h2>${k['judul kidung']}</h2>
                     <div class="kidung-text" style="font-size:${currentFontSize}px">${k['isi kidung']}</div>
                     <hr><p><em>${k['Cerita kidung']}</em></p>
                 `;
