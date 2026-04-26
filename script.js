@@ -177,7 +177,49 @@ function showKegiatanDetail(kegiatan) {
     `;
     document.getElementById('kegiatanModal').style.display = 'block';
 }
+// --- Fungsi untuk mengubah ukuran font secara dinamis ---
+function adjustKidungFont(delta) {
+    currentFontSize += delta;
+    
+    // Batasi ukuran font agar tidak terlalu kecil atau terlalu besar
+    if (currentFontSize < 10) currentFontSize = 10; 
+    if (currentFontSize > 40) currentFontSize = 40;
 
+    const teksContainer = document.getElementById('kidung-isi-teks');
+    if (teksContainer) {
+        teksContainer.style.fontSize = currentFontSize + 'px';
+    }
+}
+
+// --- Fungsi untuk berpindah tab (Teks, Foto, Audio, Video) ---
+function switchKidungTab(tabName) {
+    // Sembunyikan semua tab terlebih dahulu
+    const tabs = document.querySelectorAll('.kidung-tab');
+    tabs.forEach(tab => {
+        tab.style.display = 'none';
+    });
+
+    // Tampilkan hanya tab yang dipilih
+    const selectedTab = document.getElementById('tab-' + tabName);
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+    }
+}
+
+// --- Helper: Mengubah Link Google Drive biasa menjadi Link Gambar langsung ---
+function formatDriveImage(url) {
+    if (!url) return '';
+    // Jika link adalah link sharing Google Drive
+    if (url.includes('drive.google.com/file/d/')) {
+        const match = url.match(/\/d\/(.*?)\//);
+        if (match && match[1]) {
+            const fileId = match[1];
+            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        }
+    }
+    // Jika link langsung atau dari server lain, kembalikan apa adanya
+    return url;
+}
 // Tutup Modal & Jalankan Inisiasi
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
