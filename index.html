@@ -225,7 +225,98 @@ window.applyKidungFilters = function() {
             item.style.display = 'none';
         }
     });
-};    
+};  
+
+let scale = 1;
+let posX = 0;
+let posY = 0;
+let startX, startY;
+let isDragging = false;
+
+// APPLY TRANSFORM
+function updateTransform() {
+    const img = document.getElementById("zoomImage");
+    if (!img) return;
+    img.style.transform = `translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) scale(${scale})`;
+}
+
+// ZOOM BUTTON
+function zoomIn() {
+    scale += 0.2;
+    updateTransform();
+}
+
+function zoomOut() {
+    scale = Math.max(1, scale - 0.2);
+    updateTransform();
+}
+
+function resetZoom() {
+    scale = 1;
+    posX = 0;
+    posY = 0;
+    updateTransform();
+}
+
+// DRAG (GESER)
+document.addEventListener("mousedown", e => {
+    if (e.target.id !== "zoomImage") return;
+    isDragging = true;
+    startX = e.clientX - posX;
+    startY = e.clientY - posY;
+});
+
+document.addEventListener("mousemove", e => {
+    if (!isDragging) return;
+    posX = e.clientX - startX;
+    posY = e.clientY - startY;
+    updateTransform();
+});
+
+document.addEventListener("mouseup", () => {
+    isDragging = false;
+});
+
+// TOUCH SUPPORT (HP)
+let initialDistance = 0;
+
+document.addEventListener("touchstart", e => {
+    const img = document.getElementById("zoomImage");
+    if (!img) return;
+
+    if (e.touches.length === 2) {
+        initialDistance = getDistance(e.touches[0], e.touches[1]);
+    }
+});
+
+document.addEventListener("touchmove", e => {
+    const img = document.getElementById("zoomImage");
+    if (!img) return;
+
+    // PINCH ZOOM
+    if (e.touches.length === 2) {
+        const newDistance = getDistance(e.touches[0], e.touches[1]);
+        let zoom = newDistance / initialDistance;
+        scale = Math.max(1, scale * zoom);
+        initialDistance = newDistance;
+        updateTransform();
+    }
+
+    // DRAG 1 JARI
+    if (e.touches.length === 1) {
+        posX += e.touches[0].movementX || 0;
+        posY += e.touches[0].movementY || 0;
+        updateTransform();
+    }
+});
+
+function getDistance(t1, t2) {
+    return Math.sqrt(
+        Math.pow(t1.clientX - t2.clientX, 2) +
+        Math.pow(t1.clientY - t2.clientY, 2)
+    );
+}
+    
 // ==========================================
 // 2. FUNGSI UTAMA RENDER KIDUNG
 // ==========================================
@@ -388,9 +479,27 @@ function renderKidung() {
                             <p style="font-size: 0.9em; opacity: 0.8;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
                         </div>
 
-                        <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
-                            ${hasFoto ? `<img src="${formatDriveImage(k['link foto kidung'])}" style="max-width: 100%; height: auto; border-radius: 8px;" alt="Foto Kidung">` : ''}
-                        </div>
+<div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
+    ${hasFoto ? `
+    <div style="overflow:hidden; position:relative; width:100%; height:70vh; border-radius:10px; background:#000;">
+        
+        <!-- Tombol -->
+        <div style="position:absolute; top:10px; left:10px; z-index:10; display:flex; gap:5px;">
+            <button onclick="zoomIn()">➕</button>
+            <button onclick="zoomOut()">➖</button>
+            <button onclick="resetZoom()">🔄</button>
+        </div>
+
+        <!-- Image -->
+        <img 
+            id="zoomImage"
+            src="${formatDriveImage(k['link foto kidung'])}" 
+            style="max-width:100%; max-height:100%; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(1); transform-origin:center; cursor:grab;"
+        >
+    </div>
+    ` : ''}
+</div>
+
 
                         <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
                             <p>Dengarkan Audio:</p>
