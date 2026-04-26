@@ -168,17 +168,79 @@
                 <button onclick="changeFontSize(-15)">A--</button>
                 <small>Ketuk lagu untuk baca</small>
             </div>
-            <div id="kidung-list"></div>
+            <div id="kidung-list" style="display: grid; gap: 10px;"></div>
         `;
         db.Kidung.forEach(k => {
             const div = document.createElement('div');
             div.className = 'kidung-item';
+            div.style.padding = '10px';
+            div.style.border = '1px solid #ccc';
+            div.style.borderRadius = '8px';
+            div.style.cursor = 'pointer';
+
+            // Memeriksa isi judul (jika kolom judul kosong, tampilkan '-' agar rapi)
+        const judul = k['judul kidung'] ? k['judul kidung'] : 'Tanpa Judul';
+        const styleKidung = k['style'] ? k['style'] : '';
+        const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
+
             div.innerHTML += `<strong> ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
             div.onclick = () => {
+                const hasFoto = k['link foto kidung'] ? true : false;
+                const hasAudio = k['link lagu'] ? true : false;
+                const hasVideo = k['link video'] ? true : false;
+
                 const body = `
-                    <h2>${k['no kidung']}</h2>
-                    <h2>${k['judul kidung']}</h2>
-                    <div class="kidung-text" style="font-size:${currentFontSize}px">${k['isi kidung']}</div>
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <h2>${k['no kidung']}. ${judul}</h2>
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: #f0f0f0; padding: 10px; border-radius: 8px;">
+                    <span style="font-weight: bold; margin-right: auto;">Ukuran Teks:</span>
+                    <button onclick="adjustKidungFont(-2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer;">A-</button>
+                    <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer;">A+</button>
+                </div>
+                
+                <div class="kidung-text" style="font-size:${currentFontSize}px">${k['isi kidung']}</div>
+                    
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer;">📝 Isi Teks</button>
+                    ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">🖼️ No Foto</button>`}
+                    ${hasAudio ? `<button onclick="switchKidungTab('audio')" style="flex:1; padding: 8px; cursor: pointer;">🎵 Audio</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">🎵 No Audio</button>`}
+                    ${hasVideo ? `<button onclick="switchKidungTab('video')" style="flex:1; padding: 8px; cursor: pointer;">▶️ Video</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">▶️ No Video</button>`}
+                </div>
+
+                <div id="kidung-view-area">
+                    
+                    <div id="tab-teks" class="kidung-tab" style="display: block;">
+                        <div id="kidung-isi-teks" style="font-size:${currentFontSize}px; white-space: pre-wrap; line-height: 1.5;">${k['isi kidung']}</div>
+                        <hr style="margin-top: 20px;">
+                        <p style="font-size: 0.9em; color: gray;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
+                    </div>
+
+                    <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
+                        ${hasFoto ? `<img src="${formatDriveImage(k['link foto kidung'])}" style="max-width: 100%; height: auto; border-radius: 8px;" alt="Foto Kidung">` : ''}
+                    </div>
+
+                    <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
+                        <p>Dengarkan Audio:</p>
+                        ${hasAudio ? `
+                            <audio controls style="width: 100%; max-width: 300px;">
+                                <source src="${k['link lagu']}">
+                                Browser Anda tidak mendukung pemutar audio.
+                            </audio>
+                            <br><br>
+                            <a href="${k['link lagu']}" target="_blank" style="color: blue; text-decoration: underline;">Atau klik untuk buka link asli</a>
+                        ` : ''}
+                    </div>
+
+                    <div id="tab-video" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
+                        <p>Tonton Video:</p>
+                        ${hasVideo ? `
+                            <a href="${k['link video']}" target="_blank" style="display: inline-block; padding: 10px 20px; background: red; color: white; border-radius: 5px; text-decoration: none;">
+                                ▶️ Buka Video di Tab Baru
+                            </a>
+                        ` : ''}
+                    </div>
+
                     <hr><p><em>${k['Cerita kidung']}</em></p>
                 `;
                 showModal(body);
