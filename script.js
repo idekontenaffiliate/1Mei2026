@@ -178,12 +178,14 @@ function showKegiatanDetail(kegiatan) {
     document.getElementById('kegiatanModal').style.display = 'block';
 }
 // --- Fungsi untuk mengubah ukuran font secara dinamis ---
+let currentFontSize = 16;
+
 function adjustKidungFont(delta) {
     currentFontSize += delta;
     
     // Batasi ukuran font agar tidak terlalu kecil atau terlalu besar
     if (currentFontSize < 5) currentFontSize = 5; 
-    if (currentFontSize > 100) currentFontSize = 100;
+    if (currentFontSize > 500) currentFontSize = 500;
 
     const teksContainer = document.getElementById('kidung-isi-teks');
     if (teksContainer) {
