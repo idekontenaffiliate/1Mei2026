@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.16 @2026</h4>
+        <h4>versi 2.21 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -101,6 +101,21 @@
         <button onclick="closeViewer()">❌</button>
     </div>
 </div>
+<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+    <input type="text" id="k-search" class="k-input" onkeyup="applyKidungFilters()" placeholder="🔍 Cari No, Syair, Cerita...">
+    
+    <select id="k-filter-genre" class="k-input" onchange="applyKidungFilters()">
+        <option value="">Semua Genre</option>
+        <option value="Anak-anak">Anak-anak</option>
+        <option value="Dewasa">Dewasa</option>
+    </select>
+
+    <select id="k-filter-jenis-kidung" class="k-input" onchange="applyKidungFilters()">
+        <option value="">Semua Karakter</option>
+        <option value="Melankolis">Melankolis</option>
+        <option value="Sanguinis">Sanguinis</option>
+    </select>
+</div>    
 
 <script src="script.js"></script>
 
@@ -476,7 +491,10 @@ function renderKidung() {
             const fontSize = typeof currentFontSize !== 'undefined' ? currentFontSize : 16;
             const imgUrlFormat = formatDriveImage(k['link foto kidung']);
 
-            const body = `
+            const originalBas = k['kunci_bas'] || '';
+            const originalNot = k['not_angka'] || '';
+            const originalSyair = k['isi_syair'] || '';
+ const body = `
             <div style="background-image: var(--k-bg-image); background-color: var(--k-bg-color); color: var(--k-fg-color); padding: 15px; border-radius: 8px; min-height: 100%; background-size: cover; background-attachment: fixed;">
                 
                 <div style="background-color: var(--k-item-bg); padding: 15px; border-radius: 8px;">
@@ -490,6 +508,16 @@ function renderKidung() {
                         <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A+</button>
                     </div>
                         
+						
+                   <div style="display:flex; justify-content: space-between; margin-bottom:10px;">
+                        <small>Kunci: ${k['kunci_dasar']} | Tempo: ${k['tempo']}</small>
+                        <div>
+                            <button onclick="updateTransposeUI(-1, \`${originalBas}\`)" style="padding:5px;">-1 Transpose</button>
+                            <button onclick="updateTransposeUI(1, \`${originalBas}\`)" style="padding:5px;">+1 Transpose</button>
+                        </div>
+                    </div>
+
+		
                     <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
                         <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
                         ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🖼️ No Foto</button>`}
@@ -504,16 +532,29 @@ function renderKidung() {
                             <p style="font-size: 0.9em; opacity: 0.8;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
                         </div>
 
-<div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
-    ${hasFoto ? `
-        <img 
-            src="${imgUrlFormat}" 
-            style="width:100%; border-radius:8px; cursor:pointer;"
-            onclick="openFullscreen('${imgUrlFormat}')"
-        >
-    ` : ''}
-</div>
 
+<div id="kidung-display-area" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #eee; color: #333; padding: 10px; border-radius: 5px;">
+            <div id="kidung-bas" style="color: blue; font-weight: bold;">${originalBas}</div>
+            <div id="kidung-not" style="color: green;">${originalNot}</div>
+            <div id="kidung-syair" style="color: black;">${originalSyair}</div>
+        </div>
+
+
+                        <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
+                         ${hasFoto ? `
+                         <img 
+                                 src="${imgUrlFormat}" 
+                                 style="width:100%; border-radius:8px; cursor:pointer;"
+                                 onclick="openFullscreen('${imgUrlFormat}')"
+                                >
+                                ` : ''}
+                        </div>
+              <div style="margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap;">
+            <button onclick="shareKidung('syair', {judul: '${k['judul_kidung']}', syair: \`${originalSyair}\`})">Share Syair</button>
+            <button onclick="shareKidung('all', {judul: '${k['judul_kidung']}', bas: document.getElementById('kidung-bas').innerText, not: '${originalNot}', syair: \`${originalSyair}\`})">Share Lengkap (3 Text)</button>
+        </div>
+		
+		
                         <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
                             <p>Dengarkan Audio:</p>
                             ${hasAudio ? `
@@ -534,13 +575,21 @@ function renderKidung() {
                                 </a>
                             ` : ''}
                         </div>
+						
+						<h4>Media & Link:</h4>
+                        <div style="display:grid; gap:10px;">
+                            ${k.link_musik_1 ? `<button onclick="shareKidung('link', {judul:'Musik 1', link:'${k.link_musik_1}'})">Share Link Musik 1</button>` : ''}
+                            ${k.link_video ? `<button onclick="shareKidung('link', {judul:'Video', link:'${k.link_video}'})">Share Link Video</button>` : ''}
+                        </div>
+		
                     </div>
                 </div>
             </div>
             `;
-            showModal(body);
+	           showModal(body);
         };
-        
+ 		
+            
         wrapper.appendChild(div);
         listContainer.appendChild(wrapper);
     });
