@@ -157,102 +157,266 @@
                <small>Font Size : ${currentFontSize}, User : ${currentUserName}</small>
             `;
     }
+
+// ==========================================
+// 1. FUNGSI HELPER TEMA & FILTER (Taruh di luar/sebelum renderKidung)
+// ==========================================
+
+// Variabel Global untuk menyimpan data tema default dari Sheet
+window.kidungSheetBg = 'black';
+window.kidungSheetFg = 'white';
+window.isKidungDark = true; // Status awal dianggap mode gelap/default
+
+window.applyKidungTheme = function(bg, fg) {
+    const root = document.documentElement;
+    
+    // Cek apakah background berupa link gambar (http atau data image)
+    if (bg.startsWith('http') || bg.startsWith('data:')) {
+        root.style.setProperty('--k-bg-image', `url('${bg}')`);
+        root.style.setProperty('--k-bg-color', 'black'); // fallback color
+    } else {
+        root.style.setProperty('--k-bg-image', 'none');
+        root.style.setProperty('--k-bg-color', bg);
+    }
+    root.style.setProperty('--k-fg-color', fg);
+
+    // Menyesuaikan background item agar teks tetap terbaca jika pakai gambar
+    const isLightFg = (fg === 'white' || fg === '#fff' || fg.toLowerCase() === '#ffffff');
+    root.style.setProperty('--k-item-bg', isLightFg ? 'rgba(0, 0, 0, 0.65)' : 'rgba(255, 255, 255, 0.8)');
+};
+
+window.toggleKidungTheme = function() {
+    const btn = document.getElementById('btn-theme-toggle');
+    window.isKidungDark = !window.isKidungDark;
+    
+    if (window.isKidungDark) {
+        btn.innerText = "☀️"; // Menampilkan tombol matahari untuk ganti ke light mode
+        // Kembalikan ke tema dari Spreadsheet
+        applyKidungTheme(window.kidungSheetBg, window.kidungSheetFg);
+    } else {
+        btn.innerText = "🌙"; // Menampilkan tombol bulan untuk ganti ke dark mode
+        // Paksa ke Light Mode standar (Putih, tulisan Hitam)
+        applyKidungTheme('white', 'black');
+    }
+};
+
+window.applyKidungFilters = function() {
+    const searchTxt = document.getElementById('k-search').value.toLowerCase();
+    const styleVal = document.getElementById('k-filter-style').value;
+    const catVal = document.getElementById('k-filter-kategori').value;
+    const tempoVal = document.getElementById('k-filter-tempo').value;
+
+    const items = document.querySelectorAll('.kidung-item-wrapper');
+    items.forEach(item => {
+        // Ambil data dari dataset yang sudah kita tanam di HTML
+        const no = item.dataset.no;
+        const isi = item.dataset.isi;
+        const cerita = item.dataset.cerita;
+        
+        // Logika Pencarian & Filter
+        const matchSearch = no.includes(searchTxt) || isi.includes(searchTxt) || cerita.includes(searchTxt);
+        const matchStyle = styleVal === "" || item.dataset.style === styleVal;
+        const matchCat = catVal === "" || item.dataset.kategori === catVal;
+        const matchTempo = tempoVal === "" || item.dataset.tempo === tempoVal;
+
+        if (matchSearch && matchStyle && matchCat && matchTempo) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+};    
     // --- RENDER MODUL KIDUNG ---
     function renderKidung() {
         const content = document.getElementById('app-content');
-        content.innerHTML += `
-            <div class="kidung-controls">
-                <button onclick="changeFontSize(15)">A++</button>
-                <button onclick="changeFontSize(2)">A+</button>
-                <button onclick="changeFontSize(-2)">A-</button>
-                <button onclick="changeFontSize(-15)">A--</button>
-                <small>Ketuk lagu untuk baca</small>
+    // --- SETUP TEMA DARI SHEET "background" ---
+    if (typeof db !== 'undefined' && db.background && db.background.length > 0) {
+        const bgData = db.background[0]; // Ambil baris pertama
+        if (bgData['isi background']) window.kidungSheetBg = bgData['isi background'];
+        if (bgData['isi foreground']) window.kidungSheetFg = bgData['isi foreground'];
+    }
+    // Terapkan tema awal
+    applyKidungTheme(window.kidungSheetBg, window.kidungSheetFg);
+
+    // --- SETUP OPSI FILTER OTOMATIS DARI DATA KIDUNG ---
+    const styles = [...new Set(db.Kidung.map(k => k['style']).filter(Boolean))];
+    const kategoris = [...new Set(db.Kidung.map(k => k['Kategori']).filter(Boolean))];
+    const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
+
+            // --- RENDER UI KERANGKA ATAS ---
+    content.innerHTML += `
+        <style>
+            #kidung-main-container {
+                background-image: var(--k-bg-image);
+                background-color: var(--k-bg-color);
+                color: var(--k-fg-color);
+                min-height: 100vh;
+                padding: 10px;
+                background-size: cover;
+                background-attachment: fixed;
+                transition: all 0.3s ease;
+            }
+            .kidung-item {
+                background-color: var(--k-item-bg);
+                color: var(--k-fg-color);
+                padding: 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .k-input {
+                padding: 8px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px;
+            }
+        </style>
+
+        <div id="kidung-main-container">
+            <div class="kidung-controls" style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
+                <button onclick="changeFontSize(2)" style="padding: 5px 10px;">A+</button>
+                <button onclick="changeFontSize(-2)" style="padding: 5px 10px;">A-</button>
+                <button onclick="toggleKidungTheme()" id="btn-theme-toggle" style="font-size: 1.2em; cursor:pointer; padding: 2px 10px; border-radius: 8px;">☀️</button>
+                <small style="margin-left: auto;">Ketuk lagu untuk baca</small>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <input type="text" id="k-search" class="k-input" onkeyup="applyKidungFilters()" placeholder="🔍 Cari No, Isi, atau Cerita..." style="min-width: 100%; margin-bottom: 5px;">
+                
+                <select id="k-filter-style" class="k-input" onchange="applyKidungFilters()">
+                    <option value="">🏷️ Semua Style</option>
+                    ${styles.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+                
+                <select id="k-filter-kategori" class="k-input" onchange="applyKidungFilters()">
+                    <option value="">🗂️ Semua Kategori</option>
+                    ${kategoris.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+                
+                <select id="k-filter-tempo" class="k-input" onchange="applyKidungFilters()">
+                    <option value="">⏱️ Semua Tempo</option>
+                    ${tempos.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
             </div>
             <div id="kidung-list" style="display: grid; gap: 10px;"></div>
-        `;
-        db.Kidung.forEach(k => {
-            const div = document.createElement('div');
-            div.className = 'kidung-item';
-            div.style.padding = '10px';
-            div.style.border = '1px solid #ccc';
-            div.style.borderRadius = '8px';
-            div.style.cursor = 'pointer';
+        </div>
+     `;
+    const listContainer = document.getElementById('kidung-list');
+    // --- RENDER ISI KIDUNG ---
+    db.Kidung.forEach(k => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'kidung-item-wrapper'; // Wrapper untuk fungsi filter
+        
+        // Simpan data di elemen untuk memudahkan filter pencarian
+        wrapper.dataset.no = (k['no kidung'] || '').toString().toLowerCase();
+        wrapper.dataset.isi = (k['isi kidung'] || '').toString().toLowerCase();
+        wrapper.dataset.cerita = (k['Cerita kidung'] || '').toString().toLowerCase();
+        wrapper.dataset.style = k['style'] || '';
+        wrapper.dataset.kategori = k['Kategori'] || '';
+        wrapper.dataset.tempo = k['Tempo'] || '';
 
-            // Memeriksa isi judul (jika kolom judul kosong, tampilkan '-' agar rapi)
+        const div = document.createElement('div');
+        div.className = 'kidung-item';
+
+        // Logika Warna Border berdasarkan kolom "mark"
+        let borderColor = '#ccc';
+        let borderWidth = '1px';
+        if (k['mark']) {
+            const markColor = k['mark'].toString().toLowerCase().trim();
+            if (markColor === 'kuning') { 
+                borderColor = '#FFD700'; borderWidth = '3px'; 
+            } else if (markColor === 'biru') { 
+                borderColor = '#1E90FF'; borderWidth = '3px'; 
+            }
+        }
+        div.style.border = `${borderWidth} solid ${borderColor}`;
+
+        // Data fallback
         const judul = k['judul kidung'] ? k['judul kidung'] : 'Tanpa Judul';
         const styleKidung = k['style'] ? k['style'] : '';
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
+        const hasFotoAwal = !!k['link foto kidung'];
 
             const hasFotoAwal = k['link foto kidung'] ? true : false;
             div.innerHTML += hasFotoAwal ? 
-                `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ Ada Foto</button>` : 
-                `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ tdk Foto</button>`;
+                `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ ✅ Foto</button>` : 
+                `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ ❌ Foto</button>`;
 
             div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
-            
-                        
-            div.onclick = () => {
-                const hasFoto = k['link foto kidung'] ? true : false;
-                const hasAudio = k['link lagu'] ? true : false;
-                const hasVideo = k['link video'] ? true : false;
+        
+        // StopPropagation agar jika klik tombol "Foto" di luar, tidak langsung membuka Modal isi Kidung
+        div.innerHTML += hasFotoAwal ? 
+            `<button onclick="event.stopPropagation(); switchKidungTab('foto')" style="width:100%; padding: 8px; cursor: pointer; margin-top: 8px; border-radius:5px;">🖼️ Preview Foto</button>` : 
+            `<button disabled style="width:100%; padding: 8px; opacity: 0.5; margin-top: 8px; border-radius:5px;">🖼️ No Foto</button>`;
 
-                const body = `
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <h2>${k['no kidung']}. ${judul}</h2>
-                </div>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: #f0f0f0; padding: 10px; border-radius: 8px;">
-                    <span style="font-weight: bold; margin-right: auto;">Ukuran Teks=${currentFontSize}:</span>
-                    <button onclick="adjustKidungFont(-2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer;">A-</button>
-                    <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer;">A+</button>
-                </div>
-                   
-                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
-                    <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer;">📝 Isi Teks</button>
-                    ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer;">🖼️ Ada Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">🖼️ Tdk Foto</button>`}
-                    ${hasAudio ? `<button onclick="switchKidungTab('audio')" style="flex:1; padding: 8px; cursor: pointer;">🎵 Ada Audio</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">🎵 Tdk Audio</button>`}
-                    ${hasVideo ? `<button onclick="switchKidungTab('video')" style="flex:1; padding: 8px; cursor: pointer;">▶️ Ada Video</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">▶️ Tdk Video</button>`}
-                </div>
+        div.onclick = () => {
+            const hasFoto = !!k['link foto kidung'];
+            const hasAudio = !!k['link lagu'];
+            const hasVideo = !!k['link video'];
+            const fontSize = typeof currentFontSize !== 'undefined' ? currentFontSize : 16;
 
-                <div id="kidung-view-area">
+            // Membuat modal yang juga mewarisi TEMA dinamis
+            const body = `
+            <div style="background-image: var(--k-bg-image); background-color: var(--k-bg-color); color: var(--k-fg-color); padding: 15px; border-radius: 8px; min-height: 100%; background-size: cover; background-attachment: fixed;">
+                
+                <div style="background-color: var(--k-item-bg); padding: 15px; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h2>${k['no kidung']}. ${judul}</h2>
+                    </div>
                     
-                    <div id="tab-teks" class="kidung-tab" style="display: block;">
-                        <div id="kidung-isi-teks" style="font-size:${currentFontSize}px; white-space: pre-wrap; line-height: 1.5;">${k['isi kidung']}</div>
-                        <hr style="margin-top: 20px;">
-                        <p style="font-size: 0.9em; color: gray;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: rgba(128,128,128,0.2); padding: 10px; border-radius: 8px;">
+                        <span style="font-weight: bold; margin-right: auto;">Ukuran Teks:</span>
+                        <button onclick="adjustKidungFont(-2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A-</button>
+                        <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A+</button>
+                    </div>
+                        
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
+                        ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🖼️ No Foto</button>`}
+                        ${hasAudio ? `<button onclick="switchKidungTab('audio')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🎵 Audio</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🎵 No Audio</button>`}
+                        ${hasVideo ? `<button onclick="switchKidungTab('video')" style="flex:1; padding: 8px; cursor: pointer; color: black;">▶️ Video</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">▶️ No Video</button>`}
                     </div>
 
-                    <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
-                        ${hasFoto ? `<img src="${formatDriveImage(k['link foto kidung'])}" style="max-width: 100%; height: auto; border-radius: 8px;" alt="Foto Kidung">` : ''}
-                    </div>
+                    <div id="kidung-view-area">
+                        <div id="tab-teks" class="kidung-tab" style="display: block;">
+                            <div id="kidung-isi-teks" style="font-size:${fontSize}px; white-space: pre-wrap; line-height: 1.5;">${k['isi kidung'] || ''}</div>
+                            <hr style="margin-top: 20px; border-color: rgba(128,128,128,0.5);">
+                            <p style="font-size: 0.9em; opacity: 0.8;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
+                        </div>
 
-                    <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
-                        <p>Dengarkan Audio:</p>
-                        ${hasAudio ? `
-                            <audio controls style="width: 100%; max-width: 300px;">
-                                <source src="${k['link lagu']}">
-                                Browser Anda tidak mendukung pemutar audio.
-                            </audio>
-                            <br><br>
-                            <a href="${k['link lagu']}" target="_blank" style="color: blue; text-decoration: underline;">Atau klik untuk buka link asli</a>
-                        ` : ''}
-                    </div>
+                        <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
+                            ${hasFoto ? `<img src="${formatDriveImage(k['link foto kidung'])}" style="max-width: 100%; height: auto; border-radius: 8px;" alt="Foto Kidung">` : ''}
+                        </div>
 
-                    <div id="tab-video" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
-                        <p>Tonton Video:</p>
-                        ${hasVideo ? `
-                            <a href="${k['link video']}" target="_blank" style="display: inline-block; padding: 10px 20px; background: red; color: white; border-radius: 5px; text-decoration: none;">
-                                ▶️ Buka Video di Tab Baru
-                            </a>
-                        ` : ''}
-                    </div>
+                        <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
+                            <p>Dengarkan Audio:</p>
+                            ${hasAudio ? `
+                                <audio controls style="width: 100%; max-width: 300px;">
+                                    <source src="${k['link lagu']}">
+                                    Browser Anda tidak mendukung pemutar audio.
+                                </audio>
+                                <br><br>
+                                <a href="${k['link lagu']}" target="_blank" style="color: #4da6ff; text-decoration: underline;">Buka link audio asli</a>
+                            ` : ''}
+                        </div>
 
-                    <hr><p><em>${k['Cerita kidung']}</em></p>
-                `;
-                showModal(body);
-            };
-            document.getElementById('kidung-list').appendChild(div);
-        });
-    }
+                        <div id="tab-video" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
+                            <p>Tonton Video:</p>
+                            ${hasVideo ? `
+                                <a href="${k['link video']}" target="_blank" style="display: inline-block; padding: 10px 20px; background: red; color: white; border-radius: 5px; text-decoration: none;">
+                                    ▶️ Buka Video di Tab Baru
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+            showModal(body);
+        };
+        
+        wrapper.appendChild(div);
+        
+        listContainer.appendChild(wrapper);
+    });
+    
 
     function changeFontSize(delta) {
         currentFontSize += delta;
