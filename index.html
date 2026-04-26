@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.15 @2026</h4>
+        <h4>versi 2.16 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -74,6 +74,7 @@
         <div class="modal-content" id="modalBody"></div>
         <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
+    
 <div id="viewer" style="
     display:none;
     position:fixed;
@@ -84,7 +85,6 @@
     overflow:hidden;
 ">
 
-    <!-- Image -->
     <img id="viewerImg" style="
         position:absolute;
         top:50%; left:50%;
@@ -94,7 +94,6 @@
         touch-action:none;
     ">
 
-    <!-- Controls -->
     <div style="position:absolute; top:10px; left:10px;">
         <button onclick="zoomIn()">➕</button>
         <button onclick="zoomOut()">➖</button>
@@ -102,10 +101,10 @@
         <button onclick="closeViewer()">❌</button>
     </div>
 </div>
+
 <script src="script.js"></script>
 
 <script>
-    // MASUKKAN LINK CSV ANDA DISINI
     const URLS = {
         Awal: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6N6cAL1OoX2hCBXmL3MAmQcgxMTglDN2LtCseQdOC8zkWdDwRDCRDjKnI9NE3vMGSaXgWesgcdvGV/pub?output=csv",
         Kidung: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSasN_qIm_FKLGkh4t-clscJXdiuZJENUa0JgC3_-lwpmggsQ_xqF8DH_m-3wxCFU99j1WIj0n8nNhy/pub?output=csv",
@@ -118,35 +117,28 @@
     let currentUserName = null;
     let db = { Awal: [], Kidung: [], Acara: [], Kegiatan: [], Jemaat: [] };
     let currentFontSize = 16;
-
-    // Load Data Awal (User)
-  
-
     let isUserLoaded = false;
 
-    function fetchData(key) {
-    Papa.parse(URLS[key], {
-        download: true,
-        header: true,
-        complete: (res) => {
-            db[key] = res.data;
-            if (key === 'Awal') isUserLoaded = true;
-        }
-    });
-}
-  function attemptLogin() {
-    if (!isUserLoaded) {
-        alert("Data user masih loading...");
-        return;
-    }  
+    // Panggil fetchData untuk 'Awal' saat halaman pertama kali dimuat
+    fetchData('Awal');
+
     function fetchData(key) {
         Papa.parse(URLS[key], {
-            download: true, header: true,
-            complete: (res) => { db[key] = res.data; }
+            download: true,
+            header: true,
+            complete: (res) => {
+                db[key] = res.data;
+                if (key === 'Awal') isUserLoaded = true;
+            }
         });
     }
 
     function attemptLogin() {
+        if (!isUserLoaded) {
+            alert("Data user masih loading... Harap tunggu sebentar.");
+            return;
+        }
+
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
         const userFound = db.Awal.find(row => row.username === u && row.password === p);
@@ -157,6 +149,7 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
             setupNavigation();
+            
             // Pre-load data yang diijinkan
             if(currentUser.tipe.includes('Kidung')) fetchData('Kidung');
             if(currentUser.tipe.includes('Acara')) fetchData('Acara');
@@ -177,7 +170,7 @@
             btn.onclick = (e) => loadModule(menu, e.target);
             nav.appendChild(btn);
         });
-        loadModule(menuAvailable[0]); // Load menu pertama
+        loadModule(menuAvailable[0]); 
     }
 
     function loadModule(name, el) {
@@ -186,44 +179,44 @@
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
         
         if (el) el.classList.add('active');
-        renderAwal();
-        if (name === 'Kidung') renderKidung();
-        else if (name === 'Acara') renderAcara();
-        else if (name === 'kegiatan') renderKegiatan();
-        else if (name === 'Jemaat') renderJemaat();
+        
+        // Timer singkat untuk memastikan data sheet sudah diparsing
+        setTimeout(() => {
+            renderAwal();
+            if (name === 'Kidung') renderKidung();
+            else if (name === 'Acara') renderAcara();
+            else if (name === 'kegiatan') renderKegiatan();
+            else if (name === 'Jemaat') renderJemaat();
+        }, 500);
     }
 
     // --- RENDER MODUL AWAL DASHBOARD ---
     function renderAwal() {
         const content = document.getElementById('app-content');
-            content.innerHTML = `
-               <small>Font Size : ${currentFontSize}, User : ${currentUserName}</small>
-            `;
+        content.innerHTML = `
+            <small>Font Size : ${currentFontSize}, User : ${currentUserName}</small>
+        `;
     }
 
 // ==========================================
-// 1. FUNGSI HELPER TEMA & FILTER (Taruh di luar/sebelum renderKidung)
+// 1. FUNGSI HELPER TEMA & FILTER
 // ==========================================
 
-// Variabel Global untuk menyimpan data tema default dari Sheet
 window.kidungSheetBg = 'black';
 window.kidungSheetFg = 'white';
-window.isKidungDark = true; // Status awal dianggap mode gelap/default
+window.isKidungDark = true;
 
 window.applyKidungTheme = function(bg, fg) {
     const root = document.documentElement;
-    
-    // Cek apakah background berupa link gambar (http atau data image)
     if (bg.startsWith('http') || bg.startsWith('data:')) {
         root.style.setProperty('--k-bg-image', `url('${bg}')`);
-        root.style.setProperty('--k-bg-color', 'black'); // fallback color
+        root.style.setProperty('--k-bg-color', 'black');
     } else {
         root.style.setProperty('--k-bg-image', 'none');
         root.style.setProperty('--k-bg-color', bg);
     }
     root.style.setProperty('--k-fg-color', fg);
 
-    // Menyesuaikan background item agar teks tetap terbaca jika pakai gambar
     const isLightFg = (fg === 'white' || fg === '#fff' || fg.toLowerCase() === '#ffffff');
     root.style.setProperty('--k-item-bg', isLightFg ? 'rgba(0, 0, 0, 0.65)' : 'rgba(255, 255, 255, 0.8)');
 };
@@ -233,12 +226,10 @@ window.toggleKidungTheme = function() {
     window.isKidungDark = !window.isKidungDark;
     
     if (window.isKidungDark) {
-        btn.innerText = "☀️"; // Menampilkan tombol matahari untuk ganti ke light mode
-        // Kembalikan ke tema dari Spreadsheet
+        btn.innerText = "☀️";
         applyKidungTheme(window.kidungSheetBg, window.kidungSheetFg);
     } else {
-        btn.innerText = "🌙"; // Menampilkan tombol bulan untuk ganti ke dark mode
-        // Paksa ke Light Mode standar (Putih, tulisan Hitam)
+        btn.innerText = "🌙";
         applyKidungTheme('white', 'black');
     }
 };
@@ -251,12 +242,10 @@ window.applyKidungFilters = function() {
 
     const items = document.querySelectorAll('.kidung-item-wrapper');
     items.forEach(item => {
-        // Ambil data dari dataset yang sudah kita tanam di HTML
         const no = item.dataset.no;
         const isi = item.dataset.isi;
         const cerita = item.dataset.cerita;
         
-        // Logika Pencarian & Filter
         const matchSearch = no.includes(searchTxt) || isi.includes(searchTxt) || cerita.includes(searchTxt);
         const matchStyle = styleVal === "" || item.dataset.style === styleVal;
         const matchCat = catVal === "" || item.dataset.kategori === catVal;
@@ -271,37 +260,31 @@ window.applyKidungFilters = function() {
 };  
 
 // ==========================================
-// versi 1.1 untuk membesar image
+// IMAGE & VIEWER
 // ==========================================
 function formatDriveImage(url) {
     if (!url) return '';
-
     let idMatch = url.match(/[-\w]{25,}/);
     let id = idMatch ? idMatch[0] : null;
-
     if (!id) return url;
-
-    return `https://lh3.googleusercontent.com/d/${id}`;
+    return `https://lh3.googleusercontent.com/d/$${id}`;
 }
-// ==========================================
-// versi 1.2 untuk full screen
-// ==========================================
+
 let images = [];
 let currentIndex = 0;
 
-function openFullscreen(index) {
+function openFullscreen(clickedUrl) {
     images = db.Kidung
         .filter(k => k['link foto kidung'])
         .map(k => formatDriveImage(k['link foto kidung']));
 
-    // currentIndex = index;
-    const src = formatDriveImage(k['link foto kidung']);
-    currentIndex = images.indexOf(src);
-    // currentIndex = images.indexOf(index);
+    currentIndex = images.indexOf(clickedUrl);
+    if(currentIndex === -1) currentIndex = 0; // fallback
 
     document.getElementById("viewer").style.display = "block";
     showImage();
 }
+
 function showImage() {
     const img = document.getElementById("viewerImg");
     img.src = images[currentIndex];
@@ -312,67 +295,9 @@ function closeViewer() {
     document.getElementById("viewer").style.display = "none";
 }
 
-// SWIPE
+// SWIPE & ZOOM
 let startX = 0;
-
-// document.getElementById("viewer").addEventListener("touchstart", e => {
-//    startX = e.touches[0].clientX;
-// });
-
-    window.addEventListener("DOMContentLoaded", () => {
-    const viewer = document.getElementById("viewer");
-
-    viewer.addEventListener("touchstart", e => {
-        startX = e.touches[0].clientX;
-    });
-
-    viewer.addEventListener("touchend", e => {
-        let endX = e.changedTouches[0].clientX;
-        let diff = startX - endX;
-
-        if (diff > 50) nextImage();
-        if (diff < -50) prevImage();
-    });
-  });
-
-function nextImage() {
-    if (currentIndex < images.length - 1) {
-        currentIndex++;
-        showImage();
-    }
-}
-
-function prevImage() {
-    if (currentIndex > 0) {
-        currentIndex--;
-        showImage();
-    }
-}
-
-// ZOOM
 let scale = 1;
-
-function zoomIn() {
-    scale += 0.2;
-    updateZoom();
-}
-
-function zoomOut() {
-    scale = Math.max(1, scale - 0.2);
-    updateZoom();
-}
-
-function resetZoom() {
-    scale = 1;
-    updateZoom();
-}
-
-function updateZoom() {
-    document.getElementById("viewerImg").style.transform =
-        `translate(-50%,-50%) scale(${scale})`;
-}
-
-// PINCH ZOOM
 let initialDistance = 0;
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -394,20 +319,36 @@ window.addEventListener("DOMContentLoaded", () => {
         if (e.touches.length === 2) {
             let d = getDistance(e.touches[0], e.touches[1]);
             if (!initialDistance) initialDistance = d;
-
             scale *= d / initialDistance;
             initialDistance = d;
-
             updateZoom();
         }
     });
-});    
+});
+
+function nextImage() {
+    if (currentIndex < images.length - 1) {
+        currentIndex++;
+        showImage();
+    }
+}
+
+function prevImage() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        showImage();
+    }
+}
+
+function zoomIn() { scale += 0.2; updateZoom(); }
+function zoomOut() { scale = Math.max(1, scale - 0.2); updateZoom(); }
+function resetZoom() { scale = 1; updateZoom(); }
+function updateZoom() {
+    document.getElementById("viewerImg").style.transform = `translate(-50%,-50%) scale(${scale})`;
+}
 
 function getDistance(t1, t2) {
-    return Math.hypot(
-        t1.clientX - t2.clientX,
-        t1.clientY - t2.clientY
-    );
+    return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
 }    
     
 // ==========================================
@@ -417,21 +358,17 @@ function getDistance(t1, t2) {
 function renderKidung() {
     const content = document.getElementById('app-content');
 
-    // --- SETUP TEMA DARI SHEET "background" ---
     if (typeof db !== 'undefined' && db.background && db.background.length > 0) {
-        const bgData = db.background[0]; // Ambil baris pertama
+        const bgData = db.background[0];
         if (bgData['isi background']) window.kidungSheetBg = bgData['isi background'];
         if (bgData['isi foreground']) window.kidungSheetFg = bgData['isi foreground'];
     }
-    // Terapkan tema awal
     applyKidungTheme(window.kidungSheetBg, window.kidungSheetFg);
 
-    // --- SETUP OPSI FILTER OTOMATIS DARI DATA KIDUNG ---
     const styles = [...new Set(db.Kidung.map(k => k['style']).filter(Boolean))];
     const kategoris = [...new Set(db.Kidung.map(k => k['Kategori']).filter(Boolean))];
     const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
 
-    // --- RENDER UI KERANGKA ATAS ---
     content.innerHTML = `
         <style>
             #kidung-main-container {
@@ -490,12 +427,11 @@ function renderKidung() {
 
     const listContainer = document.getElementById('kidung-list');
 
-    // --- RENDER ISI KIDUNG ---
-    db.Kidung.forEach(k, index) => {
+    // Perbaikan kurung pada forEach
+    db.Kidung.forEach((k, index) => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'kidung-item-wrapper'; // Wrapper untuk fungsi filter
+        wrapper.className = 'kidung-item-wrapper';
         
-        // Simpan data di elemen untuk memudahkan filter pencarian
         wrapper.dataset.no = (k['no kidung'] || '').toString().toLowerCase();
         wrapper.dataset.isi = (k['isi kidung'] || '').toString().toLowerCase();
         wrapper.dataset.cerita = (k['Cerita kidung'] || '').toString().toLowerCase();
@@ -506,7 +442,6 @@ function renderKidung() {
         const div = document.createElement('div');
         div.className = 'kidung-item';
 
-        // Logika Warna Border berdasarkan kolom "mark"
         let borderColor = '#ccc';
         let borderWidth = '1px';
         if (k['mark']) {
@@ -519,7 +454,6 @@ function renderKidung() {
         }
         div.style.border = `${borderWidth} solid ${borderColor}`;
 
-        // Data fallback
         const judul = k['judul kidung'] ? k['judul kidung'] : 'Tanpa Judul';
         const styleKidung = k['style'] ? k['style'] : '';
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
@@ -531,8 +465,6 @@ function renderKidung() {
 
             div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
 
-        
-        // StopPropagation agar jika klik tombol "Foto" di luar, tidak langsung membuka Modal isi Kidung
         div.innerHTML += hasFotoAwal ? 
             `<button onclick="event.stopPropagation(); switchKidungTab('foto')" style="width:100%; padding: 8px; cursor: pointer; margin-top: 8px; border-radius:5px;">🖼️ Preview Foto</button>` : 
             `<button disabled style="width:100%; padding: 8px; opacity: 0.5; margin-top: 8px; border-radius:5px;">🖼️ No Foto</button>`;
@@ -542,8 +474,8 @@ function renderKidung() {
             const hasAudio = !!k['link lagu'];
             const hasVideo = !!k['link video'];
             const fontSize = typeof currentFontSize !== 'undefined' ? currentFontSize : 16;
+            const imgUrlFormat = formatDriveImage(k['link foto kidung']);
 
-            // Membuat modal yang juga mewarisi TEMA dinamis
             const body = `
             <div style="background-image: var(--k-bg-image); background-color: var(--k-bg-color); color: var(--k-fg-color); padding: 15px; border-radius: 8px; min-height: 100%; background-size: cover; background-attachment: fixed;">
                 
@@ -575,9 +507,9 @@ function renderKidung() {
 <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
     ${hasFoto ? `
         <img 
-            src="${formatDriveImage(k['link foto kidung'])}" 
+            src="${imgUrlFormat}" 
             style="width:100%; border-radius:8px; cursor:pointer;"
-            onclick="openFullscreen(${index})"
+            onclick="openFullscreen('${imgUrlFormat}')"
         >
     ` : ''}
 </div>
@@ -613,6 +545,7 @@ function renderKidung() {
         listContainer.appendChild(wrapper);
     });
 }
+
     function changeFontSize(delta) {
         currentFontSize += delta;
         const txt = document.querySelector('.kidung-text');
@@ -665,8 +598,7 @@ function renderKidung() {
         const content = document.getElementById('app-content');
         content.innerHTML += `<div class="grid" id="jem-grid"></div>`;
 
-        
-       db.Jemaat.forEach((j, idx) => {
+        db.Jemaat.forEach((j, idx) => {
             const foto = j['Link Foto'] || (j.Gender === 'Pria' ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=m'+idx : 'https://api.dicebear.com/7.x/avataaars/svg?seed=f'+idx);
             const card = document.createElement('div');
             card.className = 'card';
