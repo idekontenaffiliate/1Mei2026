@@ -202,5 +202,5 @@ main {
 }
 
 #zoomImage {
-    transition: transform 0.1s ease;
+    transition: transform 0.01s ease;
 }
