@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 1.73 @2026</h4>
+        <h4>versi 1.74 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -184,14 +184,13 @@
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
 
             const hasFotoAwal = k['link foto kidung'] ? true : false;
-            div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
-            
-            // Perbaikan: hapus kurung kurawal ${} yang salah letak dan gunakan hasFotoAwal
             div.innerHTML += hasFotoAwal ? 
                 `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ Foto</button>` : 
                 `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ No Foto</button>`;
 
+            div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
             
+                        
             div.onclick = () => {
                 const hasFoto = k['link foto kidung'] ? true : false;
                 const hasAudio = k['link lagu'] ? true : false;
