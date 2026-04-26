@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.14 @2026</h4>
+        <h4>versi 2.15 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -120,10 +120,25 @@
     let currentFontSize = 16;
 
     // Load Data Awal (User)
-    window.onload = () => {
-        fetchData('Awal');
-    };
+  
 
+    let isUserLoaded = false;
+
+    function fetchData(key) {
+    Papa.parse(URLS[key], {
+        download: true,
+        header: true,
+        complete: (res) => {
+            db[key] = res.data;
+            if (key === 'Awal') isUserLoaded = true;
+        }
+    });
+}
+  function attemptLogin() {
+    if (!isUserLoaded) {
+        alert("Data user masih loading...");
+        return;
+    }  
     function fetchData(key) {
         Papa.parse(URLS[key], {
             download: true, header: true,
@@ -279,7 +294,9 @@ function openFullscreen(index) {
         .filter(k => k['link foto kidung'])
         .map(k => formatDriveImage(k['link foto kidung']));
 
-    currentIndex = index;
+    // currentIndex = index;
+    const src = formatDriveImage(k['link foto kidung']);
+    currentIndex = images.indexOf(src);
     // currentIndex = images.indexOf(index);
 
     document.getElementById("viewer").style.display = "block";
@@ -358,17 +375,33 @@ function updateZoom() {
 // PINCH ZOOM
 let initialDistance = 0;
 
-document.getElementById("viewer").addEventListener("touchmove", e => {
-    if (e.touches.length === 2) {
-        let d = getDistance(e.touches[0], e.touches[1]);
-        if (!initialDistance) initialDistance = d;
+window.addEventListener("DOMContentLoaded", () => {
+    const viewer = document.getElementById("viewer");
 
-        scale *= d / initialDistance;
-        initialDistance = d;
+    viewer.addEventListener("touchstart", e => {
+        startX = e.touches[0].clientX;
+    });
 
-        updateZoom();
-    }
-});
+    viewer.addEventListener("touchend", e => {
+        let endX = e.changedTouches[0].clientX;
+        let diff = startX - endX;
+
+        if (diff > 50) nextImage();
+        if (diff < -50) prevImage();
+    });
+
+    viewer.addEventListener("touchmove", e => {
+        if (e.touches.length === 2) {
+            let d = getDistance(e.touches[0], e.touches[1]);
+            if (!initialDistance) initialDistance = d;
+
+            scale *= d / initialDistance;
+            initialDistance = d;
+
+            updateZoom();
+        }
+    });
+});    
 
 function getDistance(t1, t2) {
     return Math.hypot(
