@@ -226,9 +226,13 @@ window.applyKidungFilters = function() {
         }
     });
 };    
-    // --- RENDER MODUL KIDUNG ---
-    function renderKidung() {
-        const content = document.getElementById('app-content');
+// ==========================================
+// 2. FUNGSI UTAMA RENDER KIDUNG
+// ==========================================
+
+function renderKidung() {
+    const content = document.getElementById('app-content');
+
     // --- SETUP TEMA DARI SHEET "background" ---
     if (typeof db !== 'undefined' && db.background && db.background.length > 0) {
         const bgData = db.background[0]; // Ambil baris pertama
@@ -243,8 +247,8 @@ window.applyKidungFilters = function() {
     const kategoris = [...new Set(db.Kidung.map(k => k['Kategori']).filter(Boolean))];
     const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
 
-            // --- RENDER UI KERANGKA ATAS ---
-    content.innerHTML += `
+    // --- RENDER UI KERANGKA ATAS ---
+    content.innerHTML = `
         <style>
             #kidung-main-container {
                 background-image: var(--k-bg-image);
@@ -268,7 +272,7 @@ window.applyKidungFilters = function() {
                 padding: 8px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px;
             }
         </style>
-
+        
         <div id="kidung-main-container">
             <div class="kidung-controls" style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
                 <button onclick="changeFontSize(2)" style="padding: 5px 10px;">A+</button>
@@ -295,10 +299,13 @@ window.applyKidungFilters = function() {
                     ${tempos.map(s => `<option value="${s}">${s}</option>`).join('')}
                 </select>
             </div>
+
             <div id="kidung-list" style="display: grid; gap: 10px;"></div>
         </div>
-     `;
+    `;
+
     const listContainer = document.getElementById('kidung-list');
+
     // --- RENDER ISI KIDUNG ---
     db.Kidung.forEach(k => {
         const wrapper = document.createElement('div');
@@ -334,12 +341,13 @@ window.applyKidungFilters = function() {
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
         const hasFotoAwal = !!k['link foto kidung'];
 
-            const hasFotoAwal = k['link foto kidung'] ? true : false;
-            div.innerHTML += hasFotoAwal ? 
-                `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ ✅ Foto</button>` : 
+        const hasFotoAwal = k['link foto kidung'] ? true : false;
+        div.innerHTML += hasFotoAwal ? 
+             `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ ✅ Foto</button>` : 
                 `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ ❌ Foto</button>`;
 
             div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
+
         
         // StopPropagation agar jika klik tombol "Foto" di luar, tidak langsung membuka Modal isi Kidung
         div.innerHTML += hasFotoAwal ? 
@@ -362,7 +370,7 @@ window.applyKidungFilters = function() {
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: rgba(128,128,128,0.2); padding: 10px; border-radius: 8px;">
-                        <span style="font-weight: bold; margin-right: auto;">Ukuran Teks:</span>
+                        <span style="font-weight: bold; margin-right: auto;">Ukuran Teks=${currentFontSize}:</span>
                         <button onclick="adjustKidungFont(-2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A-</button>
                         <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A+</button>
                     </div>
@@ -413,11 +421,9 @@ window.applyKidungFilters = function() {
         };
         
         wrapper.appendChild(div);
-        
         listContainer.appendChild(wrapper);
     });
-    }
-
+}
     function changeFontSize(delta) {
         currentFontSize += delta;
         const txt = document.querySelector('.kidung-text');
