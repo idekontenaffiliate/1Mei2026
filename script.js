@@ -206,6 +206,61 @@ function switchKidungTab(tabName) {
     }
 }
 
+// Data untuk Transpose
+const scale = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+let currentTranspose = 0;
+
+// Fungsi Transpose Text (Kunci Bas)
+function transposeText(text, steps) {
+    return text.replace(/[A-G][#b]?(m|maj7|7|sus4|dim|aug)?/g, (match) => {
+        const isMinor = match.includes('m') && !match.toLowerCase().includes('maj');
+        const suffix = match.replace(/[A-G][#b]?/, '');
+        const root = match.replace(suffix, '');
+        
+        let index = scale.indexOf(root);
+        if (index === -1) return match; // Jika tidak ketemu (misal Bb di scale sharp)
+        
+        let newIndex = (index + steps + 12) % 12;
+        return scale[newIndex] + suffix;
+    });
+}
+
+// Fungsi Share ke Aplikasi Lain
+async function shareKidung(mode, data) {
+    let shareText = "";
+    if (mode === 'syair') {
+        shareText = `Syair Kidung: ${data.judul}\n\n${data.syair}`;
+    } else if (mode === 'all') {
+        shareText = `Kidung: ${data.judul}\n\n[Kunci Bas]\n${data.bas}\n\n[Not Angka]\n${data.not}\n\n[Syair]\n${data.syair}`;
+    } else if (mode === 'link') {
+        shareText = `Link Media untuk ${data.judul}:\n${data.link}`;
+    }
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: data.judul,
+                text: shareText,
+            });
+        } catch (err) {
+            console.log("Error sharing:", err);
+        }
+    } else {
+        // Fallback copy to clipboard
+        navigator.clipboard.writeText(shareText);
+        alert("Link/Text disalin ke clipboard!");
+    }
+}
+
+// Fungsi Update Tampilan Transpose di Modal
+function updateTransposeUI(steps, originalBas, originalNot, originalSyair) {
+    currentTranspose += steps;
+    const basElem = document.getElementById('kidung-bas');
+    if (basElem) {
+        basElem.innerText = transposeText(originalBas, currentTranspose);
+    }
+}
+
 // --- Helper: Mengubah Link Google Drive biasa menjadi Link Gambar langsung ---
 function formatDriveImage(url) {
     if (!url) return '';
