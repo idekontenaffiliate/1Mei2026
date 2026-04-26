@@ -54,14 +54,14 @@
 <body>
 
     <div id="login-screen">
-        <h2>Acara 1-2 Mei 2026,Solo</h2>
+        <h2>Acara 1-2 Mei 2026, Solo</h2>
         <div class="login-box">
             User : <input type="text" id="user" placeholder="Username">
             Pass : <input type="password" id="pass" placeholder="Password">
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.21 @2026</h4>
+        <h4>versi 2.31 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -101,21 +101,6 @@
         <button onclick="closeViewer()">❌</button>
     </div>
 </div>
-<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-    <input type="text" id="k-search" class="k-input" onkeyup="applyKidungFilters()" placeholder="🔍 Cari No, Syair, Cerita...">
-    
-    <select id="k-filter-genre" class="k-input" onchange="applyKidungFilters()">
-        <option value="">Semua Genre</option>
-        <option value="Anak-anak">Anak-anak</option>
-        <option value="Dewasa">Dewasa</option>
-    </select>
-
-    <select id="k-filter-jenis-kidung" class="k-input" onchange="applyKidungFilters()">
-        <option value="">Semua Karakter</option>
-        <option value="Melankolis">Melankolis</option>
-        <option value="Sanguinis">Sanguinis</option>
-    </select>
-</div>    
 
 <script src="script.js"></script>
 
@@ -134,7 +119,6 @@
     let currentFontSize = 16;
     let isUserLoaded = false;
 
-    // Panggil fetchData untuk 'Awal' saat halaman pertama kali dimuat
     fetchData('Awal');
 
     function fetchData(key) {
@@ -165,7 +149,6 @@
             document.getElementById('main-app').style.display = 'flex';
             setupNavigation();
             
-            // Pre-load data yang diijinkan
             if(currentUser.tipe.includes('Kidung')) fetchData('Kidung');
             if(currentUser.tipe.includes('Acara')) fetchData('Acara');
             if(currentUser.tipe.includes('kegiatan')) fetchData('Kegiatan');
@@ -195,7 +178,6 @@
         
         if (el) el.classList.add('active');
         
-        // Timer singkat untuk memastikan data sheet sudah diparsing
         setTimeout(() => {
             renderAwal();
             if (name === 'Kidung') renderKidung();
@@ -205,7 +187,6 @@
         }, 500);
     }
 
-    // --- RENDER MODUL AWAL DASHBOARD ---
     function renderAwal() {
         const content = document.getElementById('app-content');
         content.innerHTML = `
@@ -223,16 +204,16 @@ window.isKidungDark = true;
 
 window.applyKidungTheme = function(bg, fg) {
     const root = document.documentElement;
-    if (bg.startsWith('http') || bg.startsWith('data:')) {
+    if (bg && (bg.startsWith('http') || bg.startsWith('data:'))) {
         root.style.setProperty('--k-bg-image', `url('${bg}')`);
         root.style.setProperty('--k-bg-color', 'black');
     } else {
         root.style.setProperty('--k-bg-image', 'none');
-        root.style.setProperty('--k-bg-color', bg);
+        root.style.setProperty('--k-bg-color', bg || 'white');
     }
-    root.style.setProperty('--k-fg-color', fg);
+    root.style.setProperty('--k-fg-color', fg || 'black');
 
-    const isLightFg = (fg === 'white' || fg === '#fff' || fg.toLowerCase() === '#ffffff');
+    const isLightFg = (fg && (fg === 'white' || fg === '#fff' || fg.toLowerCase() === '#ffffff'));
     root.style.setProperty('--k-item-bg', isLightFg ? 'rgba(0, 0, 0, 0.65)' : 'rgba(255, 255, 255, 0.8)');
 };
 
@@ -282,7 +263,7 @@ function formatDriveImage(url) {
     let idMatch = url.match(/[-\w]{25,}/);
     let id = idMatch ? idMatch[0] : null;
     if (!id) return url;
-    return `https://lh3.googleusercontent.com/d/$${id}`;
+    return `https://lh3.googleusercontent.com/d/$$${id}`; // BUG FIX: ditambahkan logo dolar $
 }
 
 let images = [];
@@ -294,7 +275,7 @@ function openFullscreen(clickedUrl) {
         .map(k => formatDriveImage(k['link foto kidung']));
 
     currentIndex = images.indexOf(clickedUrl);
-    if(currentIndex === -1) currentIndex = 0; // fallback
+    if(currentIndex === -1) currentIndex = 0;
 
     document.getElementById("viewer").style.display = "block";
     showImage();
@@ -442,7 +423,6 @@ function renderKidung() {
 
     const listContainer = document.getElementById('kidung-list');
 
-    // Perbaikan kurung pada forEach
     db.Kidung.forEach((k, index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'kidung-item-wrapper';
@@ -472,16 +452,19 @@ function renderKidung() {
         const judul = k['judul kidung'] ? k['judul kidung'] : 'Tanpa Judul';
         const styleKidung = k['style'] ? k['style'] : '';
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
+        const imgUrlFormat = formatDriveImage(k['link foto kidung']);
 
         const hasFotoAwal = k['link foto kidung'] ? true : false;
+        
+        // BUG FIX: Ubah logika klik foto list ke openFullscreen karena modal belum terbuka
         div.innerHTML += hasFotoAwal ? 
-             `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ ✅ Foto</button>` : 
-                `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ ❌ Foto</button>`;
+            `<button onclick="event.stopPropagation(); openFullscreen('${imgUrlFormat}')" style="flex:1; padding: 8px; cursor: pointer; margin-top: 5px;">🖼️ ✅ Foto</button>` : 
+            `<button disabled style="flex:1; padding: 8px; opacity: 0.5; margin-top: 5px;">🖼️ ❌ Foto</button>`;
 
-            div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
+        div.innerHTML += `<strong> ${k['no kidung']}. ${judul} ${styleKidung}</strong><br><small>${tempoKidung}</small><br>`;
 
         div.innerHTML += hasFotoAwal ? 
-            `<button onclick="event.stopPropagation(); switchKidungTab('foto')" style="width:100%; padding: 8px; cursor: pointer; margin-top: 8px; border-radius:5px;">🖼️ Preview Foto</button>` : 
+            `<button onclick="event.stopPropagation(); openFullscreen('${imgUrlFormat}')" style="width:100%; padding: 8px; cursor: pointer; margin-top: 8px; border-radius:5px;">🖼️ Preview Foto</button>` : 
             `<button disabled style="width:100%; padding: 8px; opacity: 0.5; margin-top: 8px; border-radius:5px;">🖼️ No Foto</button>`;
 
         div.onclick = () => {
@@ -489,17 +472,18 @@ function renderKidung() {
             const hasAudio = !!k['link lagu'];
             const hasVideo = !!k['link video'];
             const fontSize = typeof currentFontSize !== 'undefined' ? currentFontSize : 16;
-            const imgUrlFormat = formatDriveImage(k['link foto kidung']);
 
             const originalBas = k['kunci_bas'] || '';
             const originalNot = k['not_angka'] || '';
             const originalSyair = k['isi_syair'] || '';
- const body = `
+            
+            // BUG FIX: HTML disusun dengan rapi tanpa jeda enter yang merusak template literal
+            const body = `
             <div style="background-image: var(--k-bg-image); background-color: var(--k-bg-color); color: var(--k-fg-color); padding: 15px; border-radius: 8px; min-height: 100%; background-size: cover; background-attachment: fixed;">
                 
                 <div style="background-color: var(--k-item-bg); padding: 15px; border-radius: 8px;">
                     <div style="text-align: center; margin-bottom: 15px;">
-                        <h2>${k['no kidung']}. ${judul}</h2>
+                        <h2 id="kidung-judul">${k['no kidung']}. ${judul}</h2>
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: rgba(128,128,128,0.2); padding: 10px; border-radius: 8px;">
@@ -508,16 +492,14 @@ function renderKidung() {
                         <button onclick="adjustKidungFont(2)" style="padding: 5px 15px; border-radius: 5px; cursor: pointer; color: black;">A+</button>
                     </div>
                         
-						
                    <div style="display:flex; justify-content: space-between; margin-bottom:10px;">
-                        <small>Kunci: ${k['kunci_dasar']} | Tempo: ${k['tempo']}</small>
+                        <small>Kunci: ${k['kunci_dasar'] || '-'} | Tempo: ${k['tempo'] || '-'}</small>
                         <div>
-                            <button onclick="updateTransposeUI(-1, \`${originalBas}\`)" style="padding:5px;">-1 Transpose</button>
-                            <button onclick="updateTransposeUI(1, \`${originalBas}\`)" style="padding:5px;">+1 Transpose</button>
+                            <button onclick="updateTransposeUI(-1, document.getElementById('kidung-bas').innerText)" style="padding:5px;">-1 Transpose</button>
+                            <button onclick="updateTransposeUI(1, document.getElementById('kidung-bas').innerText)" style="padding:5px;">+1 Transpose</button>
                         </div>
                     </div>
 
-		
                     <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
                         <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
                         ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🖼️ No Foto</button>`}
@@ -532,13 +514,11 @@ function renderKidung() {
                             <p style="font-size: 0.9em; opacity: 0.8;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
                         </div>
 
-
-<div id="kidung-display-area" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #eee; color: #333; padding: 10px; border-radius: 5px;">
-            <div id="kidung-bas" style="color: blue; font-weight: bold;">${originalBas}</div>
-            <div id="kidung-not" style="color: green;">${originalNot}</div>
-            <div id="kidung-syair" style="color: black;">${originalSyair}</div>
-        </div>
-
+                        <div id="kidung-display-area" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #eee; color: #333; padding: 10px; border-radius: 5px;">
+                            <div id="kidung-bas" style="color: blue; font-weight: bold;">${originalBas}</div>
+                            <div id="kidung-not" style="color: green;">${originalNot}</div>
+                            <div id="kidung-syair" style="color: black;">${originalSyair}</div>
+                        </div>
 
                         <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
                          ${hasFoto ? `
@@ -549,12 +529,12 @@ function renderKidung() {
                                 >
                                 ` : ''}
                         </div>
-              <div style="margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap;">
-            <button onclick="shareKidung('syair', {judul: '${k['judul_kidung']}', syair: \`${originalSyair}\`})">Share Syair</button>
-            <button onclick="shareKidung('all', {judul: '${k['judul_kidung']}', bas: document.getElementById('kidung-bas').innerText, not: '${originalNot}', syair: \`${originalSyair}\`})">Share Lengkap (3 Text)</button>
-        </div>
-		
-		
+                        
+                        <div style="margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap;">
+                            <button onclick="shareKidung('syair', {judul: document.getElementById('kidung-judul').innerText, syair: document.getElementById('kidung-syair').innerText})">Share Syair</button>
+                            <button onclick="shareKidung('all', {judul: document.getElementById('kidung-judul').innerText, bas: document.getElementById('kidung-bas').innerText, not: document.getElementById('kidung-not').innerText, syair: document.getElementById('kidung-syair').innerText})">Share Lengkap (3 Text)</button>
+                        </div>
+        
                         <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
                             <p>Dengarkan Audio:</p>
                             ${hasAudio ? `
@@ -575,21 +555,20 @@ function renderKidung() {
                                 </a>
                             ` : ''}
                         </div>
-						
-						<h4>Media & Link:</h4>
+                        
+                        <h4>Media & Link:</h4>
                         <div style="display:grid; gap:10px;">
                             ${k.link_musik_1 ? `<button onclick="shareKidung('link', {judul:'Musik 1', link:'${k.link_musik_1}'})">Share Link Musik 1</button>` : ''}
                             ${k.link_video ? `<button onclick="shareKidung('link', {judul:'Video', link:'${k.link_video}'})">Share Link Video</button>` : ''}
                         </div>
-		
+        
                     </div>
                 </div>
             </div>
             `;
-	           showModal(body);
+            showModal(body);
         };
- 		
-            
+        
         wrapper.appendChild(div);
         listContainer.appendChild(wrapper);
     });
