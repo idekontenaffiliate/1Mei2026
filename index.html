@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.12 @2026</h4>
+        <h4>versi 2.13 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -272,17 +272,18 @@ function formatDriveImage(url) {
 // ==========================================
 let images = [];
 let currentIndex = 0;
-function openFullscreen(src) {
+
+function openFullscreen(index) {
     images = db.Kidung
         .filter(k => k['link foto kidung'])
         .map(k => formatDriveImage(k['link foto kidung']));
 
-    currentIndex = images.indexOf(src);
+    currentIndex = index;
+    // currentIndex = images.indexOf(index);
 
     document.getElementById("viewer").style.display = "block";
     showImage();
 }
-
 function showImage() {
     const img = document.getElementById("viewerImg");
     img.src = images[currentIndex];
@@ -315,13 +316,6 @@ let startX = 0;
         if (diff < -50) prevImage();
     });
   });
-document.getElementById("viewer").addEventListener("touchend", e => {
-    let endX = e.changedTouches[0].clientX;
-    let diff = startX - endX;
-
-    if (diff > 50) nextImage();
-    if (diff < -50) prevImage();
-});
 
 function nextImage() {
     if (currentIndex < images.length - 1) {
@@ -463,7 +457,7 @@ function renderKidung() {
     const listContainer = document.getElementById('kidung-list');
 
     // --- RENDER ISI KIDUNG ---
-    db.Kidung.forEach(k,index) => {
+    db.Kidung.forEach(k, index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'kidung-item-wrapper'; // Wrapper untuk fungsi filter
         
