@@ -64,13 +64,12 @@ main {
 
 /* Card Styles */
 .card {
-    background: var(--card-bg);
-    border-radius: 10px;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    background-color: var(--bg-surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 15px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;    
 }
 
 .card:hover {
@@ -89,6 +88,38 @@ main {
 .card h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.1rem;
+}
+/* =========================================
+   KIDUNG ITEM (Daftar Lagu)
+   Kombinasi div.className = 'kidung-item card'
+   ========================================= */
+.kidung-item {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Efek saat lagu disorot / disentuh (Hover State) */
+.kidung-item:hover {
+    transform: translateY(-2px); /* Kartu sedikit terangkat */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary); /* Pinggiran berubah warna */
+}
+
+/* =========================================
+   KIDUNG TAB (Isi Konten dalam Modal)
+   Digunakan untuk Tab Teks, Foto, Audio, Video
+   ========================================= */
+.kidung-tab {
+    background-color: var(--bg-main);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-top: 15px;
+    
+    /* Animasi halus saat berpindah tab */
+    animation: fadeInTab 0.3s ease-in-out;
 }
 
 .badge {
@@ -157,4 +188,15 @@ main {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
+}
+/* Keyframe untuk animasi tab muncul */
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
