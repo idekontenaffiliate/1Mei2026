@@ -183,7 +183,10 @@
         const styleKidung = k['style'] ? k['style'] : '';
         const tempoKidung = k['Tempo'] ? k['Tempo'] : '-';
 
+            const hasFotoAwal = k['link foto kidung'] ? true : false;
             div.innerHTML += `<strong> ${k['no kidung']}. ${k['judul kidung']} ${k['style']}</strong><br><small>${k.Tempo}</small>`;
+            div.innerHTML += ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5;">🖼️ No Foto</button>`};
+
             div.onclick = () => {
                 const hasFoto = k['link foto kidung'] ? true : false;
                 const hasAudio = k['link lagu'] ? true : false;
