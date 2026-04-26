@@ -200,3 +200,7 @@ main {
         transform: translateY(0);
     }
 }
+
+#zoomImage {
+    transition: transform 0.1s ease;
+}
