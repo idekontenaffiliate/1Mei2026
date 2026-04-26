@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.1 @2026</h4>
+        <h4>versi 2.12 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -254,107 +254,30 @@ window.applyKidungFilters = function() {
     });
 };  
 
-// versi 1 untuk membesar image
-let scale = 1;
-let posX = 0;
-let posY = 0;
-let startX, startY;
-let isDragging = false;
+// ==========================================
+// versi 1.1 untuk membesar image
+// ==========================================
+function formatDriveImage(url) {
+    if (!url) return '';
 
-// APPLY TRANSFORM
-function updateTransform() {
-    const img = document.getElementById("zoomImage");
-    if (!img) return;
-    img.style.transform = `translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) scale(${scale})`;
+    let idMatch = url.match(/[-\w]{25,}/);
+    let id = idMatch ? idMatch[0] : null;
+
+    if (!id) return url;
+
+    return `https://lh3.googleusercontent.com/d/${id}`;
 }
-
-// ZOOM BUTTON
-function zoomIn() {
-    scale += 0.2;
-    updateTransform();
-}
-
-function zoomOut() {
-    scale = Math.max(1, scale - 0.2);
-    updateTransform();
-}
-
-function resetZoom() {
-    scale = 1;
-    posX = 0;
-    posY = 0;
-    updateTransform();
-}
-
-// DRAG (GESER)
-document.addEventListener("mousedown", e => {
-    if (e.target.id !== "zoomImage") return;
-    isDragging = true;
-    startX = e.clientX - posX;
-    startY = e.clientY - posY;
-});
-
-document.addEventListener("mousemove", e => {
-    if (!isDragging) return;
-    posX = e.clientX - startX;
-    posY = e.clientY - startY;
-    updateTransform();
-});
-
-document.addEventListener("mouseup", () => {
-    isDragging = false;
-});
-
-// TOUCH SUPPORT (HP)
-let initialDistance = 0;
-
-document.addEventListener("touchstart", e => {
-    const img = document.getElementById("zoomImage");
-    if (!img) return;
-
-    if (e.touches.length === 2) {
-        initialDistance = getDistance(e.touches[0], e.touches[1]);
-    }
-});
-
-document.addEventListener("touchmove", e => {
-    const img = document.getElementById("zoomImage");
-    if (!img) return;
-
-    // PINCH ZOOM
-    if (e.touches.length === 2) {
-        const newDistance = getDistance(e.touches[0], e.touches[1]);
-        let zoom = newDistance / initialDistance;
-        scale = Math.max(1, scale * zoom);
-        initialDistance = newDistance;
-        updateTransform();
-    }
-
-    // DRAG 1 JARI
-    if (e.touches.length === 1) {
-        posX += e.touches[0].movementX || 0;
-        posY += e.touches[0].movementY || 0;
-        updateTransform();
-    }
-});
-
-function getDistance(t1, t2) {
-    return Math.sqrt(
-        Math.pow(t1.clientX - t2.clientX, 2) +
-        Math.pow(t1.clientY - t2.clientY, 2)
-    );
-}
-
-// versi 2 untuk full screen
+// ==========================================
+// versi 1.2 untuk full screen
+// ==========================================
 let images = [];
 let currentIndex = 0;
-
-function openFullscreen(index) {
+function openFullscreen(src) {
     images = db.Kidung
         .filter(k => k['link foto kidung'])
         .map(k => formatDriveImage(k['link foto kidung']));
 
-    currentIndex = index;
+    currentIndex = images.indexOf(src);
 
     document.getElementById("viewer").style.display = "block";
     showImage();
@@ -373,10 +296,25 @@ function closeViewer() {
 // SWIPE
 let startX = 0;
 
-document.getElementById("viewer").addEventListener("touchstart", e => {
-    startX = e.touches[0].clientX;
-});
+// document.getElementById("viewer").addEventListener("touchstart", e => {
+//    startX = e.touches[0].clientX;
+// });
 
+    window.addEventListener("DOMContentLoaded", () => {
+    const viewer = document.getElementById("viewer");
+
+    viewer.addEventListener("touchstart", e => {
+        startX = e.touches[0].clientX;
+    });
+
+    viewer.addEventListener("touchend", e => {
+        let endX = e.changedTouches[0].clientX;
+        let diff = startX - endX;
+
+        if (diff > 50) nextImage();
+        if (diff < -50) prevImage();
+    });
+  });
 document.getElementById("viewer").addEventListener("touchend", e => {
     let endX = e.changedTouches[0].clientX;
     let diff = startX - endX;
@@ -525,7 +463,7 @@ function renderKidung() {
     const listContainer = document.getElementById('kidung-list');
 
     // --- RENDER ISI KIDUNG ---
-    db.Kidung.forEach(k => {
+    db.Kidung.forEach(k,index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'kidung-item-wrapper'; // Wrapper untuk fungsi filter
         
