@@ -178,7 +178,6 @@ function showKegiatanDetail(kegiatan) {
     document.getElementById('kegiatanModal').style.display = 'block';
 }
 // --- Fungsi untuk mengubah ukuran font secara dinamis ---
-let currentFontSize = 16;
 
 function adjustKidungFont(delta) {
     currentFontSize += delta;
