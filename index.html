@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.13 @2026</h4>
+        <h4>versi 2.14 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -159,17 +159,18 @@
         menuAvailable.forEach(menu => {
             const btn = document.createElement('button');
             btn.innerText = menu;
-            btn.onclick = () => loadModule(menu);
+            btn.onclick = (e) => loadModule(menu, e.target);
             nav.appendChild(btn);
         });
         loadModule(menuAvailable[0]); // Load menu pertama
     }
 
-    function loadModule(name) {
+    function loadModule(name, el) {
         const content = document.getElementById('app-content');
         content.innerHTML = "Memuat...";
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
+        
+        if (el) el.classList.add('active');
         renderAwal();
         if (name === 'Kidung') renderKidung();
         else if (name === 'Acara') renderAcara();
