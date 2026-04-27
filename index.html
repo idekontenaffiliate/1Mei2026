@@ -54,14 +54,14 @@
 <body>
 
     <div id="login-screen">
-        <h2>Acara 1-2 Mei 2026, Solo</h2>
+        <h2>1-2 Mei 2026, Solo</h2>
         <div class="login-box">
             User : <input type="text" id="user" placeholder="Username">
             Pass : <input type="password" id="pass" placeholder="Password">
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.51 @2026</h4>
+        <h4>versi 2.66 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -198,9 +198,9 @@
 // 1. FUNGSI HELPER TEMA & FILTER
 // ==========================================
 
-window.kidungSheetBg = 'black';
-window.kidungSheetFg = 'white';
-window.isKidungDark = true;
+window.kidungSheetBg = 'white';
+window.kidungSheetFg = 'black';
+window.isKidungDark = false;
 
 window.applyKidungTheme = function(bg, fg) {
     const root = document.documentElement;
@@ -550,11 +550,6 @@ function renderKidung() {
                             ` : ''}
                         </div>
                         
-                        <h4>Media & Link:</h4>
-                        <div style="display:grid; gap:10px;">
-                            ${k.link_musik_1 ? `<button onclick="shareKidung('link', {judul:'Musik 1', link:'${k.link_musik_1}'})">Share Link Musik 1</button>` : ''}
-                            ${k.link_video ? `<button onclick="shareKidung('link', {judul:'Video', link:'${k.link_video}'})">Share Link Video</button>` : ''}
-                        </div>
         
                     </div>
                 </div>
