@@ -3,131 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kidung Pro - Solo 2026</title>
+    <title>Perbauran Gembala, Solo 2026</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
             --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6;
-            --k-bg: #ffffff; --k-fg: #000000; /* Default */
+            --k-bg: #ffffff; --k-fg: #000000;
         }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100%; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); height: 100%; }
+        
+        /* Login Screen (Kembali ke versi awal) */
+        #login-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; background: var(--primary); color: white; text-align: center;
+        }
+        .login-box { background: white; padding: 2rem; border-radius: 10px; color: #333; width: 80%; max-width: 300px; margin: 15px 0; }
+        .login-box input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+        .login-box button { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         
         #main-app { display: none; flex-direction: column; height: 100vh; }
-        header { background: var(--primary); color: white; padding: 10px; text-align: center; }
-        nav { display: flex; overflow-x: auto; background: #fff; border-bottom: 2px solid var(--accent); }
-        nav button { flex: 1; padding: 12px; border: none; background: none; cursor: pointer; white-space: nowrap; font-weight: bold; }
-        nav button.active { color: var(--accent); border-bottom: 4px solid var(--accent); }
+        header { background: var(--primary); color: white; padding: 10px; text-align: center; display: flex; justify-content: space-between; align-items: center; }
+        nav { display: flex; overflow-x: auto; background: #fff; border-bottom: 2px solid #ddd; }
+        nav button { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; white-space: nowrap; font-weight: bold; color: #555; }
+        nav button.active { border-bottom: 3px solid var(--accent); color: var(--accent); }
 
         .content-area { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* Kidung Styles */
-        #kidung-container { 
-            background: var(--k-bg); 
-            color: var(--k-fg); 
-            min-height: 100%; 
-            padding: 10px; 
-            background-size: cover; 
-            background-position: center;
-            background-attachment: fixed;
-        }
-        .kidung-card { 
-            background: rgba(255,255,255,0.1); 
-            backdrop-filter: blur(5px);
-            border: 1px solid #ddd;
-            padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer;
-            transition: transform 0.2s;
-            color: inherit;
-        }
-        .mark-kuning { border: 4px solid #f1c40f !important; }
-        .mark-biru { border: 4px solid #3498db !important; }
+        /* General Cards & Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .card { background: white; border-radius: 8px; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
+        .card img { width: 100%; border-radius: 5px; height: 120px; object-fit: cover; }
+        
+        /* Acara */
+        .acara-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .acara-time { color: var(--accent); font-weight: bold; font-size: 1.1em; }
 
-        /* Controls */
+        /* Kidung View */
+        #kidung-container { background: var(--k-bg); color: var(--k-fg); min-height: 100%; padding: 10px; border-radius: 8px; background-size: cover; background-attachment: fixed; }
+        .kidung-card { background: rgba(255,255,255,0.85); padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; color: black; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .mark-kuning { border: 3px solid #FFD700 !important; }
+        .mark-biru { border: 3px solid #1E90FF !important; }
+        
         .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .input-custom { padding: 8px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px; }
-        
+        .k-input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px; }
+
         /* Modal & Tabs */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto; }
-        .modal-content { padding: 20px; color: white; }
-        .tab-btn { padding: 10px; border: none; background: #444; color: white; border-radius: 5px; cursor: pointer; }
-        .tab-btn.active { background: var(--accent); }
-        .kidung-tab { display: none; margin-top: 15px; }
-        .active-tab { display: block; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; overflow-y: auto; z-index: 1000; }
+        .modal-content { padding: 20px; }
+        .close-btn { background: var(--accent); color: white; padding: 15px; border: none; width: 100%; position: sticky; bottom: 0; font-weight: bold; font-size: 1.1em; }
         
-        pre { white-space: pre-wrap; font-family: monospace; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.2); }
-        .btn-action { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        .tab-btn { padding: 10px; border: none; background: #555; color: white; border-radius: 5px; cursor: pointer; }
+        .tab-btn.active { background: var(--accent); }
+        .kidung-tab { display: none; margin-top: 15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; }
+        .active-tab { display: block; }
+
+        .btn-action { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; background: #ddd; color: black; margin-bottom: 5px; }
+        .k-text-scalable { white-space: pre-wrap; font-family: monospace; line-height: 1.5; margin-bottom: 10px; transition: font-size 0.2s; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #2c3e50; color: white;">
-        <h2>Kidung Apps 2026</h2>
-        <input type="text" id="user" placeholder="User" style="margin:5px; padding:10px;">
-        <input type="password" id="pass" placeholder="Pass" style="margin:5px; padding:10px;">
-        <button onclick="attemptLogin()" style="padding:10px 20px; background: #3498db; border:none; color:white; border-radius:5px;">Masuk</button>
+    <div id="login-screen">
+        <h2>1-2 Mei 2026, Solo</h2>
+        <div class="login-box">
+            User : <input type="text" id="user" placeholder="Username">
+            Pass : <input type="password" id="pass" placeholder="Password">
+            <button onclick="attemptLogin()">Masuk</button>
+        </div>
+        <h3>Hubungi contact Admin</h3>
+        <h4>versi 2.91 @2026</h4>
     </div>
 
     <div id="main-app">
         <header>
-            <div style="display:flex; justify-content: space-between; align-items: center; padding: 0 10px;">
-                <span id="user-info"></span>
-                <button id="theme-toggle" onclick="toggleDarkMode()" style="background:none; border:none; font-size:20px; cursor:pointer;">🌙</button>
-            </div>
+            <h3 id="app-title" style="margin:0;">Acara Solo 2026</h3>
+            <button onclick="toggleDarkMode()" id="btn-theme-toggle" style="font-size: 1.2em; cursor:pointer; background:none; border:none; color:white;">☀️</button>
         </header>
         <nav id="main-nav"></nav>
         <div class="content-area" id="app-content"></div>
     </div>
 
     <div id="itemModal" class="modal">
-        <div id="modalBody" class="modal-content"></div>
-        <button onclick="closeModal()" style="width:100%; padding:15px; background:#e74c3c; color:white; border:none; position:sticky; bottom:0;">KEMBALI</button>
+        <div class="modal-content" id="modalBody"></div>
+        <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
 
 <script>
     const URLS = {
         Awal: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6N6cAL1OoX2hCBXmL3MAmQcgxMTglDN2LtCseQdOC8zkWdDwRDCRDjKnI9NE3vMGSaXgWesgcdvGV/pub?output=csv",
         Kidung: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSasN_qIm_FKLGkh4t-clscJXdiuZJENUa0JgC3_-lwpmggsQ_xqF8DH_m-3wxCFU99j1WIj0n8nNhy/pub?output=csv",
-        Background: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv" // Gantilah ke URL sheet background Anda yang benar
+        Acara: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBBAJPP9Cn1cyq2cBpFGpv1rJSeSQedR7ctR9mrO67wGNbVTbEcCaXCp4ZVkAOGmCKJ9yxo1Q7Yox3/pub?output=csv",
+        Kegiatan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR2W99PcE9P3GLHRXWFSO_viwtukTnH8ePHSKKr_KPgtMOhOEOLRkSHc6vMdpyay8GLEop3CB0R2gtS/pub?output=csv",
+        Jemaat: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv",
+        Background: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv" // Sheet Background (Ganti URL-nya jika beda)
     };
 
+    let currentUser = null;
     let db = {};
     let isDarkMode = false;
+    let currentFontSize = 16;
     let currentTranspose = 0;
 
+    // Load Initial Data User
+    Papa.parse(URLS.Awal, { download: true, header: true, complete: res => { db.Awal = res.data; }});
+
+    // Format Image Drive yang Anti-Gagal (Bisa nampil maksimal)
     function formatDriveImage(url) {
-        if (!url || !url.includes('drive.google.com')) return url;
-        const id = url.match(/[-\w]{25,}/);
-        return id ? `https://lh3.googleusercontent.com/u/0/d/${id[0]}` : url;
+        if (!url) return '';
+        const match = url.match(/[-\w]{25,}/);
+        return match ? `https://lh3.googleusercontent.com/d/${match[0]}` : url;
     }
 
     async function attemptLogin() {
-        const res = await fetchCSV(URLS.Awal);
-        db.Awal = res;
+        if (!db.Awal) return alert("Sistem masih memuat data, tunggu 2 detik lalu coba lagi.");
+        
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
-        const found = res.find(row => row.username === u && row.password === p);
+        const found = db.Awal.find(row => row.username === u && row.password === p);
 
         if (found) {
-            db.user = found;
+            currentUser = found;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
-            document.getElementById('user-info').innerText = found.username;
-            loadBackgroundSettings();
+            document.getElementById('app-title').innerText = `Halo, ${found.username}`;
+            
+            // Tarik data background jika ada
+            Papa.parse(URLS.Background, { download: true, header: true, complete: res => {
+                db.Background = res.data;
+                applyBackground();
+            }});
+
             setupNavigation();
-        } else alert("Salah!");
+        } else {
+            alert("Username atau Password salah!");
+        }
     }
 
-    async function fetchCSV(url) {
-        return new Promise(resolve => {
-            Papa.parse(url, { download: true, header: true, complete: (res) => resolve(res.data) });
-        });
-    }
-
-    async function loadBackgroundSettings() {
-        const bgData = await fetchCSV(URLS.Background);
-        if (bgData && bgData[0]) {
-            const config = bgData[0];
-            const bg = config['isi background'] || '#ffffff';
-            const fg = config['isi foreground'] || '#000000';
+    function applyBackground() {
+        if (db.Background && db.Background.length > 0 && !isDarkMode) {
+            const bgData = db.Background[0];
+            const bg = bgData['isi background'] || '#ffffff';
+            const fg = bgData['isi foreground'] || '#000000';
             
             if (bg.startsWith('http')) {
                 document.documentElement.style.setProperty('--k-bg', `url('${bg}')`);
@@ -138,53 +154,89 @@
         }
     }
 
-    function setupNavigation() {
-        const nav = document.getElementById('main-nav');
-        const menus = db.user.tipe.split(',');
-        menus.forEach((m, i) => {
-            const btn = document.createElement('button');
-            btn.innerText = m.trim();
-            btn.onclick = (e) => loadModule(m.trim(), e.target);
-            nav.appendChild(btn);
-            if(i===0) btn.click();
-        });
-    }
-
-    async function loadModule(name, btn) {
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const content = document.getElementById('app-content');
-        content.innerHTML = "Loading...";
-
-        if(name === 'Kidung') {
-            db.Kidung = await fetchCSV(URLS.Kidung);
-            renderKidung();
+    function toggleDarkMode() {
+        isDarkMode = !isDarkMode;
+        const btn = document.getElementById('btn-theme-toggle');
+        if (isDarkMode) {
+            btn.innerText = "🌙";
+            document.documentElement.style.setProperty('--k-bg', '#121212');
+            document.documentElement.style.setProperty('--k-fg', '#ffffff');
         } else {
-            content.innerHTML = `Modul ${name} sedang dikembangkan.`;
+            btn.innerText = "☀️";
+            applyBackground(); // Kembali ke tema custom
         }
     }
 
+    function setupNavigation() {
+        const nav = document.getElementById('main-nav');
+        const menuAvailable = currentUser.tipe.split(',').map(s => s.trim());
+        
+        menuAvailable.forEach((menu, idx) => {
+            const btn = document.createElement('button');
+            btn.innerText = menu;
+            btn.onclick = (e) => loadModule(menu, e.target);
+            nav.appendChild(btn);
+            if (idx === 0) btn.click();
+        });
+    }
+
+    function loadModule(name, el) {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        if (el) el.classList.add('active');
+        
+        const content = document.getElementById('app-content');
+        content.innerHTML = "Memuat data...";
+
+        // Lazy load module data
+        if (!db[name]) {
+            Papa.parse(URLS[name] || URLS.Awal, {
+                download: true, header: true,
+                complete: (res) => {
+                    db[name] = res.data;
+                    dispatchRender(name);
+                }
+            });
+        } else {
+            dispatchRender(name);
+        }
+    }
+
+    function dispatchRender(name) {
+        const checkName = name.toLowerCase();
+        if (checkName === 'kidung') renderKidung();
+        else if (checkName === 'acara') renderAcara();
+        else if (checkName === 'kegiatan') renderKegiatan();
+        else if (checkName === 'jemaat') renderJemaat();
+        else document.getElementById('app-content').innerHTML = `Modul ${name} ditampilkan di sini.`;
+    }
+
+    // =====================================
+    // RENDER KIDUNG (Font Size, Copy, Music)
+    // =====================================
     function renderKidung() {
         const content = document.getElementById('app-content');
-        const styles = [...new Set(db.Kidung.map(k => k.style).filter(Boolean))];
-        const kats = [...new Set(db.Kidung.map(k => k.Kategori).filter(Boolean))];
-        const tempos = [...new Set(db.Kidung.map(k => k.Tempo).filter(Boolean))];
+        const styles = [...new Set(db.Kidung.map(k => k['style']).filter(Boolean))];
+        const kategoris = [...new Set(db.Kidung.map(k => k['Kategori']).filter(Boolean))];
+        const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
 
         content.innerHTML = `
             <div id="kidung-container">
                 <div class="filter-group">
-                    <input type="text" id="k-search" class="input-custom" placeholder="Cari No, Isi, Cerita..." onkeyup="filterKidung()">
-                    <select id="f-style" class="input-custom" onchange="filterKidung()">
-                        <option value="">Semua Style</option>${styles.map(s=>`<option>${s}</option>`)}
+                    <input type="text" id="k-search" class="k-input" onkeyup="filterKidung()" placeholder="🔍 Cari No, Isi, Cerita...">
+                    <select id="k-style" class="k-input" onchange="filterKidung()">
+                        <option value="">🏷️ Semua Style</option>
+                        ${styles.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
-                    <select id="f-kat" class="input-custom" onchange="filterKidung()">
-                        <option value="">Semua Kategori</option>${kats.map(s=>`<option>${s}</option>`)}
+                    <select id="k-kat" class="k-input" onchange="filterKidung()">
+                        <option value="">🗂️ Semua Kategori</option>
+                        ${kategoris.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
-                    <select id="f-tempo" class="input-custom" onchange="filterKidung()">
-                        <option value="">Semua Tempo</option>${tempos.map(s=>`<option>${s}</option>`)}
+                    <select id="k-tempo" class="k-input" onchange="filterKidung()">
+                        <option value="">⏱️ Semua Tempo</option>
+                        ${tempos.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
                 </div>
-                <div id="k-list"></div>
+                <div id="kidung-list"></div>
             </div>
         `;
         filterKidung();
@@ -192,106 +244,192 @@
 
     function filterKidung() {
         const search = document.getElementById('k-search').value.toLowerCase();
-        const style = document.getElementById('f-style').value;
-        const kat = document.getElementById('f-kat').value;
-        const tempo = document.getElementById('f-tempo').value;
-        const list = document.getElementById('k-list');
+        const style = document.getElementById('k-style').value;
+        const kat = document.getElementById('k-kat').value;
+        const tempo = document.getElementById('k-tempo').value;
+        const list = document.getElementById('kidung-list');
         list.innerHTML = "";
 
         db.Kidung.forEach(k => {
-            const matchTxt = (k['no kidung'] + k['isi kidung'] + k['Cerita kidung']).toLowerCase().includes(search);
-            const matchStyle = !style || k.style === style;
-            const matchKat = !kat || k.Kategori === kat;
-            const matchTempo = !tempo || k.Tempo === tempo;
+            const no = (k['no kidung'] || '').toString().toLowerCase();
+            const isi = (k['isi kidung'] || '').toString().toLowerCase();
+            const cerita = (k['Cerita kidung'] || '').toString().toLowerCase();
+            
+            const matchSearch = no.includes(search) || isi.includes(search) || cerita.includes(search);
+            const matchStyle = !style || k['style'] === style;
+            const matchKat = !kat || k['Kategori'] === kat;
+            const matchTempo = !tempo || k['Tempo'] === tempo;
 
-            if (matchTxt && matchStyle && matchKat && matchTempo) {
-                const markClass = k.mark === 'kuning' ? 'mark-kuning' : (k.mark === 'biru' ? 'mark-biru' : '');
-                const hasImg = k['link foto kidung'] ? '🖼️' : '';
-                const card = document.createElement('div');
-                card.className = `kidung-card ${markClass}`;
-                card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between">
-                        <strong>${k['no kidung']}. ${k['judul kidung']}</strong>
-                        <span>${hasImg}</span>
+            if (matchSearch && matchStyle && matchKat && matchTempo) {
+                let borderClass = "";
+                if (k.mark) {
+                    const m = k.mark.toLowerCase().trim();
+                    if (m === 'kuning') borderClass = 'mark-kuning';
+                    if (m === 'biru') borderClass = 'mark-biru';
+                }
+
+                const div = document.createElement('div');
+                div.className = `kidung-card ${borderClass}`;
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>${k['no kidung']}. ${k['judul kidung'] || 'Tanpa Judul'}</strong>
+                        <span>${k['link foto kidung'] ? '🖼️' : ''} ${k['link lagu'] ? '🎵' : ''}</span>
                     </div>
-                    <small>${k.style} | ${k.Kategori} | ${k.Tempo}</small>
+                    <small>${k['style'] || '-'} | ${k['Kategori'] || '-'} | ${k['Tempo'] || '-'}</small>
                 `;
-                card.onclick = () => openDetail(k);
-                list.appendChild(card);
+                div.onclick = () => openKidungDetail(k);
+                list.appendChild(div);
             }
         });
     }
 
-    function openDetail(k) {
+    function openKidungDetail(k) {
+        currentFontSize = 16;
         currentTranspose = 0;
         const img = formatDriveImage(k['link foto kidung']);
+        const audio = k['link lagu'];
+        const video = k['link video'];
+
         const body = `
-            <div style="text-align:center">
-                <h2>${k['judul kidung']}</h2>
-                <div style="display:flex; gap:5px; overflow-x:auto; margin-bottom:15px;">
-                    <button class="tab-btn active" onclick="showTab('teks', this)">Teks</button>
-                    ${img ? `<button class="tab-btn" onclick="showTab('foto', this)">Gambar</button>` : ''}
-                    ${k['link lagu'] ? `<button class="tab-btn" onclick="showTab('audio', this)">Audio</button>` : ''}
-                    ${k['link video'] ? `<button class="tab-btn" onclick="showTab('video', this)">Video</button>` : ''}
+            <div style="text-align: center; color: white;">
+                <h2>${k['no kidung']}. ${k['judul kidung']}</h2>
+                
+                <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 15px; overflow-x: auto;">
+                    <button class="tab-btn active" onclick="switchKTab('teks', this)">📝 Teks</button>
+                    ${img ? `<button class="tab-btn" onclick="switchKTab('foto', this)">🖼️ Foto</button>` : ''}
+                    ${audio ? `<button class="tab-btn" onclick="switchKTab('audio', this)">🎵 Audio</button>` : ''}
+                    ${video ? `<button class="tab-btn" onclick="switchKTab('video', this)">▶️ Video</button>` : ''}
                 </div>
 
                 <div id="tab-teks" class="kidung-tab active-tab">
-                    <div style="margin-bottom:10px;">
-                        <button class="btn-action" onclick="doTranspose(-1)">Transpose -</button>
-                        <button class="btn-action" onclick="doTranspose(1)">Transpose +</button>
-                        <button class="btn-action" style="background:#27ae60; color:white;" onclick="shareWa('${k['judul kidung']}')">Share WA</button>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;">
+                        <button class="btn-action" onclick="adjustFont(-2)">A-</button>
+                        <button class="btn-action" onclick="adjustFont(2)">A+</button>
+                        <button class="btn-action" onclick="copyText()">📋 Copy</button>
+                        <button class="btn-action" onclick="alert('Transpose -')">T-</button>
+                        <button class="btn-action" onclick="alert('Transpose +')">T+</button>
+                        <button class="btn-action" style="background:#25D366; color:white;" onclick="shareWA('${k['judul kidung']}')">WhatsApp</button>
                     </div>
-                    <pre id="display-bas" style="color:#3498db; font-weight:bold;">${k.kunci_bas || ''}</pre>
-                    <pre id="display-not" style="color:#f1c40f;">${k.not_angka || ''}</pre>
-                    <pre id="display-isi">${k['isi kidung']}</pre>
+
+                    ${audio ? `<audio controls autoplay style="width:100%; margin-bottom:10px;"><source src="${audio}"></audio>` : ''}
+
+                    <div id="k-text-area" style="text-align: left; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px;">
+                        <div class="k-text-scalable" style="color: #64B5F6; font-weight: bold;">${k['kunci_bas'] || ''}</div>
+                        <div class="k-text-scalable" style="color: #AED581;">${k['not_angka'] || ''}</div>
+                        <div class="k-text-scalable" id="copy-target" style="color: white;">${k['isi kidung'] || ''}</div>
+                        <hr style="border-color: #555; margin: 15px 0;">
+                        <p style="font-size: 0.9em; font-style: italic;">Cerita: ${k['Cerita kidung'] || '-'}</p>
+                    </div>
                 </div>
 
                 <div id="tab-foto" class="kidung-tab">
-                    <img src="${img}" style="width:100%; border-radius:10px;">
+                    <img src="${img}" style="width: 100%; object-fit: contain; max-height: 80vh; border-radius: 8px;">
                 </div>
 
                 <div id="tab-audio" class="kidung-tab">
-                    <audio controls src="${k['link lagu']}" style="width:100%"></audio>
+                    <p>Pemutar Audio Manual</p>
+                    <audio controls style="width: 100%;"><source src="${audio}"></audio>
                 </div>
 
                 <div id="tab-video" class="kidung-tab">
-                    <iframe width="100%" height="250" src="${k['link video']?.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>
+                    ${video ? `<iframe width="100%" height="250" src="${video.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>` : ''}
                 </div>
             </div>
         `;
         showModal(body);
     }
 
-    function showTab(id, btn) {
+    function switchKTab(id, btn) {
         document.querySelectorAll('.kidung-tab').forEach(t => t.classList.remove('active-tab'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tab-'+id).classList.add('active-tab');
+        document.getElementById('tab-' + id).classList.add('active-tab');
         btn.classList.add('active');
     }
 
-    function doTranspose(n) {
-        currentTranspose += n;
-        alert("Transpose nada ke: " + currentTranspose);
-        // Logika transpose kompleks biasanya butuh library music, 
-        // ini simulasi visual perpindahan nada
+    function adjustFont(delta) {
+        currentFontSize += delta;
+        if(currentFontSize < 10) currentFontSize = 10;
+        if(currentFontSize > 60) currentFontSize = 60;
+        document.querySelectorAll('.k-text-scalable').forEach(el => el.style.fontSize = currentFontSize + 'px');
     }
 
-    function shareWa(judul) {
-        const txt = `*${judul}*\n\n${document.getElementById('display-isi').innerText}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`);
+    function copyText() {
+        const text = document.getElementById('copy-target').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Teks Kidung disalin ke clipboard!');
+        });
     }
 
-    function toggleDarkMode() {
-        isDarkMode = !isDarkMode;
-        const btn = document.getElementById('theme-toggle');
-        if(isDarkMode) {
-            document.documentElement.style.setProperty('--k-bg', '#1a1a1a');
-            document.documentElement.style.setProperty('--k-fg', '#ffffff');
-            btn.innerText = "☀️";
-        } else {
-            loadBackgroundSettings();
-            btn.innerText = "🌙";
-        }
+    function shareWA(judul) {
+        const text = document.getElementById('copy-target').innerText;
+        const msg = `*${judul}*\n\n${text}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+    }
+
+    // =====================================
+    // RENDER ACARA, KEGIATAN, JEMAAT
+    // =====================================
+    function renderAcara() {
+        const content = document.getElementById('app-content');
+        content.innerHTML = "";
+        db.Acara.forEach(a => {
+            content.innerHTML += `
+                <div class="acara-card">
+                    <div class="acara-time">${a.jam || '-'}</div>
+                    <h3 style="margin:5px 0;">${a['nama acara'] || '-'}</h3>
+                    <p style="margin:5px 0;"><strong>Peserta:</strong> ${a.peserta || '-'}</p>
+                    <small>${a.penjelasan || ''}</small>
+                </div>
+            `;
+        });
+    }
+
+    function renderKegiatan() {
+        const content = document.getElementById('app-content');
+        content.innerHTML = `<div class="grid" id="keg-grid"></div>`;
+        const grid = document.getElementById('keg-grid');
+        
+        db.Kegiatan.forEach(k => {
+            const img = formatDriveImage(k.gambar) || 'https://via.placeholder.com/150';
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<img src="${img}"><h4>${k.nama || '-'}</h4>`;
+            card.onclick = () => showModal(`
+                <h2 style="text-align:center;">${k.nama}</h2>
+                <img src="${img}" style="width:100%; max-height:60vh; object-fit:contain; border-radius:10px; margin-bottom:15px;">
+                <p><strong>Tujuan:</strong> ${k.tujuan || '-'}</p>
+                <div style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.1); padding:10px; border-radius:8px;">
+                    <img src="${formatDriveImage(k.pic_foto) || 'https://via.placeholder.com/50'}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+                    <span style="font-size:1.1em; font-weight:bold;">PIC: ${k.pic_nama || '-'}</span>
+                </div>
+            `);
+            grid.appendChild(card);
+        });
+    }
+
+    function renderJemaat() {
+        const content = document.getElementById('app-content');
+        content.innerHTML = `<div class="grid" id="jem-grid"></div>`;
+        const grid = document.getElementById('jem-grid');
+
+        db.Jemaat.forEach((j, idx) => {
+            const genderSeed = j.Gender === 'Pria' ? 'm' : 'f';
+            const foto = formatDriveImage(j['Link Foto']) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${genderSeed}${idx}`;
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<img src="${foto}"><h4>${j['Nama Panggilan'] || j['Nama Lengkap'] || '-'}</h4>`;
+            card.onclick = () => showModal(`
+                <img src="${foto}" style="width:150px; height:150px; object-fit:cover; border-radius:50%; display:block; margin:0 auto 15px auto; border: 3px solid white;">
+                <h2 style="text-align:center;">${j['Nama Lengkap'] || '-'}</h2>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                    <p><strong>Usia:</strong> ${j.Usia || '-'}</p>
+                    <p><strong>Tanggal Baptis:</strong> ${j['tanggal baptis'] || '-'}</p>
+                    <p><strong>Ibadah yang diikuti:</strong> ${j['ibadah yang diikuti'] || 'Tidak Ada'}</p>
+                </div>
+            `);
+            grid.appendChild(card);
+        });
     }
 
     function showModal(html) {
@@ -300,7 +438,14 @@
     }
 
     function closeModal() {
-        document.getElementById('itemModal').style.display = 'none';
+        // Stop audio/video when closing modal
+        const modal = document.getElementById('itemModal');
+        const mediaElements = modal.querySelectorAll('audio, iframe');
+        mediaElements.forEach(media => {
+            if(media.tagName === 'AUDIO') media.pause();
+            if(media.tagName === 'IFRAME') media.src = media.src; // Reload iframe to stop video
+        });
+        modal.style.display = 'none';
     }
 </script>
 </body>
