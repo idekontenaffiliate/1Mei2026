@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.31 @2026</h4>
+        <h4>versi 2.51 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -475,7 +475,7 @@ function renderKidung() {
 
             const originalBas = k['kunci_bas'] || '';
             const originalNot = k['not_angka'] || '';
-            const originalSyair = k['isi_syair'] || '';
+            const originalSyair = k['isi kidung'] || '';
             
             // BUG FIX: HTML disusun dengan rapi tanpa jeda enter yang merusak template literal
             const body = `
@@ -501,23 +501,21 @@ function renderKidung() {
                     </div>
 
                     <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
-                        <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
+                        <butiton onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
                         ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🖼️ No Foto</button>`}
                         ${hasAudio ? `<button onclick="switchKidungTab('audio')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🎵 Audio</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🎵 No Audio</button>`}
                         ${hasVideo ? `<button onclick="switchKidungTab('video')" style="flex:1; padding: 8px; cursor: pointer; color: black;">▶️ Video</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">▶️ No Video</button>`}
                     </div>
 
-                    <div id="kidung-view-area">
+
+                        <div id="kidung-view-area" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #eee; color: #333; padding: 10px; border-radius: 5px;">
                         <div id="tab-teks" class="kidung-tab" style="display: block;">
-                            <div id="kidung-isi-teks" style="font-size:${fontSize}px; white-space: pre-wrap; line-height: 1.5;">${k['isi kidung'] || ''}</div>
+                            <div id="kidung-bas" style="font-size:${fontSize}px;color: blue; font-weight: bold;">${originalBas}</div>
+                            <div id="kidung-not" style="font-size:${fontSize}px;color: green;">${originalNot}</div>
+                            <div id="kidung-syair" style="font-size:${fontSize}px;color: black; white-space: pre-wrap; line-height: 1.5;">${originalSyair}</div>
                             <hr style="margin-top: 20px; border-color: rgba(128,128,128,0.5);">
                             <p style="font-size: 0.9em; opacity: 0.8;"><em>Cerita: ${k['Cerita kidung'] || 'Tidak ada cerita.'}</em></p>
-                        </div>
-
-                        <div id="kidung-display-area" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #eee; color: #333; padding: 10px; border-radius: 5px;">
-                            <div id="kidung-bas" style="color: blue; font-weight: bold;">${originalBas}</div>
-                            <div id="kidung-not" style="color: green;">${originalNot}</div>
-                            <div id="kidung-syair" style="color: black;">${originalSyair}</div>
+                        
                         </div>
 
                         <div id="tab-foto" class="kidung-tab" style="display: none; text-align: center;">
@@ -530,11 +528,7 @@ function renderKidung() {
                                 ` : ''}
                         </div>
                         
-                        <div style="margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button onclick="shareKidung('syair', {judul: document.getElementById('kidung-judul').innerText, syair: document.getElementById('kidung-syair').innerText})">Share Syair</button>
-                            <button onclick="shareKidung('all', {judul: document.getElementById('kidung-judul').innerText, bas: document.getElementById('kidung-bas').innerText, not: document.getElementById('kidung-not').innerText, syair: document.getElementById('kidung-syair').innerText})">Share Lengkap (3 Text)</button>
-                        </div>
-        
+       
                         <div id="tab-audio" class="kidung-tab" style="display: none; text-align: center; padding: 20px 0;">
                             <p>Dengarkan Audio:</p>
                             ${hasAudio ? `
