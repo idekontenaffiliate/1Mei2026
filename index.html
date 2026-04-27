@@ -109,13 +109,14 @@
             Pass : <input type="password" id="pass" placeholder="Password">
             <button onclick="attemptLogin()">Masuk</button>
         </div>
-        <p style="font-size: 0.8rem; margin-top: 20px;">Hubungi Admin untuk akses<br>v2.90 @2026</p>
+        <p style="font-size: 0.8rem; margin-top: 20px;">Hubungi Admin untuk akses<br>v2.91 @2026</p>
     </div>
 
     <div id="main-app">
         <header>
-            <h3 id="app-title" style="margin:0;">Acara Solo 2026</h3>
+            <h3 id="app-title" style="margin:0;">Acara Solo 2026
             <button onclick="toggleDarkMode()" id="btn-theme-toggle" style="font-size: 1.2em; cursor:pointer; background:none; border:none; color:white;">☀️</button>
+            </h3>
         </header>
         <nav id="main-nav"></nav>
         <div id="app-content-wrapper">
@@ -425,59 +426,118 @@
                     <p class="modern-item-desc">Peserta: ${a.peserta || '-'}</p>
                 </div>
             `;
-            div.onclick = () => openDetailModal(a['nama acara'], foto, a.penjelasan);
+            const acaraawal = `🕒 ${a.jam || '-'} <br/> ${a['nama acara'] || ''}`;
+            div.onclick = () => openDetailModal(acaraawal, foto, a.penjelasan);
             list.appendChild(div);
         });
     }
 
-    function renderKegiatan() {
-        const content = document.getElementById('app-content');
-        content.innerHTML = `<div class="modern-list" id="keg-list"></div>`;
-        const list = document.getElementById('keg-list');
+ function renderAcara() {
+    const content = document.getElementById('app-content');
+    if (!content) return;
+
+    content.innerHTML = `<div class="modern-list" id="acara-list"></div>`;
+    const list = document.getElementById('acara-list');
+
+    if (!db || !db.Acara) return;
+
+    db.Acara.forEach((a, idx) => {
+        const color = modernColors[idx % modernColors.length];
+        const foto = formatDriveImage(a.foto) || 'https://via.placeholder.com/150/EEEEEE/999999?text=Acara';
         
-        db.Kegiatan.forEach((k, idx) => {
-            const color = modernColors[(idx+3) % modernColors.length];
-            const img = formatDriveImage(k.gambar) || formatDriveImage(k.foto) || 'https://via.placeholder.com/150/EEEEEE/999999?text=Kegiatan';
-            
-            const div = document.createElement('div');
-            div.className = 'modern-item';
-            div.innerHTML = `
-                <img src="${img}" style="border: 2px solid ${color};">
-                <div class="modern-item-content">
-                    <h3 class="modern-item-title" style="color: ${color};">${k.nama || '-'}</h3>
-                    <p class="modern-item-desc">${k.tujuan || '-'}</p>
-                </div>
-            `;
-            
-            // Susun Penjelasan (Gabung tujuan + PIC)
-            const textPenjelasan = `Tujuan:\n${k.tujuan || '-'}\n\nPIC: ${k.pic_nama || '-'}`;
-            div.onclick = () => openDetailModal(k.nama, img, textPenjelasan);
-            list.appendChild(div);
-        });
-    }
+        const div = document.createElement('div');
+        div.className = 'modern-item';
 
-    // Modal Dinamis untuk Acara dan Kegiatan (Mendukung Enter / pre-wrap)
-    function openDetailModal(title, imageSrc, description) {
-        const body = `
-            <div style="text-align: center;">
-                <h2 style="font-family:'Poppins', sans-serif; margin-top:0;">${title || 'Detail'}</h2>
-                
-                ${imageSrc && !imageSrc.includes('placeholder') ? `<img src="${imageSrc}" style="width:100%; max-height:40vh; object-fit:cover; border-radius:10px; margin-bottom:15px; box-shadow:0 4px 10px rgba(0,0,0,0.2);">` : ''}
-                
-                <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
-                    <button class="btn-action" onclick="adjustFontGlobal(-2)">A-</button>
-                    <button class="btn-action" onclick="adjustFontGlobal(2)">A+</button>
-                    <button class="btn-action" onclick="copyTargetText('copy-target-detail')">📋 Copy</button>
+        div.innerHTML = `
+            <img src="${foto}" style="border: 2px solid ${color};">
+            <div class="modern-item-content">
+                <div style="font-size: 0.85em; font-weight:bold; color: ${color}; margin-bottom:2px;">
+                    🕒 ${a.jam || '-'}
                 </div>
-
-                <div style="text-align: left; background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border);">
-                    <div id="copy-target-detail" class="scalable-text font-poppins">${description || 'Tidak ada penjelasan.'}</div>
-                </div>
+                <h3 class="modern-item-title">${a['nama acara'] || '-'}</h3>
+                <p class="modern-item-desc">Peserta: ${a.peserta || '-'}</p>
             </div>
         `;
-        showModal(body);
-        adjustFontGlobal(0); // Terapkan memori font
-    }
+
+        const acaraawal = `🕒 ${a.jam || '-'} <br/> ${a['nama acara'] || '-'}`;
+
+        div.onclick = () => openDetailModal(
+            acaraawal,
+            foto,
+            a.penjelasan || '-'
+        );
+
+        list.appendChild(div);
+    });
+}
+
+function renderKegiatan() {
+    const content = document.getElementById('app-content');
+    if (!content) return;
+
+    content.innerHTML = `<div class="modern-list" id="keg-list"></div>`;
+    const list = document.getElementById('keg-list');
+
+    if (!db || !db.Kegiatan) return;
+    
+    db.Kegiatan.forEach((k, idx) => {
+        const color = modernColors[(idx+3) % modernColors.length];
+        const img = formatDriveImage(k.gambar) || formatDriveImage(k.foto) || 'https://via.placeholder.com/150/EEEEEE/999999?text=Kegiatan';
+        
+        const div = document.createElement('div');
+        div.className = 'modern-item';
+
+        div.innerHTML = `
+            <img src="${img}" style="border: 2px solid ${color};">
+            <div class="modern-item-content">
+                <h3 class="modern-item-title" style="color: ${color};">${k.nama || '-'}</h3>
+                <p class="modern-item-desc">${k.tujuan || '-'}</p>
+            </div>
+        `;
+        
+        const textPenjelasan = `Tujuan:\n${k.tujuan || '-'}\n\nPIC: ${k.pic_nama || '-'}`;
+
+        div.onclick = () => openDetailModal(
+            k.nama || '-',
+            img,
+            textPenjelasan
+        );
+
+        list.appendChild(div);
+    });
+}
+
+function openDetailModal(title, imageSrc, description) {
+    const body = `
+        <div style="text-align: center;">
+            <h2 style="font-family:'Poppins', sans-serif; margin-top:0;">
+                ${title || 'Detail'}
+            </h2>
+
+            ${
+                imageSrc && !imageSrc.includes('placeholder')
+                ? `<img src="${imageSrc}" style="width:100%; max-height:40vh; object-fit:cover; border-radius:10px; margin-bottom:15px;">`
+                : ''
+            }
+
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+                <button class="btn-action" onclick="adjustFontGlobal(-2)">A-</button>
+                <button class="btn-action" onclick="adjustFontGlobal(2)">A+</button>
+                <button class="btn-action" onclick="copyTargetText('copy-target-detail')">📋 Copy</button>
+            </div>
+
+            <div style="text-align: left; padding: 15px; border-radius: 8px;">
+                <div id="copy-target-detail" class="scalable-text font-poppins">
+                    ${description || 'Tidak ada penjelasan.'}
+                </div>
+            </div>
+        </div>
+    `;
+
+    showModal(body);
+    adjustFontGlobal(0);
+}
+    
 
     function renderJemaat() {
         const content = document.getElementById('app-content');
