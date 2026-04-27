@@ -71,7 +71,8 @@
         .modern-item img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px; flex-shrink: 0; }
         .modern-item-content { flex: 1; overflow: hidden; }
         .modern-item-title { margin: 0; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .modern-item-desc { margin: 4px 0 0 0; font-size: 0.85em; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .modern-item-desc { margin: 4px 0 0 0; font-size: 0.95em; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .modern-item-desc2 { margin: 3px 0 0 0; font-size: 0.85em; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* Kidung View */
         .kidung-card { background: var(--card-bg); padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; color: var(--text-color); border: 1px solid var(--card-border); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -456,6 +457,7 @@
                 </div>
                 <h3 class="modern-item-title">${a['nama acara'] || '-'}</h3>
                 <p class="modern-item-desc">Peserta: ${a.peserta || '-'}</p>
+                <p class="modern-item-desc2">Peserta: ${a.penjelasan || '-'}</p>
             </div>
         `;
 
