@@ -127,7 +127,17 @@
         <div class="modal-content" id="modalBody"></div>
         <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
+    <div id="viewer">
 
+        <img id="viewerImg" src="">
+
+        <div style="position:absolute; top:20px; right:20px; display:flex; gap:10px;">
+
+            <button onclick="closeViewer()" style="background:rgba(0,0,0,0.5); color:white; border:none; padding:10px 15px; border-radius:50%; font-size:20px;">✕</button>
+
+        </div>
+
+    </div>
 <script>
     const URLS = {
         Awal: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6N6cAL1OoX2hCBXmL3MAmQcgxMTglDN2LtCseQdOC8zkWdDwRDCRDjKnI9NE3vMGSaXgWesgcdvGV/pub?output=csv",
@@ -142,18 +152,25 @@
     let db = {};
     let isDarkMode = false;
     let currentFontSize = 16; // Disimpan global, tidak di-reset
+    let currentTranspose = 0;
 
     // Warna dinamis untuk list Kegiatan
     const modernColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#C06C84', '#F67280'];
 
     Papa.parse(URLS.Awal, { download: true, header: true, complete: res => { db.Awal = res.data; }});
 
-    function formatDriveImage(url) {
-        if (!url) return '';
-        const match = url.match(/[-\w]{25,}/);
-        return match ? `https://lh3.googleusercontent.com/d/$${match[0]}` : url;
-    }
 
+ // Format Image Drive yang Anti-Gagal (Bisa nampil maksimal)
+
+    function formatDriveImage(url) {
+
+        if (!url) return '';
+
+        const match = url.match(/[-\w]{25,}/);
+
+        return match ? `https://lh3.googleusercontent.com/d/${match[0]}` : url;
+
+    }
     async function attemptLogin() {
         if (!db.Awal) return alert("Sistem masih memuat data, tunggu sebentar...");
         
@@ -282,6 +299,7 @@
         const styles = [...new Set(db.Kidung.map(k => k['style']).filter(Boolean))];
         const kategoris = [...new Set(db.Kidung.map(k => k['Kategori']).filter(Boolean))];
         const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
+
 
         content.innerHTML = `
             <div>
