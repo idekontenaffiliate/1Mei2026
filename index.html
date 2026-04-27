@@ -5,62 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Perbauran Gembala, Solo 1-2 Mei 2026</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-   
         :root {
-            --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6;
-            --k-bg-color: white; --k-fg-color: black; --k-item-bg: rgba(255, 255, 255, 0.8);
+            /* Tema Terang Default */
+            --bg-color: #f4f7f6;
+            --text-color: #000000;
+            --card-bg: #ffffff;
+            --card-border: #e0e0e0;
+            --header-bg: #2c3e50;
+            --accent: #3498db;
+            --modal-bg: rgba(255, 255, 255, 0.95);
         }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); height: 100%; overflow: hidden; }
+
+        /* Tema Gelap Strict */
+        body.dark-theme {
+            --bg-color: #000000 !important;
+            --text-color: #ffffff !important;
+            --card-bg: #111111 !important;
+            --card-border: #333333 !important;
+            --header-bg: #000000 !important;
+            --modal-bg: rgba(0, 0, 0, 0.95) !important;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-color);
+            height: 100%; overflow: hidden; 
+            transition: background 0.3s, color 0.3s;
+        }
         
         /* Login Screen */
         #login-screen {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; background: var(--primary); color: white; text-align: center;
+            height: 100vh; background: var(--header-bg); color: white; text-align: center;
         }
-        .login-box { background: white; padding: 2rem; border-radius: 10px; color: #333; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .login-box { background: var(--card-bg); padding: 2rem; border-radius: 10px; color: var(--text-color); width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--card-border); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); }
         .login-box button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
-        
         #main-app { display: none; flex-direction: column; height: 100vh; }
-        header { background: var(--primary); color: white; padding: 10px; text-align: center; display: flex; justify-content: space-between; align-items: center; }
-        nav { display: flex; overflow-x: auto; background: #fff; border-bottom: 2px solid #ddd; }
-        nav button { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; white-space: nowrap; font-weight: bold; color: #555; }
-        nav button.active { border-bottom: 3px solid var(--accent); color: var(--accent); }
+        header { background: var(--header-bg); color: white; padding: 10px; text-align: center; display: flex; justify-content: space-between; align-items: center; }
+        nav { display: flex; overflow-x: auto; background: var(--card-bg); border-bottom: 2px solid var(--card-border); }
+        nav button { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; white-space: nowrap; font-weight: bold; color: var(--text-color); opacity: 0.7; }
+        nav button.active { border-bottom: 3px solid var(--accent); color: var(--accent); opacity: 1; }
 
-        .content-area { flex: 1; overflow-y: auto; padding: 15px; }
+        /* Container dengan Background Spreadsheet */
+        #app-content-wrapper {
+            flex: 1; overflow-y: auto; 
+            background-size: cover; background-position: center; background-attachment: fixed;
+            background-color: var(--bg-color);
+        }
+        .content-area { padding: 15px; min-height: 100%; }
 
-        /* General Cards & Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-        .card { background: white; border-radius: 8px; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
-        .card img { width: 100%; border-radius: 5px; height: 120px; object-fit: cover; }
-        
-        /* Acara */
-        .acara-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .acara-time { color: var(--accent); font-weight: bold; font-size: 1.1em; }
+        /* Tampilan Node.js Style untuk List (Kegiatan/Acara) */
+        .modern-list { display: flex; flex-direction: column; gap: 12px; }
+        .modern-item { 
+            display: flex; align-items: center; background: var(--card-bg); 
+            padding: 15px; border-radius: 12px; border: 1px solid var(--card-border);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s;
+        }
+        .modern-item:active { transform: scale(0.98); }
+        .modern-item img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px; flex-shrink: 0; }
+        .modern-item-content { flex: 1; overflow: hidden; }
+        .modern-item-title { margin: 0; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .modern-item-desc { margin: 4px 0 0 0; font-size: 0.85em; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* Kidung View */
-        #kidung-container { background: var(--k-bg); color: var(--k-fg); min-height: 100%; padding: 10px; border-radius: 8px; background-size: cover; background-attachment: fixed; }
-        .kidung-card { background: rgba(255,255,255,0.85); padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; color: black; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .mark-kuning { border: 3px solid #FFD700 !important; }
-        .mark-biru { border: 3px solid #1E90FF !important; }
+        .kidung-card { background: var(--card-bg); padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; color: var(--text-color); border: 1px solid var(--card-border); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .mark-kuning { border-left: 5px solid #FFD700 !important; }
+        .mark-biru { border-left: 5px solid #1E90FF !important; }
+        .mark-merah { border-left: 5px solid #FF4136 !important; }
         
         .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .k-input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px; }
+        .k-input { padding: 10px; border-radius: 5px; border: 1px solid var(--card-border); flex: 1; min-width: 120px; background: var(--card-bg); color: var(--text-color); }
 
         /* Modal & Tabs */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; overflow-y: auto; z-index: 1000; }
-        .modal-content { padding: 20px; }
-        .close-btn { background: var(--accent); color: white; padding: 15px; border: none; width: 100%; position: sticky; bottom: 0; font-weight: bold; font-size: 1.1em; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-bg); color: var(--text-color); overflow-y: auto; z-index: 1000; }
+        .modal-content { padding: 20px; padding-bottom: 80px; }
+        .close-btn { background: var(--header-bg); color: white; padding: 15px; border: none; width: 100%; position: fixed; bottom: 0; left: 0; font-weight: bold; font-size: 1.1em; cursor: pointer; z-index: 1010; }
         
-        .tab-btn { padding: 10px; border: none; background: #555; color: white; border-radius: 5px; cursor: pointer; }
-        .tab-btn.active { background: var(--accent); }
-        .kidung-tab { display: none; margin-top: 15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; }
+        .tab-btn { padding: 10px; border: none; background: var(--card-border); color: var(--text-color); border-radius: 5px; cursor: pointer; flex: 1; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        .kidung-tab { display: none; margin-top: 15px; background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border); }
         .active-tab { display: block; }
 
-        .btn-action { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; background: #ddd; color: black; margin-bottom: 5px; }
-        .k-text-scalable { white-space: pre-wrap; font-family: monospace; line-height: 1.5; margin-bottom: 10px; transition: font-size 0.2s; }
+        .btn-action { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; background: var(--card-border); color: var(--text-color); margin-bottom: 5px; }
+        
+        /* Font Styles */
+        .scalable-text { white-space: pre-wrap; line-height: 1.5; transition: font-size 0.2s; word-wrap: break-word; }
+        .font-courier { font-family: 'Courier New', Courier, monospace; }
+        .font-poppins { font-family: 'Poppins', sans-serif; }
     </style>
 </head>
 <body>
@@ -72,9 +109,8 @@
             Pass : <input type="password" id="pass" placeholder="Password">
             <button onclick="attemptLogin()">Masuk</button>
         </div>
-   
-       <p style="font-size: 0.8rem; margin-top: 20px;">Hubungi Admin untuk akses<br>v2.80 @2026</p>
-    </div>    </div>
+        <p style="font-size: 0.8rem; margin-top: 20px;">Hubungi Admin untuk akses<br>v2.90 @2026</p>
+    </div>
 
     <div id="main-app">
         <header>
@@ -82,7 +118,9 @@
             <button onclick="toggleDarkMode()" id="btn-theme-toggle" style="font-size: 1.2em; cursor:pointer; background:none; border:none; color:white;">☀️</button>
         </header>
         <nav id="main-nav"></nav>
-        <div class="content-area" id="app-content"></div>
+        <div id="app-content-wrapper">
+            <div class="content-area" id="app-content"></div>
+        </div>
     </div>
 
     <div id="itemModal" class="modal">
@@ -90,22 +128,6 @@
         <button class="close-btn" onclick="closeModal()">Kembali Menu</button>
     </div>
 
-
-  
-    <div id="viewer">
-        <img id="viewerImg" src="">
-        <div style="position:absolute; top:20px; right:20px; display:flex; gap:10px;">
-            <button onclick="closeViewer()" style="background:rgba(0,0,0,0.5); color:white; border:none; padding:10px 15px; border-radius:50%; font-size:20px;">✕</button>
-        </div>
-    </div>
-
-
-    
-
-
-
-
-    
 <script>
     const URLS = {
         Awal: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6N6cAL1OoX2hCBXmL3MAmQcgxMTglDN2LtCseQdOC8zkWdDwRDCRDjKnI9NE3vMGSaXgWesgcdvGV/pub?output=csv",
@@ -119,21 +141,21 @@
     let currentUser = null;
     let db = {};
     let isDarkMode = false;
-    let currentFontSize = 16;
-    let currentTranspose = 0;
+    let currentFontSize = 16; // Disimpan global, tidak di-reset
 
-    // Load Initial Data User
+    // Warna dinamis untuk list Kegiatan
+    const modernColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#C06C84', '#F67280'];
+
     Papa.parse(URLS.Awal, { download: true, header: true, complete: res => { db.Awal = res.data; }});
 
-    // Format Image Drive yang Anti-Gagal (Bisa nampil maksimal)
     function formatDriveImage(url) {
         if (!url) return '';
         const match = url.match(/[-\w]{25,}/);
-        return match ? `https://lh3.googleusercontent.com/d/${match[0]}` : url;
+        return match ? `https://lh3.googleusercontent.com/d/$${match[0]}` : url;
     }
 
     async function attemptLogin() {
-        if (!db.Awal) return alert("Sistem masih memuat data, tunggu 2 detik lalu coba lagi.");
+        if (!db.Awal) return alert("Sistem masih memuat data, tunggu sebentar...");
         
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
@@ -145,10 +167,9 @@
             document.getElementById('main-app').style.display = 'flex';
             document.getElementById('app-title').innerText = `Halo, ${found.username}`;
             
-            // Tarik data background jika ada
             Papa.parse(URLS.Background, { download: true, header: true, complete: res => {
                 db.Background = res.data;
-                applyBackground();
+                applySpreadsheetBackground();
             }});
 
             setupNavigation();
@@ -157,32 +178,39 @@
         }
     }
 
-    function applyBackground() {
-        if (db.Background && db.Background.length > 0 && !isDarkMode) {
+    function applySpreadsheetBackground() {
+        const wrapper = document.getElementById('app-content-wrapper');
+        // Jika mode gelap aktif, JANGAN terapkan background gambar/warna dari spreadsheet (strict black)
+        if (isDarkMode) {
+            wrapper.style.backgroundImage = 'none';
+            return;
+        }
+
+        if (db.Background && db.Background.length > 0) {
             const bgData = db.Background[0];
-            const bg = bgData['isi background'] || '#ffffff';
-            const fg = bgData['isi foreground'] || '#000000';
-            
+            const bg = bgData['isi background'] || '';
             if (bg.startsWith('http')) {
-                document.documentElement.style.setProperty('--k-bg', `url('${bg}')`);
-            } else {
-                document.documentElement.style.setProperty('--k-bg', bg);
+                wrapper.style.backgroundImage = `url('${bg}')`;
+            } else if(bg) {
+                wrapper.style.backgroundImage = 'none';
+                wrapper.style.backgroundColor = bg;
             }
-            document.documentElement.style.setProperty('--k-fg', fg);
         }
     }
 
     function toggleDarkMode() {
         isDarkMode = !isDarkMode;
         const btn = document.getElementById('btn-theme-toggle');
+        const body = document.body;
+        
         if (isDarkMode) {
             btn.innerText = "🌙";
-            document.documentElement.style.setProperty('--k-bg', '#121212');
-            document.documentElement.style.setProperty('--k-fg', '#ffffff');
+            body.classList.add('dark-theme');
         } else {
             btn.innerText = "☀️";
-            applyBackground(); // Kembali ke tema custom
+            body.classList.remove('dark-theme');
         }
+        applySpreadsheetBackground(); // Refresh logic background
     }
 
     function setupNavigation() {
@@ -203,9 +231,8 @@
         if (el) el.classList.add('active');
         
         const content = document.getElementById('app-content');
-        content.innerHTML = "Memuat data...";
+        content.innerHTML = `<div style="text-align:center; margin-top:20px;">Memuat data ${name}...</div>`;
 
-        // Lazy load module data
         if (!db[name]) {
             Papa.parse(URLS[name] || URLS.Awal, {
                 download: true, header: true,
@@ -225,11 +252,30 @@
         else if (checkName === 'acara') renderAcara();
         else if (checkName === 'kegiatan') renderKegiatan();
         else if (checkName === 'jemaat') renderJemaat();
-        else document.getElementById('app-content').innerHTML = `Modul ${name} ditampilkan di sini.`;
+        else document.getElementById('app-content').innerHTML = `Modul ${name} siap.`;
     }
 
     // =====================================
-    // RENDER KIDUNG (Font Size, Copy, Music)
+    // GLOBAL FONT & COPY LOGIC
+    // =====================================
+    function adjustFontGlobal(delta) {
+        currentFontSize += delta;
+        if(currentFontSize < 10) currentFontSize = 10;
+        if(currentFontSize > 100) currentFontSize = 100;
+        document.querySelectorAll('.scalable-text').forEach(el => {
+            el.style.fontSize = currentFontSize + 'px';
+        });
+    }
+
+    function copyTargetText(targetId) {
+        const text = document.getElementById(targetId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Teks berhasil disalin!');
+        });
+    }
+
+    // =====================================
+    // RENDER KIDUNG
     // =====================================
     function renderKidung() {
         const content = document.getElementById('app-content');
@@ -238,7 +284,7 @@
         const tempos = [...new Set(db.Kidung.map(k => k['Tempo']).filter(Boolean))];
 
         content.innerHTML = `
-            <div id="kidung-container">
+            <div>
                 <div class="filter-group">
                     <input type="text" id="k-search" class="k-input" onkeyup="filterKidung()" placeholder="🔍 Cari No, Isi, Cerita...">
                     <select id="k-style" class="k-input" onchange="filterKidung()">
@@ -246,12 +292,8 @@
                         ${styles.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
                     <select id="k-kat" class="k-input" onchange="filterKidung()">
-                        <option value="">🗂️ Semua Kategori</option>
+                        <option value="">🗂️ Kategori</option>
                         ${kategoris.map(s => `<option value="${s}">${s}</option>`).join('')}
-                    </select>
-                    <select id="k-tempo" class="k-input" onchange="filterKidung()">
-                        <option value="">⏱️ Semua Tempo</option>
-                        ${tempos.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
                 </div>
                 <div id="kidung-list"></div>
@@ -264,21 +306,14 @@
         const search = document.getElementById('k-search').value.toLowerCase();
         const style = document.getElementById('k-style').value;
         const kat = document.getElementById('k-kat').value;
-        const tempo = document.getElementById('k-tempo').value;
         const list = document.getElementById('kidung-list');
         list.innerHTML = "";
 
         db.Kidung.forEach(k => {
             const no = (k['no kidung'] || '').toString().toLowerCase();
             const isi = (k['isi kidung'] || '').toString().toLowerCase();
-            const cerita = (k['Cerita kidung'] || '').toString().toLowerCase();
             
-            const matchSearch = no.includes(search) || isi.includes(search) || cerita.includes(search);
-            const matchStyle = !style || k['style'] === style;
-            const matchKat = !kat || k['Kategori'] === kat;
-            const matchTempo = !tempo || k['Tempo'] === tempo;
-
-            if (matchSearch && matchStyle && matchKat && matchTempo) {
+            if ((no.includes(search) || isi.includes(search)) && (!style || k['style'] === style) && (!kat || k['Kategori'] === kat)) {
                 let borderClass = "";
                 if (k.mark) {
                     const m = k.mark.toLowerCase().trim();
@@ -290,11 +325,10 @@
                 const div = document.createElement('div');
                 div.className = `kidung-card ${borderClass}`;
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong>${k['no kidung']}. ${k['judul kidung'] || 'Tanpa Judul'}</strong>
-                        <span>${k['link foto kidung'] ? '🖼️' : ''} ${k['link lagu'] ? '🎵' : ''}</span>
+                        <span style="font-size:1.2em;">${k['link foto kidung'] ? '🖼️' : ''} ${k['link lagu'] ? '🎵' : ''}</span>
                     </div>
-                    <small>${k['style'] || '-'} | ${k['Kategori'] || '-'} | ${k['Tempo'] || '-'}</small>
                 `;
                 div.onclick = () => openKidungDetail(k);
                 list.appendChild(div);
@@ -303,59 +337,45 @@
     }
 
     function openKidungDetail(k) {
-        // currentFontSize = 16;
-        currentTranspose = 0;
         const img = formatDriveImage(k['link foto kidung']);
         const audio = k['link lagu'];
-        const video = k['link video'];
-
+        
         const body = `
-            <div style="text-align: center; color: white;">
+            <div style="text-align: center;">
                 <h2>${k['no kidung']}. ${k['judul kidung']}</h2>
                 
-                <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 15px; overflow-x: auto;">
+                <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 15px;">
                     <button class="tab-btn active" onclick="switchKTab('teks', this)">📝 Teks</button>
                     ${img ? `<button class="tab-btn" onclick="switchKTab('foto', this)">🖼️ Foto</button>` : ''}
-                    ${audio ? `<button class="tab-btn" onclick="switchKTab('audio', this)">🎵 Audio</button>` : ''}
-                    ${video ? `<button class="tab-btn" onclick="switchKTab('video', this)">▶️ Video</button>` : ''}
                 </div>
 
                 <div id="tab-teks" class="kidung-tab active-tab">
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;">
-                        <button class="btn-action" onclick="adjustFont(-2)">A-</button>
-                        <button class="btn-action" onclick="adjustFont(2)">A+</button>
-                        <button class="btn-action" onclick="copyText()">📋 Copy</button>
-                        <button class="btn-action" onclick="alert('Transpose -')">T-</button>
-                        <button class="btn-action" onclick="alert('Transpose +')">T+</button>
-                        <button class="btn-action" style="background:#25D366; color:white;" onclick="shareWA('${k['judul kidung']}')">WhatsApp</button>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px;">
+                        <button class="btn-action" onclick="adjustFontGlobal(-2)">A-</button>
+                        <button class="btn-action" onclick="adjustFontGlobal(2)">A+</button>
+                        <button class="btn-action" onclick="copyTargetText('copy-target-kidung')">📋 Copy</button>
                     </div>
 
-                    ${audio ? `<audio controls autoplay style="width:100%; margin-bottom:10px;"><source src="${audio}"></audio>` : ''}
+                    ${audio ? `<audio controls autoplay style="width:100%; margin-bottom:15px;"><source src="${audio}"></audio>` : ''}
 
-                    <div id="k-text-area" style="text-align: left; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px;">
-                        <div class="k-text-scalable" style="color: #64B5F6; font-weight: bold;">${k['kunci_bas'] || ''}</div>
-                        <div class="k-text-scalable" style="color: #AED581;">${k['not_angka'] || ''}</div>
-                        <div class="k-text-scalable" id="copy-target" style="color: white;">${k['isi kidung'] || ''}</div>
-                        <hr style="border-color: #555; margin: 15px 0;">
+                    <div style="text-align: left; background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border);">
+                        <div id="copy-target-kidung" class="scalable-text font-courier">
+<span style="color: #64B5F6; font-weight: bold;">${k['kunci_bas'] || ''}</span>
+<span style="color: #AED581;">${k['not_angka'] || ''}</span>
+<span>${k['isi kidung'] || ''}</span>
+                        </div>
+                        <hr style="border-color: var(--card-border); margin: 15px 0;">
                         <p style="font-size: 0.9em; font-style: italic;">Cerita: ${k['Cerita kidung'] || '-'}</p>
                     </div>
                 </div>
 
                 <div id="tab-foto" class="kidung-tab">
-                    <img src="${img}" style="width: 100%; object-fit: contain; max-height: 80vh; border-radius: 8px;">
-                </div>
-
-                <div id="tab-audio" class="kidung-tab">
-                    <p>Pemutar Audio Manual</p>
-                    <audio controls style="width: 100%;"><source src="${audio}"></audio>
-                </div>
-
-                <div id="tab-video" class="kidung-tab">
-                    ${video ? `<iframe width="100%" height="250" src="${video.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>` : ''}
+                    <img src="${img}" style="width: 100%; object-fit: contain; max-height: 70vh; border-radius: 8px;">
                 </div>
             </div>
         `;
         showModal(body);
+        adjustFontGlobal(0); // Terapkan memori font terakhir
     }
 
     function switchKTab(id, btn) {
@@ -365,70 +385,85 @@
         btn.classList.add('active');
     }
 
-    function adjustFont(delta) {
-        currentFontSize += delta;
-        if(currentFontSize < 10) currentFontSize = 10;
-        if(currentFontSize > 600) currentFontSize = 600;
-        document.querySelectorAll('.k-text-scalable').forEach(el => el.style.fontSize = currentFontSize + 'px');
-    }
-
-    function copyText() {
-        const text = document.getElementById('copy-target').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Teks Kidung disalin ke clipboard!');
-        });
-    }
-
-    function shareWA(judul) {
-        const text = document.getElementById('copy-target').innerText;
-        const msg = `*${judul}*\n\n${text}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-    }
-
     // =====================================
-    // RENDER ACARA, KEGIATAN, JEMAAT
+    // RENDER ACARA & KEGIATAN (Node.js Style)
     // =====================================
     function renderAcara() {
         const content = document.getElementById('app-content');
-        content.innerHTML = "";
-        db.Acara.forEach(a => {
-            content.innerHTML += `
-                <div class="acara-card">
-                    <div class="acara-time">${a.jam || '-'}</div>
-                    <h3 style="margin:5px 0;">${a['nama acara'] || '-'}</h3>
-                    <p style="margin:5px 0;"><strong>Peserta:</strong> ${a.peserta || '-'}</p>
-                    <small>${a.penjelasan || ''}</small>
+        content.innerHTML = `<div class="modern-list" id="acara-list"></div>`;
+        const list = document.getElementById('acara-list');
+
+        db.Acara.forEach((a, idx) => {
+            const color = modernColors[idx % modernColors.length];
+            const foto = formatDriveImage(a.foto) || 'https://via.placeholder.com/150/EEEEEE/999999?text=Acara';
+            
+            const div = document.createElement('div');
+            div.className = 'modern-item';
+            div.innerHTML = `
+                <img src="${foto}" style="border: 2px solid ${color};">
+                <div class="modern-item-content">
+                    <div style="font-size: 0.85em; font-weight:bold; color: ${color}; margin-bottom:2px;">🕒 ${a.jam || '-'}</div>
+                    <h3 class="modern-item-title" style="color: var(--text-color);">${a['nama acara'] || '-'}</h3>
+                    <p class="modern-item-desc">Peserta: ${a.peserta || '-'}</p>
                 </div>
             `;
+            div.onclick = () => openDetailModal(a['nama acara'], foto, a.penjelasan);
+            list.appendChild(div);
         });
     }
 
     function renderKegiatan() {
         const content = document.getElementById('app-content');
-        content.innerHTML = `<div class="grid" id="keg-grid"></div>`;
-        const grid = document.getElementById('keg-grid');
+        content.innerHTML = `<div class="modern-list" id="keg-list"></div>`;
+        const list = document.getElementById('keg-list');
         
-        db.Kegiatan.forEach(k => {
-            const img = formatDriveImage(k.gambar) || 'https://via.placeholder.com/150';
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `<img src="${img}"><h4>${k.nama || '-'}</h4>`;
-            card.onclick = () => showModal(`
-                <h2 style="text-align:center;">${k.nama}</h2>
-                <img src="${img}" style="width:100%; max-height:60vh; object-fit:contain; border-radius:10px; margin-bottom:15px;">
-                <p><strong>Tujuan:</strong> ${k.tujuan || '-'}</p>
-                <div style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.1); padding:10px; border-radius:8px;">
-                    <img src="${formatDriveImage(k.pic_foto) || 'https://via.placeholder.com/50'}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
-                    <span style="font-size:1.1em; font-weight:bold;">PIC: ${k.pic_nama || '-'}</span>
+        db.Kegiatan.forEach((k, idx) => {
+            const color = modernColors[(idx+3) % modernColors.length];
+            const img = formatDriveImage(k.gambar) || formatDriveImage(k.foto) || 'https://via.placeholder.com/150/EEEEEE/999999?text=Kegiatan';
+            
+            const div = document.createElement('div');
+            div.className = 'modern-item';
+            div.innerHTML = `
+                <img src="${img}" style="border: 2px solid ${color};">
+                <div class="modern-item-content">
+                    <h3 class="modern-item-title" style="color: ${color};">${k.nama || '-'}</h3>
+                    <p class="modern-item-desc">${k.tujuan || '-'}</p>
                 </div>
-            `);
-            grid.appendChild(card);
+            `;
+            
+            // Susun Penjelasan (Gabung tujuan + PIC)
+            const textPenjelasan = `Tujuan:\n${k.tujuan || '-'}\n\nPIC: ${k.pic_nama || '-'}`;
+            div.onclick = () => openDetailModal(k.nama, img, textPenjelasan);
+            list.appendChild(div);
         });
+    }
+
+    // Modal Dinamis untuk Acara dan Kegiatan (Mendukung Enter / pre-wrap)
+    function openDetailModal(title, imageSrc, description) {
+        const body = `
+            <div style="text-align: center;">
+                <h2 style="font-family:'Poppins', sans-serif; margin-top:0;">${title || 'Detail'}</h2>
+                
+                ${imageSrc && !imageSrc.includes('placeholder') ? `<img src="${imageSrc}" style="width:100%; max-height:40vh; object-fit:cover; border-radius:10px; margin-bottom:15px; box-shadow:0 4px 10px rgba(0,0,0,0.2);">` : ''}
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+                    <button class="btn-action" onclick="adjustFontGlobal(-2)">A-</button>
+                    <button class="btn-action" onclick="adjustFontGlobal(2)">A+</button>
+                    <button class="btn-action" onclick="copyTargetText('copy-target-detail')">📋 Copy</button>
+                </div>
+
+                <div style="text-align: left; background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border);">
+                    <div id="copy-target-detail" class="scalable-text font-poppins">${description || 'Tidak ada penjelasan.'}</div>
+                </div>
+            </div>
+        `;
+        showModal(body);
+        adjustFontGlobal(0); // Terapkan memori font
     }
 
     function renderJemaat() {
         const content = document.getElementById('app-content');
-        content.innerHTML = `<div class="grid" id="jem-grid"></div>`;
+        content.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:15px;" id="jem-grid"></div>`;
         const grid = document.getElementById('jem-grid');
 
         db.Jemaat.forEach((j, idx) => {
@@ -436,17 +471,21 @@
             const foto = formatDriveImage(j['Link Foto']) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${genderSeed}${idx}`;
             
             const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `<img src="${foto}"><h4>${j['Nama Panggilan'] || j['Nama Lengkap'] || '-'}</h4>`;
-            card.onclick = () => showModal(`
-                <img src="${foto}" style="width:150px; height:150px; object-fit:cover; border-radius:50%; display:block; margin:0 auto 15px auto; border: 3px solid white;">
-                <h2 style="text-align:center;">${j['Nama Lengkap'] || '-'}</h2>
-                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
-                    <p><strong>Usia:</strong> ${j.Usia || '-'}</p>
-                    <p><strong>Tanggal Baptis:</strong> ${j['tanggal baptis'] || '-'}</p>
-                    <p><strong>Ibadah yang diikuti:</strong> ${j['ibadah yang diikuti'] || 'Tidak Ada'}</p>
-                </div>
-            `);
+            card.style.cssText = "background:var(--card-bg); border-radius:10px; text-align:center; padding:15px; border:1px solid var(--card-border); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.05);";
+            card.innerHTML = `<img src="${foto}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+                              <h4 style="margin:0; font-family:'Poppins', sans-serif;">${j['Nama Panggilan'] || j['Nama Lengkap'] || '-'}</h4>`;
+            
+            card.onclick = () => {
+                showModal(`
+                    <img src="${foto}" style="width:120px; height:120px; object-fit:cover; border-radius:50%; display:block; margin:0 auto 15px auto; border: 3px solid var(--accent);">
+                    <h2 style="text-align:center; font-family:'Poppins', sans-serif;">${j['Nama Lengkap'] || '-'}</h2>
+                    <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 15px; border-radius: 8px; text-align:left;">
+                        <p><strong>Usia:</strong> ${j.Usia || '-'}</p>
+                        <p><strong>Tanggal Baptis:</strong> ${j['tanggal baptis'] || '-'}</p>
+                        <p><strong>Ibadah:</strong> ${j['ibadah yang diikuti'] || 'Tidak Ada'}</p>
+                    </div>
+                `);
+            };
             grid.appendChild(card);
         });
     }
@@ -457,12 +496,11 @@
     }
 
     function closeModal() {
-        // Stop audio/video when closing modal
         const modal = document.getElementById('itemModal');
         const mediaElements = modal.querySelectorAll('audio, iframe');
         mediaElements.forEach(media => {
             if(media.tagName === 'AUDIO') media.pause();
-            if(media.tagName === 'IFRAME') media.src = media.src; // Reload iframe to stop video
+            if(media.tagName === 'IFRAME') media.src = media.src;
         });
         modal.style.display = 'none';
     }
