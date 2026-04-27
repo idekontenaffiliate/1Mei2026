@@ -180,16 +180,22 @@ function showKegiatanDetail(kegiatan) {
 // --- Fungsi untuk mengubah ukuran font secara dinamis ---
 
 function adjustKidungFont(delta) {
-    currentFontSize += delta;
+    window.currentFontSize += delta;
     
     // Batasi ukuran font agar tidak terlalu kecil atau terlalu besar
     if (currentFontSize < 5) currentFontSize = 5; 
     if (currentFontSize > 500) currentFontSize = 500;
 
-    const teksContainer = document.getElementById('kidung-isi-teks');
-    if (teksContainer) {
-        teksContainer.style.fontSize = currentFontSize + 'px';
-    }
+    const elements = ['kidung-bas', 'kidung-not', 'kidung-syair'];
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.fontSize = window.currentFontSize + 'px';
+        }
+    });
+    
+    // Opsional: update juga indikator angkanya jika kamu mau buat span khusus
+    console.log("Ukuran font sekarang: ", window.currentFontSize);
 }
 
 // --- Fungsi untuk berpindah tab (Teks, Foto, Audio, Video) ---
@@ -260,7 +266,10 @@ function updateTransposeUI(steps, originalBas, originalNot, originalSyair) {
     if (basElem) {
         basElem.innerText = transposeText(originalBas, currentTranspose);
     }
+   console.log("Fungsi transpose dipanggil: ", delta, currentChord);
+    // Masukkan logika transposisi nada kamu di sini
 }
+ 
 
 // --- Helper: Mengubah Link Google Drive biasa menjadi Link Gambar langsung ---
 function formatDriveImage(url) {
