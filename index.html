@@ -113,7 +113,7 @@
         Acara: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBBAJPP9Cn1cyq2cBpFGpv1rJSeSQedR7ctR9mrO67wGNbVTbEcCaXCp4ZVkAOGmCKJ9yxo1Q7Yox3/pub?output=csv",
         Kegiatan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR2W99PcE9P3GLHRXWFSO_viwtukTnH8ePHSKKr_KPgtMOhOEOLRkSHc6vMdpyay8GLEop3CB0R2gtS/pub?output=csv",
         Jemaat: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv",
-        Background: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSI_5dVogArMM6hfMUrTpsXCVj-7rGmD2aqklSRufNHUHN_JzOYOgZ2Qz1TZszE7kH9XTaSa1kOv6N2/pub?output=csv" // Sheet Background (Ganti URL-nya jika beda)
+        Background: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSqw1t-t4BXwVMovpnVFKMRYk45wmCXxt9u0ldhMnmyqayQTIWR5mapKb1q77U-qvuWtWLombT3N7kS/pub?output=csv" 
     };
 
     let currentUser = null;
@@ -284,6 +284,7 @@
                     const m = k.mark.toLowerCase().trim();
                     if (m === 'kuning') borderClass = 'mark-kuning';
                     if (m === 'biru') borderClass = 'mark-biru';
+                    if (m === 'merah') borderClass = 'mark-merah';
                 }
 
                 const div = document.createElement('div');
@@ -302,7 +303,7 @@
     }
 
     function openKidungDetail(k) {
-        currentFontSize = 16;
+        // currentFontSize = 16;
         currentTranspose = 0;
         const img = formatDriveImage(k['link foto kidung']);
         const audio = k['link lagu'];
@@ -367,7 +368,7 @@
     function adjustFont(delta) {
         currentFontSize += delta;
         if(currentFontSize < 10) currentFontSize = 10;
-        if(currentFontSize > 60) currentFontSize = 60;
+        if(currentFontSize > 600) currentFontSize = 600;
         document.querySelectorAll('.k-text-scalable').forEach(el => el.style.fontSize = currentFontSize + 'px');
     }
 
