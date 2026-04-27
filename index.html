@@ -61,7 +61,7 @@
             <button onclick="attemptLogin()">Masuk</button>
         </div>
         <h3>Hubungi contact Admin</h3>
-        <h4>versi 2.66 @2026</h4>
+        <h4>versi 2.76 @2026</h4>
     </div>
 
     <div id="main-app">
@@ -263,7 +263,7 @@ function formatDriveImage(url) {
     let idMatch = url.match(/[-\w]{25,}/);
     let id = idMatch ? idMatch[0] : null;
     if (!id) return url;
-    return `https://lh3.googleusercontent.com/d/$$${id}`; // BUG FIX: ditambahkan logo dolar $
+    return `https://lh3.googleusercontent.com/d/$$$${id}`; // BUG FIX: ditambahkan logo dolar $
 }
 
 let images = [];
@@ -501,7 +501,7 @@ function renderKidung() {
                     </div>
 
                     <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
-                        <butiton onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
+                        <button onclick="switchKidungTab('teks')" style="flex:1; padding: 8px; cursor: pointer; color: black;">📝 Teks</button>
                         ${hasFoto ? `<button onclick="switchKidungTab('foto')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🖼️ Foto</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🖼️ No Foto</button>`}
                         ${hasAudio ? `<button onclick="switchKidungTab('audio')" style="flex:1; padding: 8px; cursor: pointer; color: black;">🎵 Audio</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">🎵 No Audio</button>`}
                         ${hasVideo ? `<button onclick="switchKidungTab('video')" style="flex:1; padding: 8px; cursor: pointer; color: black;">▶️ Video</button>` : `<button disabled style="flex:1; padding: 8px; opacity: 0.5; color: black;">▶️ No Video</button>`}
