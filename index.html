@@ -662,7 +662,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.6 @2026</span></div>
   </div>
 </div>
 
@@ -1567,7 +1567,7 @@ function openKidungDetail(k){
         <button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>
         ${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}
         ${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}
-        <button class="btn-action" onclick="openLyricFullscreen()">⛶ Full</button>
+        <button class="btn-action" onclick="openLyricFullscreen(${JSON.stringify(k['isi kidung'] || '')})">⛶ Full</button>
       </div>
       <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${k['isi kidung']||''}</div>
       <div id="kidung-copy-2" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n${hasBas?'\nBas/Kunci:\n'+k['kunci_bas']:''}\n${hasNot?'\nNot Angka:\n'+k['not_angka']:''}\n\nSyair:\n${k['isi kidung']||''}</div>
@@ -1628,24 +1628,24 @@ function switchKTab(id,btn){
   const el=document.getElementById('tab-'+id);if(el)el.classList.add('active-tab');
   btn.classList.add('active');
 }
-function openLyricFullscreen() {
-  const lyric = document.querySelector('.lyric-box .scalable-text');
-  if (!lyric) return;
+function openLyricFullscreen(text) {
+  if (!text) return;
 
   const html = `
     <div id="fullscreen-lyric">
       <button class="fs-back" onclick="closeLyricFullscreen()">← Kembali</button>
-      <div class="fs-content">${lyric.innerHTML}</div>
+      <div class="fs-content">${escapeHtml(text)}</div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', html);
 
-  // paksa fullscreen browser (optional)
   const el = document.getElementById('fullscreen-lyric');
   if (el.requestFullscreen) el.requestFullscreen();
 }
-   function closeLyricFullscreen() {
+
+   
+function closeLyricFullscreen() {
   const el = document.getElementById('fullscreen-lyric');
 
   if (document.fullscreenElement) {
@@ -1653,6 +1653,12 @@ function openLyricFullscreen() {
   }
 
   if (el) el.remove();
+}
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
    
 // ══════════════════════════════════════════════════
