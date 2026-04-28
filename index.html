@@ -623,7 +623,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.0 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.2 @2026</span></div>
   </div>
 </div>
 
@@ -731,7 +731,7 @@ const URLS={
 // Contoh gambar: "https://lh3.googleusercontent.com/d/XXXXXXXX"
 // Biarkan kosong ("") untuk tidak menampilkan media
 const LOGIN_VIDEO_URL="";
-const LOGIN_IMAGE_URL="https://gsjk.church/wp-content/uploads/2016/11/ifbc.jpg";
+const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
 
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
 
@@ -954,10 +954,10 @@ function renderDashboard(){
   // ikutSolo/tidak
   const IkutSoloMap={ya:0,tidak:0,lainnya:0};
   jemaat.forEach(j=>{
-    const ef=(j['IkutSolo']||j['ikutsolo']||'').toLowerCase().trim();
-    if(ef==='ya'||ef==='y'||ef==='iya')IkutSoloMap.ya++;
-    else if(ef==='tidak'||ef==='n'||ef==='tdk')IkutSoloMap.tidak++;
-    else if(ef)IkutSoloMap.lainnya++;
+    const iSol=(j['IkutSolo']||j['ikutsolo']||'').toLowerCase().trim();
+    if(iSol==='ya'||iSol==='y'||iSol==='iya')IkutSoloMap.ya++;
+    else if(iSol==='tidak'||eiSol==='n'||iSol==='tdk')IkutSoloMap.tidak++;
+    else if(iSol)IkutSoloMap.lainnya++;
   });
 
   content.innerHTML=`
