@@ -932,8 +932,8 @@ function renderDashboard(){
   const pria=jemaat.filter(j=>j.Gender==='Pria').length;
   const wanita=jemaat.filter(j=>j.Gender==='Wanita').length;
   const total=jemaat.length;
-  const usia={muda:0,dewasa:0,tua:0};
-  jemaat.forEach(j=>{const u=parseInt(j.Usia)||0;if(u<25)usia.muda++;else if(u<50)usia.dewasa++;else if(u>0)usia.tua++;});
+  const usia={anak:0,remaja,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
+  jemaat.forEach(j=>{const u=parseInt(j.Usia)||0;if(u<12)usia.anak++;else if(u<17)usia.remaja++;else if(u<24)usia.pemuda++;;else if(u<35)usia.muda++,else if(u<55)usia.dewasa++;else if(u>0)usia.tua++;});
 
   // Kategori: anak, remaja, kaum saleh
   const katMap={};
