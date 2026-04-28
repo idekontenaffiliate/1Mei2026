@@ -705,7 +705,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.72 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.12 @2026</span></div>
   </div>
 </div>
 
@@ -923,12 +923,23 @@ function setTheme(t,chip){
     setTimeout(()=>{const chip=document.querySelector(`.theme-chip[data-t="${t}"]`);if(chip){document.querySelectorAll('.theme-chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');}},100);
   }
 })();
-document.addEventListener('click',e=>{
-  if(themePanelOpen&&!e.target.closest('#theme-panel')&&!e.target.closest('#btn-theme')){
-    document.getElementById('theme-panel').style.display='none';themePanelOpen=false;
-  }
-});
 
+document.addEventListener('click', e => {
+
+  // 🔴 CLOSE THEME PANEL (punyamu)
+  if (themePanelOpen && !e.target.closest('#theme-panel') && !e.target.closest('#btn-theme')) {
+    document.getElementById('theme-panel').style.display = 'none';
+    themePanelOpen = false;
+  }
+
+  // 🟢 FULLSCREEN KIDUNG (tambahan baru)
+  const btn = e.target.closest('.btn-fullscreen');
+  if (btn) {
+    const text = decodeURIComponent(btn.dataset.lyric || '');
+    openLyricFullscreen(text);
+  }
+
+});
 // ══════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════
@@ -1621,8 +1632,12 @@ function openKidungDetail(k){
         ${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}
         ${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}
        <button class="btn-action" onclick="toggleFontMode()">🔤 Font</button>
-       <button class="btn-action" onclick="openLyricFullscreen(${JSON.stringify(k['isi kidung'] || '')})">⛶ Full</button>
-      </div>
+<button class="btn-action" onclick="openLyricFullscreenFromDom()">⛶ Full🔤 </button>
+<button class="btn-action btn-fullscreen"
+  data-lyric="${encodeURIComponent(k['isi kidung'] || '')}">
+  ⛶ Full
+</button>
+</div>
       <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${k['isi kidung']||''}</div>
       <div id="kidung-copy-2" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n${hasBas?'\nBas/Kunci:\n'+k['kunci_bas']:''}\n${hasNot?'\nNot Angka:\n'+k['not_angka']:''}\n\nSyair:\n${k['isi kidung']||''}</div>
       <div class="lyric-box">
@@ -1703,7 +1718,15 @@ function openLyricFullscreen(text) {
   const el = document.getElementById('fullscreen-lyric');
   if (el.requestFullscreen) el.requestFullscreen();
 }
-   
+function openLyricFullscreenFromDom() {
+  const el = document.querySelector('.lyric-box .scalable-text');
+  if (!el) return;
+
+  // ambil hanya isi syair (hapus header manual)
+  const text = el.innerText.split('\n').slice(1).join('\n');
+
+  openLyricFullscreen(text);
+}   
 function applySavedFontMode() {
   const saved = localStorage.getItem('fontMode');
   if (saved !== null) {
