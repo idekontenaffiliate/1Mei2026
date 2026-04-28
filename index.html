@@ -1037,7 +1037,18 @@ function renderDashboard(){
         </div>
       </div>
     </div>`:''}
-
+    
+      <!-- 3D PIE IKUT SOLO -->
+      <div class="dash-card">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">✝ Efataid</div>
+        <div style="margin-top:4px;">${build3DPie([{val:IkutSoloMap.ya,color:'#10b981',label:'Ya'},{val:IkutSoloMap.tidak,color:'#ef4444',label:'Tidak'},{val:IkutSoloMap.lainnya,color:'#f59e0b',label:'Lainnya'}])}</div>
+        <div class="pie-legend" style="margin-top:8px;">
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${IkutSoloMap.ya}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${IkutSoloMap.tidak}</div>
+          ${IkutSoloMap.lainnya>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>Lainnya: ${IkutSoloMap.lainnya}</div>`:''}
+        </div>
+      </div>
+    </div>`:''}
     <!-- BAR CHART IBADAH -->
     ${Object.keys(ibadahMap).length>0?`
     <div class="dash-card" style="margin-top:10px;">
