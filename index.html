@@ -266,50 +266,44 @@ nav button:hover:not(.active){color:var(--text2);}
 
 #fullscreen-lyric {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
 
-  /* 🔥 ikut theme */
-  background: var(--background);
-  color: var(--text);
+  background: var(--background, #fff);
+  color: var(--text, #111);
 
   z-index: 9999;
   display: flex;
   flex-direction: column;
 }
 
+/* paksa semua isi ikut warna */
+#fullscreen-lyric * {
+  color: inherit !important;
+}
+
 .fs-back {
-  position: absolute;
+  position: fixed; /* ❗ bukan absolute */
   top: 10px;
   left: 10px;
-  z-index: 2;
-
-  background: var(--surface2);
-  color: var(--text);
-
-  border: 1px solid var(--border);
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+  z-index: 10;
 }
 
 .fs-content {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
 
-  padding: 40px;
+  display: block; /* ❗ ubah dari flex */
 
+  padding: 80px 20px 40px; /* kasih ruang atas biar tidak ketutup tombol */
+  
   font-size: 2rem;
   line-height: 1.6;
 
   white-space: pre-line;
   overflow-y: auto;
+
+  text-align: center;
 }
+   
  /* DEFAULT */
 .font-normal {
   font-family: inherit;
@@ -705,7 +699,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.12 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v6.12 @2026</span></div>
   </div>
 </div>
 
@@ -1698,10 +1692,19 @@ function switchKTab(id,btn){
   const el=document.getElementById('tab-'+id);if(el)el.classList.add('active-tab');
   btn.classList.add('active');
 }
+function applyFullscreenThemeFix() {
+  const el = document.getElementById('fullscreen-lyric');
+  if (!el) return;
 
+  const bg = getComputedStyle(document.body).backgroundColor;
+  const text = getComputedStyle(document.body).color;
+
+  el.style.background = bg;
+  el.style.color = text;
+}
 function openLyricFullscreen(text) {
   if (!text) return;
-
+  applyFullscreenThemeFix();
   const html = `
     <div id="fullscreen-lyric">
       <button class="fs-back" onclick="closeLyricFullscreen()">← Kembali</button>
