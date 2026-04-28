@@ -977,11 +977,14 @@ function renderDashboard(){
       </div>
       <div class="dash-card">
         <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎂 Usia</div>
-        <div class="pie-wrap">${buildPie([{val:usia.muda,color:'#10b981',label:'<25'},{val:usia.dewasa,color:'#f59e0b',label:'25-49'},{val:usia.tua,color:'#ef4444',label:'50+'}])}</div>
+        <div class="pie-wrap">${buildPie([{val:usia.anak,color:'#506981',label:'<12'},{val:usia.remaja,color:'#14b9f1',label:'12-17'},{val:usia.muda,color:'#10b981',label:'17-24'},{val:usia.muda,color:'#10b981',label:'24-25'},{val:usia.dewasa,color:'#f59e0b',label:'35-55'},{val:usia.tua,color:'#ef4444',label:'55+'}])}</div>
         <div class="pie-legend">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;25: ${usia.muda}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>25–49: ${usia.dewasa}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>50+: ${usia.tua}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;12: ${usia.anak}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;17: ${usia.remaja}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;24: ${usia.pemuda}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;35: ${usia.muda}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>35–55: ${usia.dewasa}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>55+: ${usia.tua}</div>
         </div>
       </div>
     </div>
