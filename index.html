@@ -298,7 +298,41 @@ nav button:hover:not(.active){color:var(--text2);}
   white-space: pre-line;
   overflow-y: auto;
 }   
- 
+ /* DEFAULT */
+.font-normal {
+  font-family: inherit;
+  font-weight: normal;
+}
+
+/* BOLD */
+.font-bold {
+  font-weight: 700;
+}
+
+/* TIPIS */
+.font-light {
+  font-weight: 300;
+}
+
+/* ENAK DIBACA 1 */
+.font-readable1 {
+  font-family: 'Arial', sans-serif;
+  line-height: 1.7;
+  letter-spacing: 0.3px;
+}
+
+/* ENAK DIBACA 2 */
+.font-readable2 {
+  font-family: 'Verdana', sans-serif;
+  line-height: 1.8;
+  letter-spacing: 0.4px;
+}
+
+/* COURIER */
+.font-courier {
+  font-family: 'Courier New', monospace;
+  line-height: 1.6;
+}
 /* ═══════════════════════════════════════════
    DASHBOARD
 ═══════════════════════════════════════════ */
@@ -659,7 +693,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.61 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.71 @2026</span></div>
   </div>
 </div>
 
@@ -1520,6 +1554,16 @@ function getKidungImages(k){
   keys.forEach(key=>{const f=fmtImg(k[key]);if(f)imgs.push(f);});
   return imgs;
 }
+let fontModeIndex = 0;
+
+const fontModes = [
+  'font-normal',   // default
+  'font-bold',
+  'font-light',
+  'font-readable1',
+  'font-readable2',
+  'font-courier'
+];   
 function openKidungDetail(k){
   currentTranspose=0;tonePlayerState={url:'',transpose:0,player:null,isPlaying:false};
   const imgs=getKidungImages(k);
@@ -1564,6 +1608,7 @@ function openKidungDetail(k){
         <button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>
         ${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}
         ${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}
+       <button class="btn-action" onclick="toggleFontMode()">🔤 Font</button>
        <button class="btn-action" onclick="openLyricFullscreen()">⛶ Full</button>
       </div>
       <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${k['isi kidung']||''}</div>
@@ -1618,6 +1663,7 @@ ${k['Cerita kidung']?`\n\n— Cerita: ${escHtml(k['Cerita kidung'])}`:''}
   // Init tone player after modal rendered
   if(audio){setTimeout(()=>buildTonePlayer(audio,'#tone-player-wrap'),200);}
   logHistory('kidung',k['judul kidung']);
+  setTimeout(applySavedFontMode, 50);
 }
 function switchKTab(id,btn){
   document.querySelectorAll('.kidung-tab').forEach(t=>t.classList.remove('active-tab'));
@@ -1635,14 +1681,27 @@ function openLyricFullscreen() {
       <div class="fs-content">${lyric.innerHTML}</div>
     </div>
   `;
-
+  applySavedFontMode();
   document.body.insertAdjacentHTML('beforeend', html);
 
   // paksa fullscreen browser (optional)
   const el = document.getElementById('fullscreen-lyric');
   if (el.requestFullscreen) el.requestFullscreen();
 }
-   
+
+function applySavedFontMode() {
+  const saved = localStorage.getItem('fontMode');
+  if (saved !== null) {
+    fontModeIndex = parseInt(saved);
+  }
+
+  const targets = document.querySelectorAll('.scalable-text, .fs-content');
+
+  targets.forEach(el => {
+    fontModes.forEach(f => el.classList.remove(f));
+    el.classList.add(fontModes[fontModeIndex]);
+  });
+}
 function closeLyricFullscreen() {
   const el = document.getElementById('fullscreen-lyric');
 
@@ -1658,7 +1717,19 @@ function escapeHtml(text) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
-   
+function toggleFontMode() {
+  fontModeIndex = (fontModeIndex + 1) % fontModes.length;
+
+  const targets = document.querySelectorAll('.scalable-text, .fs-content');
+
+  targets.forEach(el => {
+    fontModes.forEach(f => el.classList.remove(f));
+    el.classList.add(fontModes[fontModeIndex]);
+  });
+
+  // simpan (optional)
+  localStorage.setItem('fontMode', fontModeIndex);
+}
 // ══════════════════════════════════════════════════
 // ACARA
 // ══════════════════════════════════════════════════
