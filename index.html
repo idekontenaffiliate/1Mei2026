@@ -699,7 +699,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v6.12 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v3.12 @2026</span></div>
   </div>
 </div>
 
@@ -1049,7 +1049,48 @@ jemaat.forEach(j => { const u = parseInt(j.Usia);
     else if(ef==='tidak'||ef==='n'||ef==='tdk')efataidMap.tidak++;
     else if(ef)efataidMap.lainnya++;
   });
+// 🔵 IKUT SOLO (3D PIE)
+const ikutSoloMap = { ya: 0, tidak: 0 };
+jemaat.forEach(j => {
+  const v = (j['ikutSolo'] || '').toLowerCase().trim();
+  if (v === 'y' || v === 'ya') ikutSoloMap.ya++;
+  else ikutSoloMap.tidak++;
+});
 
+// 🟣 GUGUS
+const gugusMap = {};
+jemaat.forEach(j => {
+  const g = (j['Gugus'] || '').trim();
+  if (g) gugusMap[g] = (gugusMap[g] || 0) + 1;
+});
+
+// 🟢 KELAS
+const kelasMap = {};
+jemaat.forEach(j => {
+  const k = (j['kelas'] || '').trim();
+  if (k) kelasMap[k] = (kelasMap[k] || 0) + 1;
+});
+
+// 🔴 BAPTIS
+const baptisMap = { sudah: 0, belum: 0 };
+jemaat.forEach(j => {
+  const t = (j['Tanggal Baptis'] || '').trim();
+  if (t && t !== '00/01/1900') baptisMap.sudah++;
+  else baptisMap.belum++;
+});
+
+// 🟡 PELAYANAN
+const pelayananMap = {};
+jemaat.forEach(j => {
+  const p = (j['pelayanan'] || '').trim();
+  if (p) {
+    p.split(/[,;/]/).forEach(x => {
+      const t = x.trim();
+      if (t) pelayananMap[t] = (pelayananMap[t] || 0) + 1;
+    });
+  }
+});
+   
   content.innerHTML=`
     <div class="clock-card">
       <div class="clock-big" id="dash-clock">--:--:--</div>
@@ -1109,6 +1150,76 @@ jemaat.forEach(j => { const u = parseInt(j.Usia);
         </div>
       </div>
     </div>`:''}
+
+    <!-- 3D PIE ikut solo -->
+      <div class="dash-card">
+  <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎤 Ikut Solo</div>
+  <div>${build3DPie([
+    {val:ikutSoloMap.ya,color:'#10b981',label:'Ya'},
+    {val:ikutSoloMap.tidak,color:'#ef4444',label:'Tidak'}
+  ])}</div>
+  <div class="pie-legend">
+    <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${ikutSoloMap.ya}</div>
+    <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${ikutSoloMap.tidak}</div>
+  </div>
+</div>
+
+    <!-- Pie Chart Gugus -->
+
+${Object.keys(gugusMap).length>0?`
+<div class="dash-card">
+  <div class="section-title">🏠 Gugus</div>
+  <div class="pie-wrap">${buildPie(Object.entries(gugusMap).map(([k,v],i)=>({val:v,color:MC[i%MC.length],label:k})))}</div>
+  <div class="pie-legend">
+    ${Object.entries(gugusMap).map(([k,v],i)=>`
+      <div class="pie-leg-item">
+        <span class="pie-leg-dot" style="background:${MC[i%MC.length]}"></span>${k}: ${v}
+      </div>`).join('')}
+  </div>
+</div>`:''}
+
+    <!-- Pie Chart Kelas -->
+
+${Object.keys(kelasMap).length>0?`
+<div class="dash-card">
+  <div class="section-title">🏫 Kelas</div>
+  <div class="pie-wrap">${buildPie(Object.entries(kelasMap).map(([k,v],i)=>({val:v,color:MC[(i+2)%MC.length],label:k})))}</div>
+  <div class="pie-legend">
+    ${Object.entries(kelasMap).map(([k,v],i)=>`
+      <div class="pie-leg-item">
+        <span class="pie-leg-dot" style="background:${MC[(i+2)%MC.length]}"></span>${k}: ${v}
+      </div>`).join('')}
+  </div>
+</div>`:''}
+
+    <!-- Pie Chart Baptis -->
+
+<div class="dash-card">
+  <div class="section-title">💧 Baptis</div>
+  <div class="pie-wrap">${buildPie([
+    {val:baptisMap.sudah,color:'#10b981',label:'Sudah'},
+    {val:baptisMap.belum,color:'#ef4444',label:'Belum'}
+  ])}</div>
+  <div class="pie-legend">
+    <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div>
+    <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div>
+  </div>
+</div>
+
+    <!-- Pie Chart Pelayanan -->
+
+${Object.keys(pelayananMap).length>0?`
+<div class="dash-card">
+  <div class="section-title">🤝 Pelayanan</div>
+  <div class="pie-wrap">${buildPie(Object.entries(pelayananMap).map(([k,v],i)=>({val:v,color:MC[(i+3)%MC.length],label:k})))}</div>
+  <div class="pie-legend">
+    ${Object.entries(pelayananMap).map(([k,v],i)=>`
+      <div class="pie-leg-item">
+        <span class="pie-leg-dot" style="background:${MC[(i+3)%MC.length]}"></span>${k}: ${v}
+      </div>`).join('')}
+  </div>
+</div>`:''}
+
 
     <!-- PIE IBADAH (yang diikuti) -->
     ${Object.keys(ibadahMap).length>0?`
