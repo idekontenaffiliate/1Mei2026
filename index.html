@@ -1051,10 +1051,13 @@ jemaat.forEach(j => { const u = parseInt(j.Usia);
   });
 // 🔵 IKUT SOLO (3D PIE)
 const ikutSoloMap = { ya: 0, tidak: 0 };
+
 jemaat.forEach(j => {
-  const v = (j['ikutSolo'] || '').toLowerCase().trim();
-  if (v === 'y' || v === 'ya') ikutSoloMap.ya++;
-  else ikutSoloMap.tidak++;
+  const raw = j['ikutSolo'] || j['Ikut Solo'] || j['ikuts olo'] || '';
+  const v = String(raw).toLowerCase().replace(/\s+/g,'').trim();
+
+  if (['y','ya','yes','1'].includes(v)) ikutSoloMap.ya++;
+  else if (['n','no','tidak','0'].includes(v)) ikutSoloMap.tidak++;
 });
 
 // 🟣 GUGUS
