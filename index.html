@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
 /* ═══════════════════════════════════════════
-   THEME SYSTEM — 10 THEMES
+   THEME SYSTEM — 10 THEMESti
 ═══════════════════════════════════════════ */
 :root,[data-theme="dark"]{
   --bg:#0a0e17;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
@@ -623,7 +623,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.3 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.4 @2026</span></div>
   </div>
 </div>
 
@@ -988,11 +988,12 @@ jemaat.forEach(j => { const u = parseInt(j.Usia);
       </div>
       <div class="dash-card">
         <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎂 Usia</div>
-        <div class="pie-wrap">${buildPie([{val:usia.anak,color:'#506981',label:'<12'},{val:usia.remaja,color:'#14b9f1',label:'12-17'},{val:usia.muda,color:'#10b981',label:'17-24'},{val:usia.muda,color:'#10b981',label:'24-25'},{val:usia.dewasa,color:'#f59e0b',label:'35-55'},{val:usia.tua,color:'#ef4444',label:'55+'}])}</div>
+        <div class="pie-wrap">${buildPie([{val:usia.anak,color:'#506981',label:'<12'},{val:usia.remaja,color:'#14b9f1',label:'12-17'},{val:usia.pemuda,color:'#10491f',label:'17-24'},{val:usia.muda,color:'#10b981',label:'24-25'},{val:usia.dewasa,color:'#f59e0b',label:'35-55'},{val:usia.tua,color:'#ef4444',label:'55+'},{val:usia.tidaktahu,color:'#eff4b4',label:'tidaktahu'}])}</div>
         <div class="pie-legend">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;12: ${usia.anak}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;17: ${usia.remaja}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;24: ${usia.pemuda}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#eff4b4;"></span>&lt;12: ${usia.tidaktahu}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#506981;"></span>&lt;12: ${usia.anak}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#14b9f1;"></span>&lt;17: ${usia.remaja}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10491f;"></span>&lt;24: ${usia.pemuda}</div>
           <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>&lt;35: ${usia.muda}</div>
           <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>35–55: ${usia.dewasa}</div>
           <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>55+: ${usia.tua}</div>
