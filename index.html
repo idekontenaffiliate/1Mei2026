@@ -1636,7 +1636,7 @@ function openJemaatPopup(j,foto,idx){
     <div class="jp-body">
       <div class="jp-grid">
         <div class="jp-field"><div class="jp-field-label">No</div><div class="jp-field-value">${j['no']||j['No']||idx+1}</div></div>
-        <div class="jp-field"><div class="jp-field-label">EfataID</div><div class="jp-field-value">${j['efataid']||j['EfataID']||'-'}</div></div>
+        <div class="jp-field"><div class="jp-field-label">No_EfataID</div><div class="jp-field-value">${j['No_EfataID']||j['No_EfataID']||'-'}</div></div>
         <div class="jp-field"><div class="jp-field-label">Usia</div><div class="jp-field-value">${j.Usia||'-'} thn</div></div>
         <div class="jp-field"><div class="jp-field-label">Gender</div><div class="jp-field-value" style="color:${gColor};">${j.Gender||'-'}</div></div>
         <div class="jp-field full"><div class="jp-field-label">Tanggal Baptis</div><div class="jp-field-value">${j['Tanggal Baptis']||j['tanggal baptis']||'-'}</div></div>
@@ -1652,7 +1652,7 @@ function openJemaatPopup(j,foto,idx){
       <button class="jp-copy-btn" onclick="copyJemaatPopup(${idx})">📋 Copy Info</button>
       <div id="jp-copy-data-${idx}" style="display:none;">Nama: ${j['Nama Lengkap']||'-'}
 Panggilan: ${j['Nama Panggilan']||'-'}
-EfataID: ${j['efataid']||j['EfataID']||'-'}
+No EfataID: ${j['No_EfataID']||j['No_EfataID']||'-'}
 Gender: ${j.Gender||'-'}
 Usia: ${j.Usia||'-'}
 Baptis: ${j['Tanggal Baptis']||j['tanggal baptis']||'-'}
