@@ -660,8 +660,9 @@ const URLS={
   Background:"https://docs.google.com/spreadsheets/d/e/2PACX-1vSqw1t-t4BXwVMovpnVFKMRYk45wmCXxt9u0ldhMnmyqayQTIWR5mapKb1q77U-qvuWtWLombT3N7kS/pub?output=csv",
   Quiz:"https://docs.google.com/spreadsheets/d/e/2PACX-1vSYk4ch8PCybjRiSn38uqAM_qjqk0IviibdUrdTfOX2NufYsDUcf3oypvh9theKKYrYFGsXxqzy7Lto/pub?output=csv",
   // Pertanyaan — Sheet "Pertanyaan" dari spreadsheet Quiz (publish sheet terpisah)
-  Pertanyaan:"https://docs.google.com/spreadsheets/d/e/2PACX-1vSYk4ch8PCybjRiSn38uqAM_qjqk0IviibdUrdTfOX2NufYsDUcf3oypvh9theKKYrYFGsXxqzy7Lto/pub?gid=GANTI_GID_SHEET_PERTANYAAN&single=true&output=csv",
-  // Link menu
+  // Pertanyaan:"https://docs.google.com/spreadsheets/d/e/2PACX-1vSYk4ch8PCybjRiSn38uqAM_qjqk0IviibdUrdTfOX2NufYsDUcf3oypvh9theKKYrYFGsXxqzy7Lto/pub?gid=GANTI_GID_SHEET_PERTANYAAN&single=true&output=csv",
+  Pertanyaan :"https://docs.google.com/spreadsheets/d/e/2PACX-1vT1KDMg3W-802RPlBdiOETa_5MFRUgkonkRmriJsXubA_qma55Kpc0FfhVjldOggJQOYOonLDQXF09P/pub?output=csv",
+   // Link menu
   Link:"https://docs.google.com/spreadsheets/d/e/2PACX-1vSYk4ch8PCybjRiSn38uqAM_qjqk0IviibdUrdTfOX2NufYsDUcf3oypvh9theKKYrYFGsXxqzy7Lto/pub?output=csv",
     Alkitab : "https://docs.google.com/spreadsheets/d/e/2PACX-1vR1xjDc2jxwE4vRMZ5I9Otpdfghi_4CRudOCJ6_FGBdHVfu_cuRcIwPbnhRDVXw244tenfW1EN1qHuF/pub?output=csv"
 
@@ -672,7 +673,7 @@ const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXX
 
 // Apps Script untuk Pertanyaan (BARU — khusus pertanyaan):
 // Buat Apps Script baru, isi kodenya lihat file appscript_pertanyaan.js
-const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/GANTI_DENGAN_URL_APPSCRIPT_PERTANYAAN/exec";
+const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbzELhru3JA1V8Hiem7tgl-SfDLILKoI53UyR99GuGWNy-KODrQAGinZDDjcN5csGvPnEw/exec";
 
 // Apps Script lama (untuk quiz & history):
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
@@ -1416,8 +1417,9 @@ function renderJemaat(){
       <select id="j-ktm-tahir" class="k-input" onchange="filterJemaat()"><option value="">KTM Tahir (semua)</option><option value="y">KTM Tahir: y</option><option value="n">KTM Tahir: n</option></select>
     </div>
     <div class="filter-group">
-      <select id="j-kategori" class="k-input" onchange="filterJemaat()"><option value="">Semua Kategori</option><option>Tamu</option><option>Kaum Saleh</option><option>Remaja anak</option></select>
-      <select id="j-kelas" class="k-input" onchange="filterJemaat()"><option value="">Semua Kelas</option><option>penyerbu</option><option>pelopor A</option></select>
+      <select id="j-kategori" class="k-input" onchange="filterJemaat()"><option value="">Semua Kategori</option><option>Tamu</option><option>Kaum Saleh</option><option>Remaja</option><option>Anak</option><option>Pemuda</option></select>
+      <select id="j-kelas" class="k-input" onchange="filterJemaat()"><option value="">Semua Kelas</option><option>G Satria</option> <option>G Pejuang</option> <option>G Pelopor A</option> <option>G Pelopor B</option> 
+      <option>G Penyerbu</option> <option>KUSUMA PELOPOR A - GENTENG (D.H. KUSUMA BANGSA)</option> <option>KUSUMA PELOPOR B - GENTENG (D.H. KUSUMA BANGSA)</option> <option>KUSUMA PENYERBU - GENTENG (D.H. KUSUMA BANGSA)</option> <option>KUSUMA PEJUANG - GENTENG (D.H. KUSUMA BANGSA)KUSUMA SATRIA - GENTENG (D.H. KUSUMA BANGSA)</option></select>
     </div>
     <div class="filter-group">
       <select id="j-ikut-solo" class="k-input" onchange="filterJemaat()"><option value="">Ikut Solo (semua)</option><option value="y">Ikut Solo: y</option><option value="n">Ikut Solo: n</option></select>
