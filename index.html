@@ -178,9 +178,23 @@ nav::-webkit-scrollbar{display:none;}
 nav button{padding:8px 12px;border:none;background:none;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;font-weight:500;font-size:.8rem;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.2px;flex-shrink:0;}
 nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
 nav button:hover:not(.active){color:var(--text2);}
+#app-content-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
 
-#app-content-wrapper{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border) transparent;-webkit-overflow-scrolling:touch;}
-.content-area{padding:14px;padding-bottom:24px;}
+.content-area {
+  padding-bottom: max(80px, env(safe-area-inset-bottom, 0px) + 60px) !important;
+}
+
+   
+@supports (-webkit-touch-callout: none) {
+  #main-app {
+    height: -webkit-fill-available;
+  }
+}
 
 /* FULLSCREEN LYRIC — theme-aware */
 #fullscreen-lyric{
@@ -1782,35 +1796,71 @@ function loadPertanyaanList(){
   },error:()=>{list.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>Gagal memuat. Cek URL spreadsheet.</p></div>';}});
 }
 
-function renderPertanyaanCards(data,containerId){
-  const container=document.getElementById(containerId);if(!container)return;
-  if(!data||!data.length){container.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>Belum ada pertanyaan.</p></div>';return;}
-  const urgOrder={'Critical':0,'High':1,'Medium':2,'Low':3,'Intermesso':4};
-  const sorted=[...data].sort((a,b)=>(urgOrder[a.urgensi]||5)-(urgOrder[b.urgensi]||5));
-  container.innerHTML=sorted.map((item,i)=>{
-    const rating=parseFloat(pertanyaanRatings[i]??parseFloat(item.rating||'0'));
-    const stars=buildStarRating(rating);
-    const hasAnswer=item.isi_jawaban&&item.isi_jawaban.trim();
-    return`<div class="ptny-card" id="ptny-card-${i}">
+// Pastikan setiap card punya data-ptny-idx untuk sync antar halaman
+function renderPertanyaanCards(data, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Belum ada pertanyaan.</p></div>';
+    return;
+  }
+  const urgOrder = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Intermesso': 4 };
+  const sorted = [...data].sort((a, b) => (urgOrder[a.urgensi] || 5) - (urgOrder[b.urgensi] || 5));
+  
+  container.innerHTML = sorted.map((item, sortedI) => {
+    // Cari index asli di db.Pertanyaan untuk konsistensi rating
+    const origIdx = data.indexOf(item);
+    const rating = pertanyaanRatings[origIdx] !== undefined
+      ? pertanyaanRatings[origIdx]
+      : parseFloat(item.rating || '0');
+    pertanyaanRatings[origIdx] = rating; // sync
+    const stars = buildStarRating(rating);
+    const hasAnswer = item.isi_jawaban && item.isi_jawaban.trim();
+    
+    // Warna per urgensi
+    const urgColor = {
+      'Critical': '#ef4444', 'High': '#f59e0b',
+      'Medium': '#3b82f6',   'Low': '#10b981', 'Intermesso': '#8b5cf6'
+    };
+    const uc = urgColor[item.urgensi] || 'var(--text3)';
+    
+    return `<div class="ptny-card" id="ptny-card-${origIdx}" data-ptny-idx="${origIdx}">
       <div class="ptny-card-header">
-        <div class="ptny-card-icon">❔</div>
+        <div class="ptny-card-icon" style="font-size:1.6rem;">❔</div>
         <div class="ptny-card-meta">
-          <div><span class="ptny-urgensi ${item.urgensi||'Low'}">${item.urgensi||'?'}</span> <span class="ptny-card-topik" style="color:var(--accent);">${escHtml(item.topik||'-')}</span></div>
-          <div class="ptny-card-nama">👤 ${escHtml(item.nama||'Anonim')}</div>
-          <div class="ptny-card-waktu">🕐 ${escHtml(item.waktu||'-')}</div>
+          <div style="margin-bottom:3px;">
+            <span class="ptny-urgensi ${item.urgensi || 'Low'}" style="border-left:3px solid ${uc};">${item.urgensi || '?'}</span>
+            <span class="ptny-card-topik" style="color:${uc};font-weight:700;margin-left:6px;">${escHtml(item.topik || '-')}</span>
+          </div>
+          <div class="ptny-card-nama">👤 ${escHtml(item.nama || 'Anonim')}</div>
+          <div class="ptny-card-waktu">🕐 ${escHtml(item.waktu || '-')}</div>
         </div>
       </div>
-      <div class="ptny-question-text">${escHtml(item.pertanyaan||'-')}</div>
-      ${hasAnswer?`<div class="ptny-answer-box"><div class="ptny-answer-label">💬 Jawaban</div><div>${escHtml(item.isi_jawaban)}</div>${item.nama_penjawab?`<div style="font-size:.72rem;color:var(--text3);margin-top:4px;">— ${item.nama_penjawab}</div>`:''}</div>`:''}
-      ${item.keputusan?`<div><span class="ptny-status-badge" style="background:${item.keputusan==='VALID ANSWER'?'rgba(16,185,129,.2)':'rgba(239,68,68,.2)'};color:${item.keputusan==='VALID ANSWER'?'var(--green)':'var(--red)'};">${item.keputusan}</span></div>`:''}
-      <div class="ptny-rating">
+      <div class="ptny-question-text" style="font-size:.95rem;font-weight:500;line-height:1.6;padding:10px;background:var(--surface2);border-radius:8px;margin:8px 0;">
+        ${escHtml(item.pertanyaan || '-')}
+      </div>
+      ${hasAnswer ? `<div class="ptny-answer-box">
+        <div class="ptny-answer-label">💬 Jawaban</div>
+        <div>${escHtml(item.isi_jawaban)}</div>
+        ${item.nama_penjawab ? `<div style="font-size:.72rem;color:var(--text3);margin-top:4px;">— ${escHtml(item.nama_penjawab)}</div>` : ''}
+      </div>` : '<div style="font-size:.75rem;color:var(--text3);margin-top:4px;">⏳ Belum dijawab</div>'}
+      ${item.keputusan ? `<div style="margin-top:6px;">
+        <span class="ptny-status-badge" style="background:${item.keputusan.includes('VALID') && !item.keputusan.includes('NOT') ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)'};
+          color:${item.keputusan.includes('VALID') && !item.keputusan.includes('NOT') ? 'var(--green)' : 'var(--red)'};">
+          ${escHtml(item.keputusan)}
+        </span>
+      </div>` : ''}
+      <div class="ptny-rating" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
         <div class="ptny-stars">${stars}</div>
-        <span class="ptny-rating-num" style="color:${rating>=50?'#fbbf24':rating<0?'var(--red)':'var(--green)'};">${rating>0?'+':''}${rating}</span>
+        <span class="ptny-rating-num" style="font-family:'JetBrains Mono',monospace;font-weight:700;
+          color:${rating >= 50 ? '#fbbf24' : rating < 0 ? 'var(--red)' : 'var(--green)'};">
+          ${rating > 0 ? '+' : ''}${rating}
+        </span>
         <div class="ptny-rating-btns">
-          <button class="ptny-rating-btn neg" onclick="changePtnyRating(${i},-2)">−2</button>
-          <button class="ptny-rating-btn neg" onclick="changePtnyRating(${i},-1)">−1</button>
-          <button class="ptny-rating-btn pos" onclick="changePtnyRating(${i},1)">+1</button>
-          <button class="ptny-rating-btn pos" onclick="changePtnyRating(${i},2)">+2</button>
+          <button class="ptny-rating-btn neg" onclick="changePtnyRating(${origIdx},-2)" title="−2">−2</button>
+          <button class="ptny-rating-btn neg" onclick="changePtnyRating(${origIdx},-1)" title="−1">−1</button>
+          <button class="ptny-rating-btn pos" onclick="changePtnyRating(${origIdx},1)"  title="+1">+1</button>
+          <button class="ptny-rating-btn pos" onclick="changePtnyRating(${origIdx},2)"  title="+2">+2</button>
         </div>
       </div>
     </div>`;
@@ -1822,14 +1872,72 @@ function buildStarRating(rating){
   const stars=Math.max(0,Math.min(5,Math.round(Math.abs(rating)/20)));
   let html='';for(let i=0;i<5;i++)html+=`<span style="color:${i<stars?color:'var(--text3)'};">★</span>`;return html;
 }
-function changePtnyRating(idx,val){
-  if(!pertanyaanRatings[idx])pertanyaanRatings[idx]=0;
-  pertanyaanRatings[idx]+=val;
-  const card=document.getElementById('ptny-card-'+idx);if(!card)return;
-  const ratingEl=card.querySelector('.ptny-rating');
-  if(ratingEl){const r=pertanyaanRatings[idx];const stars=buildStarRating(r);ratingEl.querySelector('.ptny-stars').innerHTML=stars;ratingEl.querySelector('.ptny-rating-num').textContent=(r>0?'+':'')+r;ratingEl.querySelector('.ptny-rating-num').style.color=r>=50?'#fbbf24':r<0?'var(--red)':'var(--green)';}
+function changePtnyRating(idx, val) {
+  if (!pertanyaanRatings[idx]) pertanyaanRatings[idx] = 0;
+  pertanyaanRatings[idx] += val;
+  
+  // Update UI di ptny-list (menu Pertanyaan)
+  const card = document.getElementById('ptny-card-' + idx);
+  if (card) updateRatingUI(card, pertanyaanRatings[idx]);
+  
+  // Update UI di hp-list (menu Hasil Pertanyaan) — cari semua card dengan idx ini
+  document.querySelectorAll('[data-ptny-idx="' + idx + '"]').forEach(c => {
+    updateRatingUI(c, pertanyaanRatings[idx]);
+  });
+  
+  // Kirim ke server (async, tidak menunggu)
+  sendRatingToServer(idx, val);
+}
+// ── Helper update tampilan rating dalam satu card ──────────────
+function updateRatingUI(card, rating) {
+  const starsEl = card.querySelector('.ptny-stars');
+  const numEl   = card.querySelector('.ptny-rating-num');
+  if (starsEl) starsEl.innerHTML = buildStarRating(rating);
+  if (numEl) {
+    numEl.textContent = (rating > 0 ? '+' : '') + rating;
+    numEl.style.color = rating >= 50 ? '#fbbf24' : rating < 0 ? 'var(--red)' : 'var(--green)';
+  }
+}
+// ── GANTI buildStarRating() dengan versi baru ini ─────────────
+// (Merah = minus, Hijau = 1–49, Emas = 50+)
+function buildStarRating(rating) {
+  let color;
+  if      (rating >= 50)  color = '#fbbf24'; // emas
+  else if (rating >= 1)   color = '#22c55e'; // hijau
+  else                    color = '#ef4444'; // merah (0 dan negatif)
+  
+  // Skala bintang: 0 = 0 bintang, 50 = 5 bintang, -50 = 5 bintang merah
+  const absRating = Math.abs(rating);
+  // Tampilkan bintang berdasarkan magnitude (log scale agar tidak langsung 5)
+  const stars = rating === 0 ? 0 : Math.min(5, Math.max(1, Math.round(Math.log2(absRating + 1))));
+  
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    html += `<span style="color:${i < stars ? color : 'var(--text3)'}; font-size:.95rem;">★</span>`;
+  }
+  return html;
 }
 
+   
+async function sendRatingToServer(rowIndex, nilai) {
+  if (APPS_SCRIPT_PERTANYAAN.includes('GANTI')) return;
+  const formData = new URLSearchParams({
+    action: 'tambah_rating',
+    row_index: rowIndex,
+    user: currentUser?.username || 'anon',
+    nilai: nilai
+  });
+  try {
+    await fetch(APPS_SCRIPT_PERTANYAAN, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    });
+  } catch (e) {
+    // silent fail — rating tetap tampil lokal
+  }
+}
 // ══════════════════════════════════════════════════
 // HASIL PERTANYAAN — Admin view dengan jawab & filter
 // ══════════════════════════════════════════════════
@@ -1882,29 +1990,75 @@ function filterHasilPertanyaan(){
   const cnt=document.getElementById('hp-count');if(cnt)cnt.textContent=`${filtered.length} pertanyaan`;
   renderHasilPertanyaanCards(filtered,data);
 }
-function renderHasilPertanyaanCards(filtered,allData){
-  const container=document.getElementById('hp-list');if(!container)return;
-  if(!filtered.length){container.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>Tidak ada pertanyaan.</p></div>';return;}
-  container.innerHTML=filtered.map((item)=>{
-    const origIdx=allData.indexOf(item);
-    const rating=parseFloat(pertanyaanRatings[origIdx]??parseFloat(item.rating||'0'));
-    const stars=buildStarRating(rating);
-    const hasAnswer=item.isi_jawaban&&item.isi_jawaban.trim();
-    return`<div class="ptny-card">
+// Versi lengkap dengan filter dan form jawaban + keputusan
+function renderHasilPertanyaanCards(filtered, allData) {
+  const container = document.getElementById('hp-list');
+  if (!container) return;
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Tidak ada pertanyaan ditemukan.</p></div>';
+    return;
+  }
+  
+  const urgColor = {
+    'Critical': '#ef4444', 'High': '#f59e0b',
+    'Medium': '#3b82f6',   'Low': '#10b981', 'Intermesso': '#8b5cf6'
+  };
+  const keputusanOptions = [
+    'VALID ANSWER', 'NOT VALID ANSWER', 'VALID QUESTION', 'NOT VALID QUESTION'
+  ];
+  
+  container.innerHTML = filtered.map((item) => {
+    const origIdx = allData.indexOf(item);
+    const rating = pertanyaanRatings[origIdx] !== undefined
+      ? pertanyaanRatings[origIdx]
+      : parseFloat(item.rating || '0');
+    pertanyaanRatings[origIdx] = rating;
+    const stars = buildStarRating(rating);
+    const hasAnswer = item.isi_jawaban && item.isi_jawaban.trim();
+    const uc = urgColor[item.urgensi] || 'var(--text3)';
+    const statusBg = item.status === 'Done' ? 'rgba(16,185,129,.2)'
+                   : item.status === 'Cancel' ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.15)';
+    const statusColor = item.status === 'Done' ? 'var(--green)'
+                      : item.status === 'Cancel' ? 'var(--red)' : 'var(--yellow)';
+    
+    return `<div class="ptny-card" data-ptny-idx="${origIdx}" style="border-left:4px solid ${uc};">
       <div class="ptny-card-header">
-        <div class="ptny-card-icon">❔</div>
+        <div class="ptny-card-icon" style="font-size:1.6rem;">❔</div>
         <div class="ptny-card-meta">
-          <div><span class="ptny-urgensi ${item.urgensi||'Low'}">${item.urgensi||'?'}</span> <span class="ptny-card-topik" style="color:var(--accent);">${escHtml(item.topik||'-')}</span></div>
-          <div class="ptny-card-nama">👤 ${escHtml(item.nama||'Anonim')}</div>
-          <div class="ptny-card-waktu">🕐 ${escHtml(item.waktu||'-')}</div>
+          <div style="margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span class="ptny-urgensi ${item.urgensi || 'Low'}">${item.urgensi || '?'}</span>
+            <span class="ptny-card-topik" style="color:${uc};font-weight:700;">${escHtml(item.topik || '-')}</span>
+            ${item.status ? `<span style="background:${statusBg};color:${statusColor};font-size:.63rem;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;">${item.status}</span>` : ''}
+          </div>
+          <div class="ptny-card-nama">👤 ${escHtml(item.nama || 'Anonim')}</div>
+          <div class="ptny-card-waktu">🕐 ${escHtml(item.waktu || '-')}</div>
         </div>
       </div>
-      <div class="ptny-question-text">${escHtml(item.pertanyaan||'-')}</div>
-      ${hasAnswer?`<div class="ptny-answer-box"><div class="ptny-answer-label">💬 Jawaban</div><div>${escHtml(item.isi_jawaban)}</div>${item.nama_penjawab?`<div style="font-size:.72rem;color:var(--text3);margin-top:4px;">— ${item.nama_penjawab} · ${item.waktu_penjawab||''}</div>`:''}</div>`:''}
-      ${item.keputusan?`<div><span class="ptny-status-badge" style="background:${item.keputusan.includes('VALID')?'rgba(16,185,129,.2)':'rgba(239,68,68,.2)'};color:${item.keputusan.includes('VALID')?'var(--green)':'var(--red)'};">${item.keputusan}</span></div>`:''}
-      <div class="ptny-rating">
+      
+      <div class="ptny-question-text" style="font-size:.95rem;font-weight:500;line-height:1.6;padding:10px;background:var(--surface2);border-radius:8px;margin:8px 0;">
+        ${escHtml(item.pertanyaan || '-')}
+      </div>
+      
+      ${hasAnswer ? `<div class="ptny-answer-box">
+        <div class="ptny-answer-label">💬 Jawaban</div>
+        <div>${escHtml(item.isi_jawaban)}</div>
+        ${item.nama_penjawab ? `<div style="font-size:.72rem;color:var(--text3);margin-top:4px;">— ${escHtml(item.nama_penjawab)} · ${escHtml(item.waktu_penjawab || '')}</div>` : ''}
+      </div>` : '<div style="font-size:.75rem;color:var(--text3);margin-top:4px;">⏳ Belum dijawab</div>'}
+      
+      ${item.keputusan ? `<div style="margin-top:6px;">
+        <span class="ptny-status-badge" style="background:${item.keputusan.includes('VALID') && !item.keputusan.includes('NOT') ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.15)'};
+          color:${item.keputusan.includes('VALID') && !item.keputusan.includes('NOT') ? 'var(--green)' : 'var(--red)'};">
+          ${escHtml(item.keputusan)}
+        </span>
+      </div>` : ''}
+      
+      <!-- Rating row -->
+      <div class="ptny-rating" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
         <div class="ptny-stars">${stars}</div>
-        <span class="ptny-rating-num" style="color:${rating>=50?'#fbbf24':rating<0?'var(--red)':'var(--green)'};">${rating>0?'+':''}${rating}</span>
+        <span class="ptny-rating-num" style="font-family:'JetBrains Mono',monospace;font-weight:700;
+          color:${rating >= 50 ? '#fbbf24' : rating < 0 ? 'var(--red)' : 'var(--green)'};">
+          ${rating > 0 ? '+' : ''}${rating}
+        </span>
         <div class="ptny-rating-btns">
           <button class="ptny-rating-btn neg" onclick="changePtnyRating(${origIdx},-2);filterHasilPertanyaan()">−2</button>
           <button class="ptny-rating-btn neg" onclick="changePtnyRating(${origIdx},-1);filterHasilPertanyaan()">−1</button>
@@ -1912,41 +2066,84 @@ function renderHasilPertanyaanCards(filtered,allData){
           <button class="ptny-rating-btn pos" onclick="changePtnyRating(${origIdx},2);filterHasilPertanyaan()">+2</button>
         </div>
       </div>
-      <div class="ptny-answer-actions">
-        <button class="btn-action" onclick="toggleJawabRow('${origIdx}')">💬 Menjawab</button>
-        ${item.status?`<span class="ptny-status-badge" style="background:${item.status==='Done'?'rgba(16,185,129,.2)':'rgba(245,158,11,.2)'};color:${item.status==='Done'?'var(--green)':'var(--yellow)'};">${item.status}</span>`:''}
+      
+      <!-- Action buttons -->
+      <div class="ptny-answer-actions" style="margin-top:8px;flex-wrap:wrap;gap:5px;">
+        <button class="btn-action accent" onclick="toggleJawabRow('${origIdx}')">✍️ Jawab</button>
+        <button class="btn-action" onclick="setKeputusanQuick(${origIdx},'VALID ANSWER')" style="border-color:var(--green);color:var(--green);">✅ Valid</button>
+        <button class="btn-action" onclick="setKeputusanQuick(${origIdx},'NOT VALID ANSWER')" style="border-color:var(--red);color:var(--red);">❌ Tidak Valid</button>
       </div>
-      <div class="ptny-jawab-row" id="jawab-row-${origIdx}">
-        <input type="text" id="jawab-nama-${origIdx}" placeholder="Nama Penjawab">
-        <textarea id="jawab-isi-${origIdx}" rows="3" placeholder="Isi jawaban (opsional)..."></textarea>
-        <div style="display:flex;gap:5px;">
-          <button class="btn-action green" onclick="submitJawaban(${origIdx})">✅ Simpan Jawaban</button>
-          <button class="btn-action red" onclick="closeJawabRow(${origIdx})">✕</button>
+      
+      <!-- Form jawaban (hidden) -->
+      <div class="ptny-jawab-row" id="jawab-row-${origIdx}" style="display:none;margin-top:8px;">
+        <input type="text" id="jawab-nama-${origIdx}" placeholder="Nama Penjawab..." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;margin-bottom:6px;">
+        <textarea id="jawab-isi-${origIdx}" rows="3" placeholder="Isi jawaban tertulis (opsional — penjawab bisa langsung suara)..." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;resize:vertical;min-height:60px;margin-bottom:6px;"></textarea>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:.72rem;color:var(--text3);font-weight:600;display:block;margin-bottom:4px;">Keputusan:</label>
+          <select id="jawab-keputusan-${origIdx}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;">
+            <option value="">— Pilih Keputusan —</option>
+            ${keputusanOptions.map(k => `<option value="${k}" ${item.keputusan === k ? 'selected' : ''}>${k}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn-action green" onclick="submitJawaban(${origIdx})" style="flex:1;padding:10px;">✅ Simpan</button>
+          <button class="btn-action" onclick="closeJawabRow(${origIdx})" style="padding:10px;">✕ Batal</button>
         </div>
       </div>
     </div>`;
   }).join('');
 }
+// ── Shortcut set keputusan cepat tanpa buka form ──────────────
+async function setKeputusanQuick(idx, keputusan) {
+  if (!APPS_SCRIPT_PERTANYAAN.includes('GANTI')) {
+    const formData = new URLSearchParams({
+      action: 'update_keputusan',
+      row_index: idx,
+      keputusan: keputusan
+    });
+    fetch(APPS_SCRIPT_PERTANYAAN, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    }).catch(() => {});
+  }
+  toast(`✅ Keputusan: ${keputusan}`);
+  setTimeout(() => loadHasilPertanyaanList(), 800);
+}
+
+   
 function toggleJawabRow(idx){const row=document.getElementById('jawab-row-'+idx);if(!row)return;row.style.display=row.style.display==='block'?'none':'block';}
 function closeJawabRow(idx){const row=document.getElementById('jawab-row-'+idx);if(row)row.style.display='none';}
 
-async function submitJawaban(idx){
-  const namaPenjawab=document.getElementById('jawab-nama-'+idx)?.value.trim()||'Admin';
-  const isiJawaban=document.getElementById('jawab-isi-'+idx)?.value.trim()||'';
-  const waktuPenjawab=new Date().toLocaleString('id-ID');
-  const formData=new URLSearchParams({
-    action:'update_jawaban',
-    row_index:idx,
-    nama_penjawab:namaPenjawab,
-    isi_jawaban:isiJawaban,
-    waktu_penjawab:waktuPenjawab,
-    status:'Done'
+async function submitJawaban(idx) {
+  const namaPenjawab = document.getElementById('jawab-nama-' + idx)?.value.trim() || 'Admin';
+  const isiJawaban   = document.getElementById('jawab-isi-' + idx)?.value.trim()  || '';
+  const keputusan    = document.getElementById('jawab-keputusan-' + idx)?.value   || '';
+  const waktuPenjawab = new Date().toLocaleString('id-ID');
+  
+  const formData = new URLSearchParams({
+    action:          'update_jawaban',
+    row_index:       idx,
+    nama_penjawab:   namaPenjawab,
+    isi_jawaban:     isiJawaban,
+    waktu_penjawab:  waktuPenjawab,
+    status:          'Done',
+    keputusan:       keputusan
   });
-  try{
-    await fetch(APPS_SCRIPT_PERTANYAAN,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
-    toast('✅ Jawaban disimpan!');closeJawabRow(idx);
-    setTimeout(()=>loadHasilPertanyaanList(),1200);
-  }catch(e){toast('⚠️ Gagal menyimpan jawaban.');}
+  
+  try {
+    await fetch(APPS_SCRIPT_PERTANYAAN, {
+      method:  'POST',
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    formData.toString()
+    });
+    toast('✅ Jawaban & keputusan disimpan!');
+    closeJawabRow(idx);
+    setTimeout(() => loadHasilPertanyaanList(), 1200);
+  } catch (e) {
+    toast('⚠️ Gagal menyimpan. Coba lagi.');
+  }
 }
 
 // ══════════════════════════════════════════════════
