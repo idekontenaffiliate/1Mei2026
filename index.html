@@ -838,7 +838,6 @@ function renderDashboard() {
   const jemaat = db.Jemaat || [];
   const acara = db.Acara || [];
   const kidung = db.Kidung || [];
-  const alkitab = db.Alkitab || [];
 
   // Hitung statistik jemaat
   const total = jemaat.length;
@@ -938,7 +937,7 @@ function renderDashboard() {
       <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val">${total || '—'}</div><div class="dash-card-label">Total Jemaat</div></div>
       <div class="dash-card"><span class="dash-card-icon">📅</span><div class="dash-card-val">${acara.length || '—'}</div><div class="dash-card-label">Sesi Acara</div></div>
       <div class="dash-card"><span class="dash-card-icon">🎵</span><div class="dash-card-val">${kidung.length || '—'}</div><div class="dash-card-label">Kidung</div></div>
-      <div class="dash-card"><span class="dash-card-icon">📖</span><div class="dash-card-val">${alkitab.length || '—'}</div><div class="dash-card-label">Alkitab</div></div>
+      <div class="dash-card"><span class="dash-card-icon">📖</span><div class="dash-card-val">Selamat Datang</div><div class="dash-card-label"></div></div>
     </div>`;
 
   if (total > 0) {
@@ -1088,7 +1087,7 @@ function renderDashboard() {
   if (!db.Jemaat) Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;renderDashboard();}});
   if (!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
   if (!db.Kidung) Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
-  if (!db.Alkitab) Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
+  // if (!db.Alkitab) Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
 }
 
 // ══════════════════════════════════════════════════
