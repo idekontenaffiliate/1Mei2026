@@ -752,6 +752,19 @@ function openInfoModal(){
   const noEfataID=u.no_Efataid||u.no_EfataID||u['no_Efataid']||u['No_EfataID']||'-';
   const akses=u.akses||u.tipe||level;
 
+  const menuDesc={
+    Dashboard:'Menampilkan semua Data Kaum Saleh secara ringkas.',
+    Kidung:'Menampilkan Kidung yang dinyanyikan, lengkap dengan lirik dan player.',
+    Alkitab:'Menampilkan referensi Alkitab yang digunakan.',
+    Acara:'Melihat jadwal acara yang disusun.',
+    Kegiatan:'Melihat kegiatan dan program yang ada.',
+    Jemaat:'Menampilkan data jemaat yang hadir.',
+    Link:'Kumpulan link dan sumber daya yang berguna.',
+    Pertanyaan:'Menulis pertanyaan selama acara berlangsung.',
+    'Hasil Pertanyaan':'Melihat dan menjawab semua pertanyaan yang masuk.',
+  };
+
+ 
   const aturan=`📋 ATURAN PENGGUNAAN:
 • Semua peserta bisa menulis pertanyaan dan jawaban.
 • Jawaban bisa disampaikan lewat suara, tidak harus tertulis.
@@ -771,8 +784,12 @@ function openInfoModal(){
       <div class="info-row"><span class="info-row-label">Username</span><span class="info-row-val">${escHtml(u.username||'-')}</span></div>
       <div class="info-row"><span class="info-row-label">Password</span><span class="info-row-val">${escHtml(u.password||'-')}</span></div>
       <div class="info-row"><span class="info-row-label">Level</span><span class="info-row-val">${escHtml(level)}</span></div>
-      <div class="info-row"><span class="info-row-label">No. EfataID</span><span class="info-row-val">${escHtml(noEfataID)}</span></div>
+      <div class="info-row"><span class="info-row-label">No. EfataID</span><span class="info-row-val">${escHtml(No_EfataId)}</span></div>
       <div class="info-row"><span class="info-row-label">Akses</span><span class="info-row-val" style="font-size:.68rem;max-width:200px;text-align:right;word-break:break-all;">${escHtml(akses)}</span></div>
+    </div>
+    <div class="info-section">
+      <div class="info-section-title">📘 Tentang Menu </div>
+      <div style="font-size:.8rem;color:var(--text2);line-height:1.7;white-space:pre-line;">${escHtml(menuDesc)}</div>
     </div>
     <div class="info-section">
       <div class="info-section-title">📘 Tentang Aplikasi</div>
