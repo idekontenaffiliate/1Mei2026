@@ -129,6 +129,18 @@ nav button:hover:not(.active){color:var(--text2);}
 .clock-date{font-size:.8rem;color:var(--text2);margin-top:4px;}
 .acara-now-box{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;position:relative;overflow:hidden;}
 .acara-now-box::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);border-radius:4px 0 0 4px;}
+
+/* Acara row styles */
+.acara-row{display:contents;}
+.acara-row-wrap{display:grid;grid-template-columns:auto auto 1fr auto;gap:4px 8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+.acara-row-wrap:last-child{border-bottom:none;}
+.acara-row-wrap.now-row{background:rgba(245,158,11,.07);border-radius:6px;padding:6px 4px;}
+.acara-row-wrap.past-row{opacity:.55;}
+.acara-time{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;white-space:nowrap;}
+.acara-date{font-size:.68rem;color:var(--text3);white-space:nowrap;}
+.acara-name{font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acara-badge{display:inline-block;font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;}
+
 .pie-wrap{position:relative;width:130px;height:130px;margin:0 auto;}
 .pie-wrap svg{width:100%;height:100%;}
 .pie-legend{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
@@ -140,7 +152,6 @@ nav button:hover:not(.active){color:var(--text2);}
 .bar-track{flex:1;height:20px;background:var(--surface2);border-radius:5px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;transition:width .6s cubic-bezier(.4,0,.2,1);}
 .bar-val{font-size:.68rem;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;}
-/* kategori table */
 .dash-table{width:100%;border-collapse:collapse;font-size:.8rem;}
 .dash-table th{background:var(--surface2);color:var(--text3);font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
 .dash-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);}
@@ -259,7 +270,6 @@ nav button:hover:not(.active){color:var(--text2);}
 .jp-field-value{font-size:.83rem;font-weight:600;color:var(--text);}
 .jp-field.full{grid-column:1/-1;}
 .jp-copy-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;margin-top:8px;}
-/* edit field in jemaat popup */
 .jp-edit-input{width:100%;background:var(--surface);border:1.5px solid var(--accent);border-radius:7px;padding:6px 8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;margin-top:3px;}
 .jp-edit-input:focus{border-color:var(--accent2);}
 .jp-save-btn{width:100%;padding:9px;background:var(--green);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;margin-top:6px;}
@@ -275,7 +285,6 @@ nav button:hover:not(.active){color:var(--text2);}
 .ptny-field textarea{resize:vertical;min-height:80px;}
 .ptny-submit-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--accent3));color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.92rem;cursor:pointer;}
 .ptny-char-count{font-size:.68rem;color:var(--text3);text-align:right;margin-top:3px;}
-
 .ptny-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;position:relative;}
 .ptny-card-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
 .ptny-card-meta{flex:1;}
@@ -302,21 +311,15 @@ nav button:hover:not(.active){color:var(--text2);}
 .ptny-jawab-row{background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;margin-top:8px;}
 .ptny-jawab-row input,.ptny-jawab-row textarea,.ptny-jawab-row select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;margin-bottom:6px;}
 .ptny-jawab-row textarea{resize:vertical;min-height:60px;}
-
-/* pagination */
 .pagination{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;padding:14px 0;margin-top:8px;}
 .pg-btn{min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
 .pg-btn:hover{background:var(--border);}
 .pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .pg-btn:disabled{opacity:.4;cursor:default;}
-
-/* stats bar */
 .ptny-stats-bar{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
 .ptny-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;}
 .ptny-stat-num{font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--accent);}
 .ptny-stat-label{font-size:.6rem;color:var(--text3);margin-top:2px;}
-
-/* sort toggle */
 .sort-toggle-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:5px;}
 .sort-toggle-btn.newest-top{border-color:var(--accent);color:var(--accent);}
 
@@ -375,6 +378,19 @@ nav button:hover:not(.active){color:var(--text2);}
 .info-row-val{color:var(--text);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:.78rem;}
 .info-copy-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;margin-top:10px;}
 
+/* Menu level badge */
+.menu-level-badge{display:inline-block;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.25);margin-right:4px;}
+.menu-level-badge.admin{background:rgba(239,68,68,.15);color:var(--red);border-color:rgba(239,68,68,.25);}
+.menu-level-badge.gem{background:rgba(16,185,129,.15);color:var(--green);border-color:rgba(16,185,129,.25);}
+.menu-level-badge.penatua{background:rgba(245,158,11,.15);color:var(--yellow);border-color:rgba(245,158,11,.25);}
+.menu-level-badge.all{background:rgba(139,92,246,.15);color:var(--accent3);border-color:rgba(139,92,246,.25);}
+.menu-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem;}
+.menu-row:last-child{border-bottom:none;}
+.menu-row-icon{font-size:1rem;flex-shrink:0;width:20px;}
+.menu-row-info{flex:1;}
+.menu-row-name{font-weight:600;color:var(--text);}
+.menu-row-desc{font-size:.7rem;color:var(--text3);margin-top:1px;}
+
 /* ── GANTI PASSWORD MODAL ─────────────────────────────── */
 .pw-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:8100;align-items:center;justify-content:center;padding:16px;}
 .pw-modal-overlay.open{display:flex;}
@@ -419,7 +435,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v15.3 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v16.0 @2026</span></div>
   </div>
 </div>
 
@@ -554,12 +570,14 @@ const URLS={
 
 const LOGIN_VIDEO_URL="";
 const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
-const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
-const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
-// Apps Script untuk update jemaat (pisah atau sama)
-const APPS_SCRIPT_JEMAAT=APPS_SCRIPT_PERTANYAAN;
 
-const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
+// ★ GANTI dengan URL dari deployment Apps Script masing-masing
+const APPS_SCRIPT_AWAL      = "GANTI_URL_APPSCRIPT_AWAL";      // untuk ganti password & history log
+const APPS_SCRIPT_PERTANYAAN= "https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
+const APPS_SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
+const APPS_SCRIPT_JEMAAT    = APPS_SCRIPT_PERTANYAAN; // sama atau ganti bila deploy terpisah
+
+const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'];
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -584,25 +602,26 @@ let jemaatFilterIbadah=[],jemaatFilterPelayanan=[];
 let jemaatFilterIbadahMode='OR',jemaatFilterPelayananMode='OR';
 let pertanyaanRatings={};
 let lastFilteredJemaat=[];
-
-// Pertanyaan pagination
 let ptnyCurrentPage=1;
 const PTNY_PER_PAGE=10;
 let ptnyAllData=[];
 let ptnyFilteredData=[];
 let ptnyNewestFirst=true;
-
-// Hasil Pertanyaan pagination
 let hpCurrentPage=1;
 let hpFilteredData=[];
-
 const KEPUTUSAN_STORAGE_KEY='ptny_keputusan_filled';
-
 const PELAYANAN_OPTIONS=['SPR','Anak','Remaja','Pemuda','Gugus','CGM','AKM','PP','Konsumsi'];
 const IBADAH_OPTIONS=['SPR','Anak','Remaja','Pemuda','Gugus','CGM','AKM','PP','Konsumsi','Antar Jemput'];
 const KELAS_OPTIONS=['KUSUMA PEJUANG - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PELOPOR A - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PELOPOR B - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PENYERBU - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA SATRIA - GENTENG (D.H. KUSUMA BANGSA)','Pemuda Sabtu Malam','Pemuda Sabtu Malam Laguna','Remaja Minggu Pagi','Remaja Sabtu Malam','G Anak Minggu Pagi','G Pejuang','G Pelopor A','G Pelopor B','G Penyerbu','G Satria','G Remaja Minggu Pagi','G Remaja Sabtu Malam','G Pemuda Sabtu Malam','G SPR Pagi','G SPR Siang'];
 const GUGUS_OPTIONS=['kusuma','ngagel','lebak','tambak','dharmahusada','nirwana'];
 const KEPUTUSAN_OPTIONS=['VALID ANSWER','NOT VALID ANSWER','NOT VALID QUESTION','VALID QUESTION'];
+const TOPIK_OPTIONS=['Sidang Anak','Sidang Remaja','Sidang Pemuda','SPR','Konsumsi','Antar Jemput'];
+const URGENSI_OPTIONS=['Critical','High','Medium','Low','Intermesso'];
+let ptnyFilterStatus='',ptnyFilterTopik=[],ptnyFilterUrgensi=[],ptnyFilterKeputusan=[];
+let hpFilterTopik=[],hpFilterUrgensi=[],hpFilterKeputusan=[];
+let hpSortNewest=true;
+let jemaatFilterKelas=[],jemaatFilterGugus=[];
+let jemaatFilterKelasMode='OR',jemaatFilterGugusMode='OR';
 
 // ══════════════════════════════════════════════════
 // INIT
@@ -615,6 +634,7 @@ const KEPUTUSAN_OPTIONS=['VALID ANSWER','NOT VALID ANSWER','NOT VALID QUESTION',
   else{document.getElementById('login-media-wrap').style.display='none';}
 })();
 
+// Load data Awal di background (tidak blocking)
 Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
 
 setInterval(()=>{
@@ -635,21 +655,79 @@ function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
 
 function getUserLevel(){return(currentUser?.level||currentUser?.tipe||'').trim();}
-function isAdminUser(){const l=getUserLevel();return ADMIN_LEVELS.some(a=>l.includes(a))||((currentUser?.username||'').toLowerCase()==='admin');}
+function isAdminUser(){
+  const l=getUserLevel();
+  return ADMIN_LEVELS.some(a=>l.includes(a))||((currentUser?.username||'').toLowerCase()==='admin');
+}
 function isLevelAdmin(){return getUserLevel().includes('Administrator')||(currentUser?.username||'').toLowerCase()==='admin';}
 function isLevelPenatua(){return getUserLevel().includes('Penatua');}
 function isLevelGemDistr(){return getUserLevel().includes('Gembala Distrik');}
-// Kolom yang boleh diedit per level
+function isLevelGembala(){return getUserLevel().includes('Gembala')&&!getUserLevel().includes('Pra')&&!getUserLevel().includes('Distrik');}
+function isLevelPraGembala(){return getUserLevel().includes('Pra Gembala');}
+
 function getEditableJemaatCols(){
   if(isLevelAdmin())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
   if(isLevelGemDistr())return['no_EfataID','Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
   if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
+  if(isLevelGembala())return['ibadah yang diikuti','pelayanan','keterangan'];
+  if(isLevelPraGembala())return['keterangan'];
   return[];
 }
 function getVisibleJemaatCols(){
   if(isAdminUser())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
-  // user biasa: sembunyikan KTM, KTM Tahir, Kamar Hotel, Tipe Kamar, Usia
   return['no_EfataID','Nama Lengkap','Nama Panggilan','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','Rata-rata Hadir','keterangan'];
+}
+
+// ══════════════════════════════════════════════════
+// PARSE WAKTU ACARA — support semua format
+// ══════════════════════════════════════════════════
+function parseAcaraWaktu(raw) {
+  if (!raw || !raw.trim()) return null;
+  const s = raw.trim();
+
+  // Format: mm/dd/yyyy hh:mm:ss  atau  mm/dd/yyyy hh:mm
+  // Contoh: 01/30/2026 23:00:00
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (mdy) {
+    const [,mm,dd,yyyy,hh,min,sec] = mdy;
+    // Google Sheets CSV export pakai mm/dd/yyyy
+    const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd),
+                       parseInt(hh), parseInt(min), parseInt(sec||0));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Format: dd/mm/yyyy hh:mm:ss (Indonesia)
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (dmy) {
+    const [,dd,mm,yyyy,hh,min,sec] = dmy;
+    const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd),
+                       parseInt(hh), parseInt(min), parseInt(sec||0));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Format: yyyy-mm-dd hh:mm:ss atau yyyy-mm-ddThh:mm:ss
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (iso) {
+    const [,yyyy,mm,dd,hh,min,sec] = iso;
+    const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd),
+                       parseInt(hh), parseInt(min), parseInt(sec||0));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Format: hh:mm atau hh.mm (waktu saja, tanpa tanggal — asumsi hari ini)
+  const tonly = s.match(/^(\d{1,2})[:\.](\d{2})(?:[:\.](\d{2}))?$/);
+  if (tonly) {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+                       parseInt(tonly[1]), parseInt(tonly[2]), parseInt(tonly[3]||0));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Fallback: coba new Date() langsung
+  const fallback = new Date(s);
+  if (!isNaN(fallback.getTime())) return fallback;
+
+  return null;
 }
 
 // ══════════════════════════════════════════════════
@@ -670,7 +748,12 @@ document.addEventListener('click',e=>{
 // ══════════════════════════════════════════════════
 function attemptLogin(){
   const errEl=document.getElementById('login-error');errEl.style.display='none';
-  if(!db.Awal||!db.Awal.length)return toast('⏳ Memuat data, harap tunggu...');
+  if(!db.Awal||!db.Awal.length){
+    toast('⏳ Memuat data login, harap tunggu 1–2 detik...');
+    // Retry setelah 1.5 detik
+    setTimeout(()=>attemptLogin(),1500);
+    return;
+  }
   const u=document.getElementById('user').value.trim();
   const p=document.getElementById('pass').value;
   if(!u||!p)return toast('⚠️ Isi username dan password');
@@ -679,10 +762,10 @@ function attemptLogin(){
   currentUser=found;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
-  // PERUBAHAN: hanya tampilkan nama user di header, tidak perlu akses menu
   document.getElementById('header-title').textContent=found.username;
   document.getElementById('header-sub').textContent=found.level||found.tipe||'user';
-  Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
+  // Preload data Acara di background agar Dashboard cepat
+  if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
   setupNavigation();
   logHistory('login','masuk aplikasi');
 }
@@ -706,11 +789,11 @@ function setupNavigation(){
     btn.textContent=menuLabel(menu);
     btn.onclick=(e)=>{loadModule(menu,e.currentTarget);logHistory('menu',menu);};
     nav.appendChild(btn);
-    if(idx===0)setTimeout(()=>btn.click(),100);
+    if(idx===0)setTimeout(()=>btn.click(),80);
   });
 }
 function menuLabel(n){
-  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Hasil Pertanyaan':'📋',Admin:'🔑'};
+  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Hasil Pertanyaan':'📋',Laporan:'📈',Admin:'🔑'};
   return(icons[n.trim()]||'•')+' '+n.trim();
 }
 function loadModule(name,el){
@@ -738,40 +821,83 @@ function dispatchRender(name){
   else if(n==='quiz')renderQuiz();
   else if(n==='pertanyaan')renderPertanyaan();
   else if(n==='hasil pertanyaan')renderHasilPertanyaan();
+  else if(n==='laporan')renderLaporan();
   else if(n==='admin')renderAdmin();
   else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
 }
 
 // ══════════════════════════════════════════════════
-// INFO MODAL
+// INFO MODAL — dengan info menu per level
 // ══════════════════════════════════════════════════
+const MENU_DEFINITIONS = [
+  {icon:'📊', name:'Dashboard',      desc:'Ringkasan data & jadwal acara hari ini',               levels:['all']},
+  {icon:'🎵', name:'Kidung',         desc:'Lirik kidung lengkap dengan akord & player',            levels:['all']},
+  {icon:'📖', name:'Alkitab',        desc:'Referensi ayat Alkitab yang digunakan',                 levels:['all']},
+  {icon:'📅', name:'Acara',          desc:'Jadwal sesi & program acara',                           levels:['all']},
+  {icon:'⚡', name:'Kegiatan',       desc:'Program & kegiatan pelayanan',                          levels:['all']},
+  {icon:'👥', name:'Jemaat',         desc:'Data jemaat — lihat & edit sesuai level akses',         levels:['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala']},
+  {icon:'🔗', name:'Link',           desc:'Kumpulan tautan & sumber daya',                         levels:['all']},
+  {icon:'❓', name:'Quiz',           desc:'Kuis interaktif untuk peserta',                         levels:['all']},
+  {icon:'❔', name:'Pertanyaan',     desc:'Kirim & lihat pertanyaan selama acara',                  levels:['all']},
+  {icon:'📋', name:'Hasil Pertanyaan',desc:'Jawab & kelola semua pertanyaan masuk',                levels:['Administrator','Penatua','Gembala Distrik']},
+  {icon:'📈', name:'Laporan',        desc:'Statistik jemaat lengkap (dipisah agar Dashboard cepat)',levels:['Administrator','Penatua','Gembala Distrik','Gembala']},
+  {icon:'🔑', name:'Admin',          desc:'Panel admin: hasil quiz & log aktivitas',               levels:['Administrator']},
+];
+
+const JEMAAT_EDIT_MATRIX = [
+  {level:'Administrator', icon:'🔴', edit:'Semua kolom (termasuk Nama, EfataID, Baptis, KTM, Kamar)'},
+  {level:'Gembala Distrik',icon:'🟠', edit:'EfataID, Usia, Gender, Pelayanan, Ibadah, KTM, Kamar, Keterangan'},
+  {level:'Penatua',       icon:'🟡', edit:'Usia, Gender, Pelayanan, Ibadah, KTM, Kamar, Keterangan'},
+  {level:'Gembala',       icon:'🟢', edit:'Ibadah, Pelayanan, Keterangan'},
+  {level:'Pra Gembala',   icon:'🔵', edit:'Keterangan saja'},
+  {level:'User biasa',    icon:'⚪', edit:'Hanya lihat (tidak bisa edit)'},
+];
+
 function openInfoModal(){
   const u=currentUser||{};
   const level=u.level||u.tipe||'-';
-  // Ambil data tambahan dari spreadsheet Awal
   const noEfataID=u.no_Efataid||u.no_EfataID||u['no_Efataid']||u['No_EfataID']||'-';
   const akses=u.akses||u.tipe||level;
 
-   const menuDesc={
-    Dashboard:'Menampilkan semua Data Kaum Saleh secara ringkas.',
-    Kidung:'Menampilkan Kidung yang dinyanyikan, lengkap dengan lirik dan player.',
-    Alkitab:'Menampilkan referensi Alkitab yang digunakan.',
-    Acara:'Melihat jadwal acara yang disusun.',
-    Kegiatan:'Melihat kegiatan dan program yang ada.',
-    Jemaat:'Menampilkan data jemaat yang hadir.',
-    Link:'Kumpulan link dan sumber daya yang berguna.',
-    Quiz:'Kuis interaktif untuk peserta.',
-    Pertanyaan:'Menulis pertanyaan selama acara berlangsung.',
-    'Hasil Pertanyaan':'Melihat dan menjawab semua pertanyaan yang masuk.',
-    Admin:'Panel admin untuk melihat hasil dan log aktivitas.',
+  // Tentukan level badge
+  const myLevel=getUserLevel();
+  const getLevelBadge=(lvl)=>{
+    if(lvl==='all')return`<span class="menu-level-badge all">Semua Level</span>`;
+    if(lvl.includes('Administrator'))return`<span class="menu-level-badge admin">Admin</span>`;
+    if(lvl.includes('Gembala Distrik'))return`<span class="menu-level-badge gem">Gem.Distrik</span>`;
+    if(lvl.includes('Penatua'))return`<span class="menu-level-badge penatua">Penatua</span>`;
+    if(lvl.includes('Gembala'))return`<span class="menu-level-badge gem">Gembala</span>`;
+    return`<span class="menu-level-badge">${lvl}</span>`;
   };
-  
-  const aturan=`📋 ATURAN PENGGUNAAN:
-• Semua peserta bisa menulis pertanyaan dan jawaban.
-• Jawaban bisa disampaikan lewat suara, tidak harus tertulis.
-• Kolom Keputusan hanya bisa diisi 1× oleh setiap user, kecuali Administrator, Penatua, atau Gembala Distrik.
-• Rating bisa diberikan berkali-kali (-2 s/d +2), hasilnya diakumulasi.
-• Password bisa diganti lewat tombol 🔑 di pojok kanan atas.`;
+
+  // Cek apakah user punya akses ke menu
+  const hasAccess=(levels)=>{
+    if(levels.includes('all'))return true;
+    return levels.some(l=>myLevel.includes(l)||(currentUser?.username||'').toLowerCase()==='admin');
+  };
+
+  // Build menu rows
+  const menuRows=MENU_DEFINITIONS.map(m=>{
+    const access=hasAccess(m.levels);
+    const levelBadges=m.levels[0]==='all'
+      ?getLevelBadge('all')
+      :m.levels.map(l=>getLevelBadge(l)).join(' ');
+    return`<div class="menu-row" style="opacity:${access?1:.45};">
+      <div class="menu-row-icon">${m.icon}</div>
+      <div class="menu-row-info">
+        <div class="menu-row-name">${m.name}${access?'':' <span style="font-size:.6rem;color:var(--red);">🔒</span>'}</div>
+        <div class="menu-row-desc">${m.desc}</div>
+        <div style="margin-top:3px;">${levelBadges}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Build jemaat edit matrix
+  const editRows=JEMAAT_EDIT_MATRIX.map(r=>`
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:.75rem;">
+      <span>${r.icon}</span>
+      <div style="flex:1;"><div style="font-weight:600;color:var(--text);">${r.level}</div><div style="color:var(--text3);margin-top:1px;">${r.edit}</div></div>
+    </div>`).join('');
 
   const overlay=document.getElementById('info-modal-overlay');
   const body=document.getElementById('info-modal-body');
@@ -781,25 +907,37 @@ function openInfoModal(){
       <button class="info-close-btn" onclick="closeInfoModal()">✕</button>
     </div>
     <div class="info-section">
-      <div class="info-section-title">👤 Info Login</div>
+      <div class="info-section-title">👤 Info Login Saya</div>
       <div class="info-row"><span class="info-row-label">Username</span><span class="info-row-val">${escHtml(u.username||'-')}</span></div>
       <div class="info-row"><span class="info-row-label">Password</span><span class="info-row-val">${escHtml(u.password||'-')}</span></div>
       <div class="info-row"><span class="info-row-label">Level</span><span class="info-row-val">${escHtml(level)}</span></div>
       <div class="info-row"><span class="info-row-label">No. EfataID</span><span class="info-row-val">${escHtml(noEfataID)}</span></div>
-      <div class="info-row"><span class="info-row-label">Akses</span><span class="info-row-val" style="font-size:.68rem;max-width:200px;text-align:right;word-break:break-all;">${escHtml(akses)}</span></div>
+      <div class="info-row"><span class="info-row-label">Akses Menu</span><span class="info-row-val" style="font-size:.65rem;max-width:180px;text-align:right;word-break:break-all;">${escHtml(akses)}</span></div>
     </div>
     <div class="info-section">
-      <div class="info-section-title">📘 Tentang Aplikasi</div>
-      <div style="font-size:.8rem;color:var(--text2);line-height:1.7;white-space:pre-line;">${escHtml(aturan)}</div>
+      <div class="info-section-title">📋 Menu & Akses Level</div>
+      ${menuRows}
     </div>
-    <button class="info-copy-btn" onclick="copyInfoModal()">📋 Copy Info Login</button>
+    <div class="info-section">
+      <div class="info-section-title">👥 Hak Edit Data Jemaat per Level</div>
+      ${editRows}
+    </div>
+    <div class="info-section">
+      <div class="info-section-title">📘 Aturan Penggunaan</div>
+      <div style="font-size:.78rem;color:var(--text2);line-height:1.7;">
+        • Semua peserta bisa menulis pertanyaan dan memberikan rating.<br>
+        • Kolom <strong>Keputusan</strong> hanya bisa diisi 1× per user, kecuali Administrator/Penatua/Gembala Distrik.<br>
+        • Rating bisa diberikan berkali-kali (−2 s/d +2), hasilnya diakumulasi.<br>
+        • Password bisa diganti lewat tombol 🔑 di pojok kanan atas.<br>
+        • Menu <strong>Laporan</strong> memuat statistik lengkap jemaat (dipisah agar Dashboard tetap cepat).
+      </div>
+    </div>
     <div id="info-copy-hidden" style="display:none;">USERNAME: ${u.username||'-'}
 PASSWORD: ${u.password||'-'}
 LEVEL: ${level}
 NO EFATAID: ${noEfataID}
-AKSES: ${akses}
-
-${aturan}</div>`;
+AKSES: ${akses}</div>
+    <button class="info-copy-btn" onclick="copyInfoModal()">📋 Copy Info Login</button>`;
   overlay.classList.add('open');
 }
 function closeInfoModal(){document.getElementById('info-modal-overlay').classList.remove('open');}
@@ -819,8 +957,10 @@ async function submitGantiPassword(){
   if(pw1.length<3){statusEl.textContent='❌ Password minimal 3 karakter';statusEl.style.color='var(--red)';return;}
   statusEl.textContent='⏳ Menyimpan...';statusEl.style.color='var(--text3)';
   const formData=new URLSearchParams({action:'ganti_password',requester:currentUser?.username||'',username:currentUser?.username||'',new_password:pw1,level:currentUser?.level||currentUser?.tipe||''});
+  // Coba kirim ke APPS_SCRIPT_AWAL dulu, fallback ke APPS_SCRIPT_PERTANYAAN
+  const targetUrl=APPS_SCRIPT_AWAL&&!APPS_SCRIPT_AWAL.includes('GANTI')?APPS_SCRIPT_AWAL:APPS_SCRIPT_PERTANYAAN;
   try{
-    await fetch(APPS_SCRIPT_PERTANYAAN,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
+    await fetch(targetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
     if(currentUser)currentUser.password=pw1;
     statusEl.textContent='✅ Password berhasil diganti!';statusEl.style.color='var(--green)';
     toast('✅ Password berhasil diganti!');
@@ -828,379 +968,240 @@ async function submitGantiPassword(){
   }catch(e){statusEl.textContent='❌ Gagal. Coba lagi.';statusEl.style.color='var(--red)';}
 }
 
-
-
 // ══════════════════════════════════════════════════
-// DASHBOARD
+// DASHBOARD — cepat: hanya tampilkan jam + jadwal acara
+// Statistik jemaat dipindah ke menu "Laporan"
 // ══════════════════════════════════════════════════
-function renderDashboard() {
-  const content = document.getElementById('app-content');
-  const jemaat = db.Jemaat || [];
-  const acara = db.Acara || [];
-  const kidung = db.Kidung || [];
+function renderDashboard(){
+  const content=document.getElementById('app-content');
+  const acara=db.Acara||[];
+  const kidung=db.Kidung||[];
+  const jemaat=db.Jemaat||[];
 
-  // Hitung statistik jemaat
-  const total = jemaat.length;
-  const pria = jemaat.filter(j => j.Gender === 'Pria').length;
-  const wanita = jemaat.filter(j => j.Gender === 'Wanita').length;
-
-  // Usia
-  const usia = {anak:0,remaja:0,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
-  jemaat.forEach(j => {
-    const u = parseInt(j.Usia);
-    if (!u || isNaN(u)) usia.tidaktahu++;
-    else if (u <= 12) usia.anak++;
-    else if (u <= 16) usia.remaja++;
-    else if (u <= 24) usia.pemuda++;
-    else if (u <= 35) usia.muda++;
-    else if (u <= 55) usia.dewasa++;
-    else usia.tua++;
-  });
-
-  // Baptis
-  const baptisMap = {sudah:0,belum:0};
-  jemaat.forEach(j => {
-    const t = (j['Tanggal Baptis'] || '').trim();
-    if (t && t !== '00/01/1900' && t !== '-' && t !== '') baptisMap.sudah++;
-    else baptisMap.belum++;
-  });
-
-  // EfataID
-  const efataidMap = {ya:0,tidak:0,lainnya:0};
-  jemaat.forEach(j => {
-    const ef = (j['efataid'] || j['Efataid'] || '').toLowerCase().trim();
-    if (['ya','y','iya'].includes(ef)) efataidMap.ya++;
-    else if (['tidak','n','tdk'].includes(ef)) efataidMap.tidak++;
-    else if (ef) efataidMap.lainnya++;
-  });
-
-  // Ikut Solo
-  const ikutSoloMap = {ya:0,tidak:0};
-  jemaat.forEach(j => {
-    const v = String(j['ikutSolo'] || j['Ikut Solo'] || '').toLowerCase().replace(/\s+/g,'').trim();
-    if (['y','ya','yes','1'].includes(v)) ikutSoloMap.ya++;
-    else if (v) ikutSoloMap.tidak++;
-  });
-
-  // Kategori
-  const katMap = {};
-  jemaat.forEach(j => {
-    const k = (j['Kategori'] || j['kategori'] || '').trim();
-    if (k) katMap[k] = (katMap[k] || 0) + 1;
-  });
-
-  // Gugus
-  const gugusMap = {};
-  jemaat.forEach(j => {
-    const g = (j['Gugus'] || j['gugus'] || '').trim();
-    if (g) gugusMap[g] = (gugusMap[g] || 0) + 1;
-  });
-
-  // Kelas
-  const kelasGMap = {}, kelasNonGMap = {};
-  jemaat.forEach(j => {
-    const k = (j['kelas'] || j['Kelas'] || '').trim();
-    if (!k) return;
-    if (/^G[\s\-]/i.test(k)) kelasGMap[k] = (kelasGMap[k] || 0) + 1;
-    else kelasNonGMap[k] = (kelasNonGMap[k] || 0) + 1;
-  });
-
-  // Ibadah
-  const ibadahMap = {};
-  jemaat.forEach(j => {
-    (j['ibadah yang diikuti'] || '').split(/[,;\/]/).forEach(x => {
-      const t = x.trim(); if (t) ibadahMap[t] = (ibadahMap[t] || 0) + 1;
-    });
-  });
-
-  // Pelayanan
-  const pelayananMap = {};
-  jemaat.forEach(j => {
-    (j['pelayanan'] || '').split(/[,;\/]/).forEach(x => {
-      const t = x.trim(); if (t) pelayananMap[t] = (pelayananMap[t] || 0) + 1;
-    });
-  });
-
-  // Bangun section acara
-  const acaraSection = buildDashAcaraSection(acara);
-
-  // Bangun HTML
-  let html = `
+  // Card stats cepat (tidak perlu load berat)
+  const html=`
     <div class="clock-card">
       <div class="clock-big" id="dash-clock">--:--:--</div>
       <div class="clock-date" id="dash-date">-- --- 2026</div>
     </div>
-
-    ${acaraSection}
-
+    ${buildDashAcaraSection(acara)}
     <div class="dash-grid">
-      <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val">${total || '—'}</div><div class="dash-card-label">Total Jemaat</div></div>
-      <div class="dash-card"><span class="dash-card-icon">📅</span><div class="dash-card-val">${acara.length || '—'}</div><div class="dash-card-label">Sesi Acara</div></div>
-      <div class="dash-card"><span class="dash-card-icon">🎵</span><div class="dash-card-val">${kidung.length || '—'}</div><div class="dash-card-label">Kidung</div></div>
-      <div class="dash-card"><span class="dash-card-icon">📖</span><div class="dash-card-val">Selamat Datang</div><div class="dash-card-label"></div></div>
+      <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val" id="dc-jemaat">${jemaat.length||'—'}</div><div class="dash-card-label">Total Jemaat</div></div>
+      <div class="dash-card"><span class="dash-card-icon">📅</span><div class="dash-card-val">${acara.length||'—'}</div><div class="dash-card-label">Sesi Acara</div></div>
+      <div class="dash-card"><span class="dash-card-icon">🎵</span><div class="dash-card-val">${kidung.length||'—'}</div><div class="dash-card-label">Kidung</div></div>
+      <div class="dash-card" style="cursor:pointer;" onclick="goToLaporan()"><span class="dash-card-icon">📈</span><div class="dash-card-val" style="font-size:1rem;">Lihat →</div><div class="dash-card-label">Statistik Laporan</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;font-size:.82rem;color:var(--text3);">
+      💡 Statistik lengkap jemaat ada di menu <strong style="color:var(--accent);">📈 Laporan</strong> agar halaman ini tetap cepat.
     </div>`;
 
-  if (total > 0) {
-    // Gender & Baptis row
-    html += `
-    <div class="dash-grid" style="margin-top:10px;">
-      <div class="dash-card">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⚥ Gender</div>
-        <div class="pie-wrap">${buildPie([{val:pria,color:'#3b82f6',label:'Pria'},{val:wanita,color:'#ec4899',label:'Wanita'}])}</div>
-        <div class="pie-legend">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#3b82f6;"></span>Pria: ${pria}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ec4899;"></span>Wanita: ${wanita}</div>
-        </div>
-      </div>
-      <div class="dash-card">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">💧 Baptis</div>
-        <div class="pie-wrap">${buildPie([{val:baptisMap.sudah,color:'#10b981',label:'Sudah'},{val:baptisMap.belum,color:'#ef4444',label:'Belum'}])}</div>
-        <div class="pie-legend">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div>
-        </div>
-      </div>
-    </div>`;
+  content.innerHTML=html;
 
-    // Usia
-    const usiaSegments = [
-      {val:usia.tidaktahu,color:'#eff4b4',label:'?'},
-      {val:usia.anak,color:'#506981',label:'≤12'},
-      {val:usia.remaja,color:'#14b9f1',label:'13-16'},
-      {val:usia.pemuda,color:'#10491f',label:'17-24'},
-      {val:usia.muda,color:'#10b981',label:'25-35'},
-      {val:usia.dewasa,color:'#f59e0b',label:'36-55'},
-      {val:usia.tua,color:'#ef4444',label:'55+'},
-    ].filter(s => s.val > 0);
-    html += `
-    <div class="dash-card" style="margin-top:10px;">
-      <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎂 Sebaran Usia</div>
-      <div class="pie-wrap">${buildPie(usiaSegments)}</div>
-      <div class="pie-legend">
-        ${usia.tidaktahu>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#eff4b4;"></span>?: ${usia.tidaktahu}</div>`:''}
-        ${usia.anak>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#506981;"></span>≤12 th: ${usia.anak}</div>`:''}
-        ${usia.remaja>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#14b9f1;"></span>13–16 th: ${usia.remaja}</div>`:''}
-        ${usia.pemuda>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10491f;"></span>17–24 th: ${usia.pemuda}</div>`:''}
-        ${usia.muda>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>25–35 th: ${usia.muda}</div>`:''}
-        ${usia.dewasa>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>36–55 th: ${usia.dewasa}</div>`:''}
-        ${usia.tua>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>55+ th: ${usia.tua}</div>`:''}
-      </div>
-    </div>`;
-
-    // EfataID & Ikut Solo
-    html += `
-    <div class="dash-grid" style="margin-top:10px;">
-      <div class="dash-card">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">✝ EfataID</div>
-        ${build3DPie([{val:efataidMap.ya,color:'#10b981',label:'Ya'},{val:efataidMap.tidak,color:'#ef4444',label:'Tidak'},{val:efataidMap.lainnya,color:'#f59e0b',label:'Lain'}])}
-        <div class="pie-legend" style="margin-top:8px;">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${efataidMap.ya}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${efataidMap.tidak}</div>
-          ${efataidMap.lainnya>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>Lain: ${efataidMap.lainnya}</div>`:''}
-        </div>
-      </div>
-      <div class="dash-card">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎤 Ikut Solo</div>
-        ${build3DPie([{val:ikutSoloMap.ya,color:'#10b981',label:'Ya'},{val:ikutSoloMap.tidak,color:'#ef4444',label:'Tidak'}])}
-        <div class="pie-legend" style="margin-top:8px;">
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${ikutSoloMap.ya}</div>
-          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${ikutSoloMap.tidak}</div>
-        </div>
-      </div>
-    </div>`;
-
-    // Kategori
-    if (Object.keys(katMap).length > 0) {
-      const katSegments = Object.entries(katMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
-      html += `
-      <div class="dash-card" style="margin-top:10px;">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">👦 Kategori Jemaat</div>
-        <div class="pie-wrap">${buildPie(katSegments)}</div>
-        <div class="pie-legend">${katSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
-        <div style="margin-top:10px;">
-          <table class="dash-table">
-            <thead><tr><th>Kategori</th><th style="text-align:right;">Jumlah</th></tr></thead>
-            <tbody>
-              ${Object.entries(katMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${escHtml(k)}</td><td>${v}</td></tr>`).join('')}
-              <tr style="font-weight:700;"><td>Total</td><td>${total}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>`;
-    }
-
-    // Gugus
-    if (Object.keys(gugusMap).length > 0) {
-      const gugusSegments = Object.entries(gugusMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
-      html += `
-      <div class="dash-card" style="margin-top:10px;">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🏠 Gugus</div>
-        <div class="pie-wrap">${buildPie(gugusSegments)}</div>
-        <div class="pie-legend">${gugusSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
-      </div>`;
-    }
-
-    // Ibadah yang diikuti — pie + bar chart
-    if (Object.keys(ibadahMap).length > 0) {
-      const ibadahSegments = Object.entries(ibadahMap).map(([k,v],i) => ({val:v,color:MC[(i+2)%MC.length],label:k}));
-      html += `
-      <div class="dash-card" style="margin-top:10px;">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⛪ Ibadah yang Diikuti</div>
-        <div class="pie-wrap">${buildPie(ibadahSegments)}</div>
-        <div class="pie-legend">${ibadahSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
-        <div style="margin-top:12px;"><div style="font-size:.78rem;font-weight:600;color:var(--text3);margin-bottom:8px;">📊 Grafik per Ibadah</div>
-        <div class="bar-chart-wrap">${buildBarChart(ibadahMap)}</div></div>
-      </div>`;
-    }
-
-    // Pelayanan — pie + bar chart
-    if (Object.keys(pelayananMap).length > 0) {
-      const pelayananSegments = Object.entries(pelayananMap).map(([k,v],i) => ({val:v,color:MC[(i+3)%MC.length],label:k}));
-      html += `
-      <div class="dash-card" style="margin-top:10px;">
-        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🤝 Pelayanan</div>
-        <div class="pie-wrap">${buildPie(pelayananSegments)}</div>
-        <div class="pie-legend">${pelayananSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
-      </div>`;
-    }
-
-  }
-
-  content.innerHTML = html;
-
-  // Clock update
-  const updateDashClock = () => {
-    const n = new Date();
-    const pad = x => String(x).padStart(2,'0');
-    const dc = document.getElementById('dash-clock');
-    const dd = document.getElementById('dash-date');
-    if (dc) dc.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
-    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    if (dd) dd.textContent = `${days[n.getDay()]}, ${pad(n.getDate())} ${months[n.getMonth()]} ${n.getFullYear()}`;
+  const updateDashClock=()=>{
+    const n=new Date();const pad=x=>String(x).padStart(2,'0');
+    const dc=document.getElementById('dash-clock');const dd=document.getElementById('dash-date');
+    if(dc)dc.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+    const days=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    if(dd)dd.textContent=`${days[n.getDay()]}, ${pad(n.getDate())} ${months[n.getMonth()]} ${n.getFullYear()}`;
   };
   updateDashClock();
-  if (window._dashClockInterval) clearInterval(window._dashClockInterval);
-  window._dashClockInterval = setInterval(updateDashClock, 1000);
+  if(window._dashClockInterval)clearInterval(window._dashClockInterval);
+  window._dashClockInterval=setInterval(updateDashClock,1000);
 
-  // Lazy-load data yang belum ada
-  if (!db.Jemaat) Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;renderDashboard();}});
-  if (!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
-  if (!db.Kidung) Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
-  // if (!db.Alkitab) Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
+  // Lazy-load data Acara jika belum ada — lalu render ulang
+  if(!db.Acara){
+    Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
+  }
+  if(!db.Kidung){
+    Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
+  }
+}
+
+function goToLaporan(){
+  const btns=document.querySelectorAll('#main-nav button');
+  for(const b of btns){
+    if(b.textContent.includes('Laporan')){b.click();return;}
+  }
+  toast('ℹ️ Menu Laporan belum tersedia di akses Anda');
 }
 
 // ══════════════════════════════════════════════════
-// ACARA SECTION DASHBOARD
-// Tampil: 1 acara terakhir yg sudah lewat + acara yg sedang berlangsung (jika ada) + 3 acara mendatang
-// Total maks 5 baris. Jika tidak ada data waktu, tetap tampil pesan informatif.
+// DASHBOARD ACARA SECTION — FIXED parseAcaraWaktu
 // ══════════════════════════════════════════════════
-function buildDashAcaraSection(acara) {
-  const now = new Date();
-  const HARI = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
-  const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function buildDashAcaraSection(acara){
+  const now=new Date();
+  const pad2=x=>String(x).padStart(2,'0');
+  const HARI=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const DURASI_MS=90*60*1000;
 
-  // Parse semua acara yang punya waktu valid
-  const withTime = acara
-    .map((a, i) => {
-      const wkt = a['waktu'] || a['Waktu'] || a['WAKTU'] || a['jam'] || a['Jam'] || '';
-      const dt = parseAcaraWaktu(wkt);
-      return { ...a, _dt: dt, _idx: i, _wkt: wkt };
-    })
-    .filter(a => a._dt)
-    .sort((a, b) => a._dt - b._dt);
+  const withTime=acara.map((a,i)=>{
+    // Coba semua kemungkinan field waktu
+    const wkt=a['waktu']||a['Waktu']||a['WAKTU']||a['jam']||a['Jam']||a['tanggal']||a['Tanggal']||'';
+    const dt=parseAcaraWaktu(wkt);
+    return{...a,_dt:dt,_idx:i,_wkt:wkt};
+  }).filter(a=>a._dt).sort((a,b)=>a._dt-b._dt);
 
-  // Acara tanpa waktu yang valid
-  const noTime = acara.filter((a) => {
-    const wkt = a['waktu'] || a['Waktu'] || a['WAKTU'] || a['jam'] || a['Jam'] || '';
+  const noTime=acara.filter(a=>{
+    const wkt=a['waktu']||a['Waktu']||a['WAKTU']||a['jam']||a['Jam']||'';
     return !parseAcaraWaktu(wkt);
   });
 
-  // Durasi acara default: 90 menit (untuk menentukan "sedang berlangsung")
-  const DURASI_DEFAULT_MS = 90 * 60 * 1000;
+  const past=withTime.filter(a=>a._dt<now&&(now-a._dt)>DURASI_MS);
+  const current=withTime.filter(a=>a._dt<=now&&(now-a._dt)<=DURASI_MS);
+  const future=withTime.filter(a=>a._dt>now);
 
-  const past = withTime.filter(a => a._dt < now && (now - a._dt) > DURASI_DEFAULT_MS);
-  const current = withTime.filter(a => a._dt <= now && (now - a._dt) <= DURASI_DEFAULT_MS);
-  const future = withTime.filter(a => a._dt > now);
+  const lastPast=past.length?[past[past.length-1]]:[];
+  const nowAcara=current.slice(-1);
+  const nextThree=future.slice(0,3);
+  let display=[...lastPast,...nowAcara,...nextThree];
+  if(!display.length&&past.length)display=past.slice(-3);
 
-  // 1 acara terakhir yang sudah lewat
-  const lastPast = past.length ? [past[past.length - 1]] : [];
-  // Acara berlangsung (max 1)
-  const nowAcara = current.slice(-1);
-  // 3 acara mendatang
-  const nextThree = future.slice(0, 3);
-
-  const display = [...lastPast, ...nowAcara, ...nextThree];
-
-  const pad2 = x => String(x).padStart(2, '0');
-
-  const buildRow = (a) => {
-    const isNow = nowAcara.includes(a);
-    const isFuture = a._dt > now;
-    const isPast = !isNow && !isFuture;
-    const isNext = !isNow && future.length > 0 && future[0] === a;
-    const timeStr = `${pad2(a._dt.getHours())}.${pad2(a._dt.getMinutes())}`;
-    const dateStr = `${HARI[a._dt.getDay()]} ${pad2(a._dt.getDate())}/${pad2(a._dt.getMonth()+1)}`;
-    const namaAcara = a['nama acara'] || a['nama'] || a['Nama Acara'] || a['Nama'] || '-';
-
-    let badgeHtml = '';
-    if (isNow) badgeHtml = `<span class="acara-badge" style="background:#f59e0b;color:#000;">🔴 SEKARANG</span>`;
-    else if (isNext) badgeHtml = `<span class="acara-badge" style="background:rgba(59,130,246,.2);color:var(--accent);border:1px solid var(--accent);">BERIKUTNYA</span>`;
-
-    const rowClass = isNow ? 'acara-row now-row' : (isPast ? 'acara-row past-row' : 'acara-row future-row');
-    const nameWeight = isNow ? '700' : (isNext ? '600' : '400');
-    const timeColor = isNow ? '#f59e0b' : (isFuture ? 'var(--accent)' : 'var(--text3)');
-
-    return `<div class="${rowClass}">
+  const buildRow=(a)=>{
+    const isNow=nowAcara.includes(a);
+    const isFuture=a._dt>now;
+    const isNext=!isNow&&future.length>0&&future[0]===a;
+    const timeStr=`${pad2(a._dt.getHours())}.${pad2(a._dt.getMinutes())}`;
+    const dateStr=`${HARI[a._dt.getDay()]} ${pad2(a._dt.getDate())}/${pad2(a._dt.getMonth()+1)}`;
+    const namaAcara=a['nama acara']||a['nama']||a['Nama Acara']||a['Nama']||'-';
+    let badgeHtml='';
+    if(isNow)badgeHtml=`<span class="acara-badge" style="background:#f59e0b;color:#000;">🔴 KINI</span>`;
+    else if(isNext)badgeHtml=`<span class="acara-badge" style="background:rgba(59,130,246,.2);color:var(--accent);border:1px solid var(--accent);">NEXT</span>`;
+    const nameColor=isNow?'#f59e0b':isFuture?'var(--text)':'var(--text3)';
+    const timeColor=isNow?'#f59e0b':isFuture?'var(--accent)':'var(--text3)';
+    return`<div class="acara-row-wrap${isNow?' now-row':isFuture?'':' past-row'}">
       <span class="acara-time" style="color:${timeColor};">${timeStr}</span>
       <span class="acara-date">${dateStr}</span>
-      <span class="acara-name" style="font-weight:${nameWeight};color:${isNow?'#f59e0b':isPast?'var(--text3)':'var(--text)'};">${escHtml(namaAcara)}</span>
+      <span class="acara-name" style="color:${nameColor};font-weight:${isNow?700:isNext?600:400};">${escHtml(namaAcara)}</span>
       ${badgeHtml}
     </div>`;
   };
 
-  const futureCount = future.length;
-  const titleLabel = futureCount > 0
-    ? `📋 Jadwal Acara · <span style="color:var(--accent);">${futureCount} mendatang</span>`
-    : `📋 Jadwal Acara · <span style="color:var(--text3);">semua selesai</span>`;
+  const futureCount=future.length;
+  const titleLabel=futureCount>0
+    ?`📋 Jadwal Acara · <span style="color:var(--accent);">${futureCount} mendatang</span>`
+    :withTime.length>0?`📋 Jadwal Acara · <span style="color:var(--text3);">semua selesai</span>`
+    :`📋 Jadwal Acara`;
 
-  let rowsHtml = '';
-  if (display.length > 0) {
-    rowsHtml = display.map(buildRow).join('');
-  } else if (withTime.length > 0) {
-    // Semua sudah lewat, tampilkan 3 terakhir
-    const last3 = past.slice(-3);
-    rowsHtml = last3.map(buildRow).join('');
-  } else {
-    rowsHtml = `<div style="font-size:.8rem;color:var(--text3);padding:8px 0;">⏳ Data waktu acara belum tersedia atau format tidak dikenali.</div>`;
+  let rowsHtml='';
+  if(display.length){
+    rowsHtml=`<div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:3px 8px;align-items:center;margin-top:4px;">
+      <div style="font-size:.58rem;color:var(--text3);font-weight:600;padding-bottom:4px;">JAM</div>
+      <div style="font-size:.58rem;color:var(--text3);font-weight:600;padding-bottom:4px;">TGL</div>
+      <div style="font-size:.58rem;color:var(--text3);font-weight:600;padding-bottom:4px;">ACARA</div>
+      <div></div>
+      ${display.map(buildRow).join('')}
+    </div>`;
+  }else{
+    rowsHtml=`<div style="font-size:.8rem;color:var(--text3);padding:8px 0;">
+      ⏳ Data waktu belum tersedia. Pastikan kolom <strong>"waktu"</strong> di sheet Acara berisi format seperti <code>01/30/2026 23:00:00</code>.
+    </div>`;
   }
 
-  // Tampilkan juga acara tanpa waktu jika ada
-  const noTimeNote = noTime.length > 0
-    ? `<div style="font-size:.7rem;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">📌 ${noTime.length} acara lain tanpa jadwal waktu</div>`
-    : '';
+  const noTimeNote=noTime.length?`<div style="font-size:.7rem;color:var(--text3);margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">📌 ${noTime.length} acara lain tanpa jadwal waktu</div>`:'';
 
-  return `<div class="acara-now-box">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:10px;">${titleLabel}</div>
-    <div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0;align-items:center;">
-      <div style="font-size:.6rem;color:var(--text3);padding:0 8px 6px 6px;font-weight:600;">JAM</div>
-      <div style="font-size:.6rem;color:var(--text3);padding:0 8px 6px 0;font-weight:600;">TGL</div>
-      <div style="font-size:.6rem;color:var(--text3);padding:0 0 6px 0;font-weight:600;">ACARA</div>
-      <div></div>
-    </div>
+  return`<div class="acara-now-box">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:8px;">${titleLabel}</div>
     ${rowsHtml}
     ${noTimeNote}
   </div>`;
 }
 
-function build3DPie(segments){
-  const total=segments.reduce((s,x)=>s+x.val,0);
-  if(total===0)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:10px;">No data</div>';
-  const cx=100,cy=45,rx=80,ry=28,depth=18;let svgPaths='',svgSides='',offset=0;
-  segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;if(Math.sin(offset-angle/2)>0)svgSides+=`<path d="M${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} L${x2},${y2+depth} A${rx},${ry} 0 ${large},0 ${x1},${y1+depth} Z" fill="${seg.color}" opacity=".55" stroke="rgba(0,0,0,.15)" stroke-width=".5"/>`;});
-  offset=0;segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;svgPaths+=`<path d="M${cx},${cy} L${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} Z" fill="${seg.color}" opacity=".95" stroke="rgba(0,0,0,.1)" stroke-width=".5"><title>${seg.label}: ${seg.val}</title></path>`;});
-  return`<div style="text-align:center;"><svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:200px;">${svgSides}${svgPaths}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" font-weight="bold" fill="white">${total}</text></svg></div>`;
+// ══════════════════════════════════════════════════
+// LAPORAN — statistik berat dipindah ke sini
+// ══════════════════════════════════════════════════
+function renderLaporan(){
+  const content=document.getElementById('app-content');
+  content.innerHTML=`<div class="section-header"><span class="section-title">📈 Laporan Statistik</span><button class="btn-action accent" onclick="loadLaporanData()" id="laporan-load-btn">🔄 Muat Data</button></div><div id="laporan-body"><div class="empty-state"><div class="icon">📈</div><p>Tekan <strong>Muat Data</strong> untuk menampilkan statistik jemaat.</p></div></div>`;
+  // Auto load jika data sudah ada
+  if(db.Jemaat&&db.Jemaat.length)loadLaporanData();
 }
+
+function loadLaporanData(){
+  const btn=document.getElementById('laporan-load-btn');if(btn)btn.textContent='⏳ Memuat...';
+  const doRender=()=>{
+    const jemaat=db.Jemaat||[];
+    if(!jemaat.length){document.getElementById('laporan-body').innerHTML='<div class="empty-state"><div class="icon">📭</div><p>Data jemaat kosong.</p></div>';if(btn)btn.textContent='🔄 Muat Data';return;}
+    renderLaporanContent(jemaat);if(btn)btn.textContent='🔄 Refresh';
+  };
+  if(!db.Jemaat){
+    Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;doRender();}});
+  }else doRender();
+}
+
+function renderLaporanContent(jemaat){
+  const total=jemaat.length;
+  const pria=jemaat.filter(j=>j.Gender==='Pria').length;
+  const wanita=jemaat.filter(j=>j.Gender==='Wanita').length;
+
+  // Usia
+  const usia={anak:0,remaja:0,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
+  jemaat.forEach(j=>{const u=parseInt(j.Usia);if(!u||isNaN(u))usia.tidaktahu++;else if(u<=12)usia.anak++;else if(u<=16)usia.remaja++;else if(u<=24)usia.pemuda++;else if(u<=35)usia.muda++;else if(u<=55)usia.dewasa++;else usia.tua++;});
+
+  // Baptis
+  const baptisMap={sudah:0,belum:0};
+  jemaat.forEach(j=>{const t=(j['Tanggal Baptis']||'').trim();if(t&&t!=='00/01/1900'&&t!=='-'&&t!=='')baptisMap.sudah++;else baptisMap.belum++;});
+
+  // EfataID
+  const efataidMap={ya:0,tidak:0,lainnya:0};
+  jemaat.forEach(j=>{const ef=(j['efataid']||j['Efataid']||'').toLowerCase().trim();if(['ya','y','iya'].includes(ef))efataidMap.ya++;else if(['tidak','n','tdk'].includes(ef))efataidMap.tidak++;else if(ef)efataidMap.lainnya++;});
+
+  // Ikut Solo
+  const ikutSoloMap={ya:0,tidak:0};
+  jemaat.forEach(j=>{const v=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().replace(/\s+/g,'').trim();if(['y','ya','yes','1'].includes(v))ikutSoloMap.ya++;else if(v)ikutSoloMap.tidak++;});
+
+  // Kategori
+  const katMap={};jemaat.forEach(j=>{const k=(j['Kategori']||j['kategori']||'').trim();if(k)katMap[k]=(katMap[k]||0)+1;});
+  const gugusMap={};jemaat.forEach(j=>{const g=(j['Gugus']||j['gugus']||'').trim();if(g)gugusMap[g]=(gugusMap[g]||0)+1;});
+  const ibadahMap={};jemaat.forEach(j=>{(j['ibadah yang diikuti']||'').split(/[,;\/]/).forEach(x=>{const t=x.trim();if(t)ibadahMap[t]=(ibadahMap[t]||0)+1;});});
+  const pelayananMap={};jemaat.forEach(j=>{(j['pelayanan']||'').split(/[,;\/]/).forEach(x=>{const t=x.trim();if(t)pelayananMap[t]=(pelayananMap[t]||0)+1;});});
+
+  let html=`<div class="dash-grid" style="margin-bottom:10px;">
+    <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val">${total}</div><div class="dash-card-label">Total Jemaat</div></div>
+    <div class="dash-card"><span class="dash-card-icon">⚥</span><div class="dash-card-val">${pria}P/${wanita}W</div><div class="dash-card-label">Gender</div></div>
+    <div class="dash-card"><span class="dash-card-icon">💧</span><div class="dash-card-val">${baptisMap.sudah}</div><div class="dash-card-label">Sudah Baptis</div></div>
+    <div class="dash-card"><span class="dash-card-icon">✝</span><div class="dash-card-val">${efataidMap.ya}</div><div class="dash-card-label">Ada EfataID</div></div>
+  </div>`;
+
+  // Pie charts
+  const usiaSegments=[
+    {val:usia.tidaktahu,color:'#eff4b4',label:'?'},
+    {val:usia.anak,color:'#506981',label:'≤12'},
+    {val:usia.remaja,color:'#14b9f1',label:'13-16'},
+    {val:usia.pemuda,color:'#10491f',label:'17-24'},
+    {val:usia.muda,color:'#10b981',label:'25-35'},
+    {val:usia.dewasa,color:'#f59e0b',label:'36-55'},
+    {val:usia.tua,color:'#ef4444',label:'55+'},
+  ].filter(s=>s.val>0);
+
+  html+=`
+  <div class="dash-grid">
+    <div class="dash-card"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">⚥ Gender</div><div class="pie-wrap">${buildPie([{val:pria,color:'#3b82f6',label:'Pria'},{val:wanita,color:'#ec4899',label:'Wanita'}])}</div><div class="pie-legend"><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#3b82f6;"></span>Pria: ${pria}</div><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ec4899;"></span>Wanita: ${wanita}</div></div></div>
+    <div class="dash-card"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">💧 Baptis</div><div class="pie-wrap">${buildPie([{val:baptisMap.sudah,color:'#10b981',label:'Sudah'},{val:baptisMap.belum,color:'#ef4444',label:'Belum'}])}</div><div class="pie-legend"><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div></div></div>
+  </div>
+  <div class="dash-card" style="margin-top:10px;"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">🎂 Sebaran Usia</div><div class="pie-wrap">${buildPie(usiaSegments)}</div><div class="pie-legend">${usiaSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div></div>`;
+
+  if(Object.keys(katMap).length){
+    const katSeg=Object.entries(katMap).map(([k,v],i)=>({val:v,color:MC[i%MC.length],label:k}));
+    html+=`<div class="dash-card" style="margin-top:10px;"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">👦 Kategori Jemaat</div><div class="pie-wrap">${buildPie(katSeg)}</div><div class="pie-legend">${katSeg.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div><div style="margin-top:10px;"><table class="dash-table"><thead><tr><th>Kategori</th><th style="text-align:right;">Jumlah</th></tr></thead><tbody>${Object.entries(katMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${escHtml(k)}</td><td>${v}</td></tr>`).join('')}<tr style="font-weight:700;"><td>Total</td><td>${total}</td></tr></tbody></table></div></div>`;
+  }
+  if(Object.keys(gugusMap).length){
+    const gugusSeg=Object.entries(gugusMap).map(([k,v],i)=>({val:v,color:MC[i%MC.length],label:k}));
+    html+=`<div class="dash-card" style="margin-top:10px;"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">🏠 Gugus</div><div class="pie-wrap">${buildPie(gugusSeg)}</div><div class="pie-legend">${gugusSeg.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div></div>`;
+  }
+  if(Object.keys(ibadahMap).length){
+    const ibadahSeg=Object.entries(ibadahMap).map(([k,v],i)=>({val:v,color:MC[(i+2)%MC.length],label:k}));
+    html+=`<div class="dash-card" style="margin-top:10px;"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">⛪ Ibadah yang Diikuti</div><div class="pie-wrap">${buildPie(ibadahSeg)}</div><div class="pie-legend">${ibadahSeg.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div><div style="margin-top:12px;"><div class="bar-chart-wrap">${buildBarChart(ibadahMap)}</div></div></div>`;
+  }
+  if(Object.keys(pelayananMap).length){
+    const pelSeg=Object.entries(pelayananMap).map(([k,v],i)=>({val:v,color:MC[(i+3)%MC.length],label:k}));
+    html+=`<div class="dash-card" style="margin-top:10px;"><div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">🤝 Pelayanan</div><div class="pie-wrap">${buildPie(pelSeg)}</div><div class="pie-legend">${pelSeg.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div></div>`;
+  }
+
+  document.getElementById('laporan-body').innerHTML=html;
+}
+
+// ── PIE & BAR HELPERS ────────────────────────────────────────
 function buildPie(segments){
   const total=segments.reduce((s,x)=>s+x.val,0);
   if(!total)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:20px;">No data</div>';
@@ -1211,7 +1212,6 @@ function buildPie(segments){
 function buildBarChart(map){
   const maxVal=Math.max(...Object.values(map),1);
   return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>{const pct=Math.round(v/maxVal*100);return`<div class="bar-item"><div class="bar-label" title="${k}">${escHtml(k.length>15?k.slice(0,15)+'…':k)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${MC[i%MC.length]},${MC[(i+1)%MC.length]});"><span class="bar-val">${v}</span></div></div></div>`;}).join('');}
-
 
 // ══════════════════════════════════════════════════
 // IMAGE VIEWER
@@ -1350,10 +1350,9 @@ function openAlkitabDetail(k){
   if(videoRaw)tabs+=`<button class="tab-btn" onclick="switchKTab('ab-video',this)">${isYt?'▶ YouTube':'🎬 Video'}</button>`;
   if(hasPdf)tabs+=`<button class="tab-btn" onclick="switchKTab('ab-pdf',this)">📄 PDF</button>`;
   if(audio)tabs+=`<button class="tab-btn" onclick="switchKTab('ab-player',this)">🎵 Musik</button>`;
-  const copyShort=`${k['no kitab']||''}\n${isi}`;const copyFull=`${k['no kitab']||''}\n${isi}${catatan?'\n\nCatatan Kaki:\n'+catatan:''}${keperluan?'\n\nKeperluan: '+keperluan:''}`;
   const body=`<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:5px;">${escHtml(k['no kitab']||'-')}</h2><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">${k['pilihan PL/PB']||k['PL/PB']?`<span class="tag green">${escHtml(k['pilihan PL/PB']||k['PL/PB'])}</span>`:''}${keperluan?`<span class="tag yellow" style="font-size:.65rem;">${escHtml(keperluan)}</span>`:''}</div><div class="tab-group">${tabs}</div>
     <div id="tab-ab-teks" class="kidung-tab active-tab"><div class="action-row"><button class="btn-action" onclick="adjustFont(-2)">A−</button><button class="btn-action" onclick="adjustFont(2)">A+</button><button class="btn-action" onclick="toggleFontMode()">🔤 Font</button><button class="btn-action green" onclick="navigator.clipboard.writeText(document.getElementById('ab-copy-short').innerText).then(()=>toast('✅ Disalin!'))">📋 No+Isi</button><button class="btn-action accent" onclick="navigator.clipboard.writeText(document.getElementById('ab-copy-full').innerText).then(()=>toast('✅ Disalin lengkap!'))">📋 Lengkap</button>${hasPdf?`<button class="btn-action red" onclick="openPdf('${hasPdf}','${escHtml(k['no kitab']||'')}')">📄 PDF</button>`:''}<button class="btn-action" onclick="openLyricFullscreenFromDom()">⛶ Full🔤</button><button class="btn-action btn-fullscreen" data-lyric="${encodeURIComponent(isi)}">⛶ Full</button></div>
-      <div id="ab-copy-short" style="display:none;">${copyShort}</div><div id="ab-copy-full" style="display:none;">${copyFull}</div>
+      <div id="ab-copy-short" style="display:none;">${k['no kitab']||''}\n${isi}</div><div id="ab-copy-full" style="display:none;">${k['no kitab']||''}\n${isi}${catatan?'\n\nCatatan Kaki:\n'+catatan:''}${keperluan?'\n\nKeperluan: '+keperluan:''}</div>
       <div class="lyric-box"><div class="scalable-text"><span style="font-weight:700;">${escHtml(k['no kitab']||'-')}</span>\n\n${escHtml(isi)}${catatan?`\n\n📝 Catatan Kaki:\n${escHtml(catatan)}`:''}</div></div>
     </div>
     ${imgs.length?`<div id="tab-ab-foto" class="kidung-tab"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">${imgs.map((img,i)=>`<div style="aspect-ratio:1;overflow:hidden;border-radius:10px;cursor:pointer;" onclick='openImgViewer(${JSON.stringify(imgs)},${i},"Foto");'><img src="${img}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>`).join('')}</div></div>`:''}
@@ -1436,21 +1435,11 @@ function renderLink(){
 // ══════════════════════════════════════════════════
 // JEMAAT
 // ══════════════════════════════════════════════════
-let jemaatFilterKelas=[],jemaatFilterGugus=[];
-let jemaatFilterKelasMode='OR',jemaatFilterGugusMode='OR';
-
 function renderJemaat(){
   const content=document.getElementById('app-content');
   const data=db.Jemaat||[];
   jemaatFilterIbadah=[];jemaatFilterPelayanan=[];jemaatFilterKelas=[];jemaatFilterGugus=[];
   jemaatFilterIbadahMode='OR';jemaatFilterPelayananMode='OR';jemaatFilterKelasMode='OR';jemaatFilterGugusMode='OR';
-
-  const canEdit=isAdminUser();
-  const isAdmin=isLevelAdmin();
-  const isGemDistr=isLevelGemDistr();
-  const isPenatua=isLevelPenatua();
-  // Semua 3 level admin bisa lihat semua; user lain mungkin tidak bisa lihat semua
-  const canViewAll=isAdminUser();
 
   content.innerHTML=`
     <div class="dash-grid" style="margin-bottom:10px;">
@@ -1521,39 +1510,16 @@ function multiMatch(fieldVal,filterArr,mode){
 }
 function filterJemaat(){
   const search=(document.getElementById('j-search')?.value||'').toLowerCase();
-   const gender=document.getElementById('j-gender')?.value||'';
-   const kategori=document.getElementById('j-kategori')?.value||'';
-   const ikutSolo=document.getElementById('j-ikut-solo')?.value||'';
-  const usiaOp=document.getElementById('j-usia-op')?.value||'';
-  const usiaVal=parseFloat(document.getElementById('j-usia-val')?.value)||0;
-  const rhOp=document.getElementById('j-rh-op')?.value||'';
-  const rhVal=parseFloat(document.getElementById('j-rh-val')?.value)||0;
-  const ktm=document.getElementById('j-ktm')?.value||'';
-  const ktmTahir=document.getElementById('j-ktm-tahir')?.value||'';
-  const kelas=document.getElementById('j-kelas')?.value||'';
-
-   
-   lastFilteredJemaat=(db.Jemaat||[]).filter(j=>{
+  const gender=document.getElementById('j-gender')?.value||'';
+  const kategori=document.getElementById('j-kategori')?.value||'';
+  const ikutSolo=document.getElementById('j-ikut-solo')?.value||'';
+  lastFilteredJemaat=(db.Jemaat||[]).filter(j=>{
     const nama=(j['Nama Lengkap']||j['Nama Panggilan']||'').toLowerCase();
-    const usiaJ=parseInt(j.Usia)||0;
-    const rhJ=parseFloat(j['rata-rata hadir']||j['Rata-rata Hadir']||0)||0;
-    const ibadahJ=(j['ibadah yang diikuti']||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
-    const pelayananJ=(j['pelayanan']||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
-    const ktmJ=(j['KTM']||j['ktm']||'').trim().toLowerCase();
-    const ktmTahirJ=(j['KTM Tahir']||j['ktm tahir']||'').trim().toLowerCase();
     const kategoriJ=(j['Kategori']||j['kategori']||'').trim();
-    const kelasJ=(j['kelas']||j['Kelas']||'').trim();
-    const ikutSoloJ=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().replace(/\s+/g,'').trim();
     if(search&&!nama.includes(search))return false;
     if(gender&&j.Gender!==gender)return false;
-    if(usiaVal>0&&usiaOp){if(usiaOp==='lt'&&!(usiaJ<usiaVal))return;if(usiaOp==='gt'&&!(usiaJ>usiaVal))return;if(usiaOp==='eq'&&!(usiaJ===usiaVal))return;}
-    if(rhVal>0&&rhOp){if(rhOp==='lt'&&!(rhJ<rhVal))return;if(rhOp==='gt'&&!(rhJ>rhVal))return;if(rhOp==='eq'&&!(Math.abs(rhJ-rhVal)<0.01))return;}
-    if(ktm&&ktmJ!==ktm)return;
-    if(ktmTahir&&ktmTahirJ!==ktmTahir)return;
-    if(kategori&&kategoriJ!==kategori)return;
-    if(kelas&&kelasJ!==kelas)return;
-    if(kategori&&(j['Kategori']||j['kategori']||'')!==kategori)return false;
-    if(ikutSolo){const v=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().trim();const ys=['y','ya','yes','1'];const ns=['n','no','tidak','0'];if(ikutSolo==='y'&&!ys.includes(v))return false;if(ikutSolo==='n'&&!ns.includes(v))return false;}
+    if(kategori&&kategoriJ!==kategori)return false;
+    if(ikutSolo){const v=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().replace(/\s+/g,'').trim();const ys=['y','ya','yes','1'];const ns=['n','no','tidak','0'];if(ikutSolo==='y'&&!ys.includes(v))return false;if(ikutSolo==='n'&&!ns.includes(v))return false;}
     if(!multiMatch(j['ibadah yang diikuti'],jemaatFilterIbadah,jemaatFilterIbadahMode))return false;
     if(!multiMatch(j['pelayanan'],jemaatFilterPelayanan,jemaatFilterPelayananMode))return false;
     if(!multiMatch(j['kelas']||j['Kelas'],jemaatFilterKelas,jemaatFilterKelasMode))return false;
@@ -1561,7 +1527,6 @@ function filterJemaat(){
     return true;
   });
   const count=lastFilteredJemaat.length;const pria=lastFilteredJemaat.filter(j=>j.Gender==='Pria').length;const wanita=lastFilteredJemaat.filter(j=>j.Gender==='Wanita').length;
-  const tn=document.getElementById('jemaat-total-num');if(tn)tn.textContent=db.Jemaat?.length||0;
   const fn=document.getElementById('jemaat-filter-num');if(fn)fn.textContent=count;
   const pn=document.getElementById('jemaat-pria-num');if(pn)pn.textContent=pria;
   const wn=document.getElementById('jemaat-wanita-num');if(wn)wn.textContent=wanita;
@@ -1585,7 +1550,7 @@ function renderJemaatResult(data){
     data.forEach((j,idx)=>{
       const foto=fmtImg(j['Link Foto']||'')||`https://api.dicebear.com/7.x/avataaars/svg?seed=${j.Gender==='Pria'?'m':'f'}${idx}`;
       const div=document.createElement('div');div.style.cssText='display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;gap:12px;';
-      div.innerHTML=`<img src="${foto}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy"><div style="flex:1;overflow:hidden;"><div style="font-weight:700;font-size:.88rem;">${escHtml(j['Nama Lengkap']||j['Nama Panggilan']||'-')}</div><div style="font-size:.72rem;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(j['Nama Panggilan']||'')} · ${j.Gender||''}</div><div style="font-size:.7rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(j['pelayanan']||'-')}</div></div><span style="color:var(--text3);font-size:.8rem;">›</span>`;
+      div.innerHTML=`<img src="${foto}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy"><div style="flex:1;overflow:hidden;"><div style="font-weight:700;font-size:.88rem;">${escHtml(j['Nama Lengkap']||j['Nama Panggilan']||'-')}</div><div style="font-size:.72rem;color:var(--text3);margin-top:2px;">${escHtml(j['Nama Panggilan']||'')} · ${j.Gender||''}</div><div style="font-size:.7rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(j['pelayanan']||'-')}</div></div><span style="color:var(--text3);">›</span>`;
       div.onclick=()=>openJemaatPopup(j,foto,idx);list.appendChild(div);
     });
   }else{
@@ -1604,11 +1569,7 @@ function openJemaatPopup(j,foto,idx){
   const editableCols=getEditableJemaatCols();
   const visibleCols=getVisibleJemaatCols();
   const canEdit=editableCols.length>0;
-
-  // Map field label
   const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','Kamar Hotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan'};
-
-  // Build grid fields
   const fieldKeys=visibleCols;
   let gridHtml=fieldKeys.map(key=>{
     const label=fieldLabels[key]||key;
@@ -1623,7 +1584,6 @@ function openJemaatPopup(j,foto,idx){
       }
     </div>`;
   }).join('');
-
   document.getElementById('jemaat-popup-body').innerHTML=`
     <div class="jp-header">
       <button class="jp-close" onclick="closeJemaatPopup()">✕</button>
@@ -1659,17 +1619,19 @@ async function saveJemaatEdit(idx){
     const input=document.getElementById('jp-edit-'+key);
     if(input)updates[key]=input.value.trim();
   });
-  // Update lokal
   Object.assign(j,updates);
   toast('⏳ Menyimpan...');
-  // Kirim ke server
   const payload={action:'update_jemaat',username:currentUser?.username||'',level:currentUser?.level||currentUser?.tipe||'',efataid:j['no_EfataID']||j['no_Efataid']||'',updates:JSON.stringify(updates)};
   const formData=new URLSearchParams();Object.entries(payload).forEach(([k,v])=>formData.append(k,v));
-  try{await fetch(APPS_SCRIPT_JEMAAT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});toast('✅ Data berhasil disimpan!');}catch(e){toast('✅ Tersimpan lokal (offline mode)');}
+  try{
+    await fetch(APPS_SCRIPT_JEMAAT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
+    toast('✅ Data berhasil disimpan!');
+  }catch(e){toast('✅ Tersimpan lokal (offline mode)');}
   closeJemaatPopup();filterJemaat();
 }
 
-// ══════════════════════════════════════════════════
+  
+  // ══════════════════════════════════════════════════
 // QUIZ
 // ══════════════════════════════════════════════════
 function renderQuiz(){
