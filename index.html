@@ -752,6 +752,20 @@ function openInfoModal(){
   const noEfataID=u.no_Efataid||u.no_EfataID||u['no_Efataid']||u['No_EfataID']||'-';
   const akses=u.akses||u.tipe||level;
 
+   const menuDesc={
+    Dashboard:'Menampilkan semua Data Kaum Saleh secara ringkas.',
+    Kidung:'Menampilkan Kidung yang dinyanyikan, lengkap dengan lirik dan player.',
+    Alkitab:'Menampilkan referensi Alkitab yang digunakan.',
+    Acara:'Melihat jadwal acara yang disusun.',
+    Kegiatan:'Melihat kegiatan dan program yang ada.',
+    Jemaat:'Menampilkan data jemaat yang hadir.',
+    Link:'Kumpulan link dan sumber daya yang berguna.',
+    Quiz:'Kuis interaktif untuk peserta.',
+    Pertanyaan:'Menulis pertanyaan selama acara berlangsung.',
+    'Hasil Pertanyaan':'Melihat dan menjawab semua pertanyaan yang masuk.',
+    Admin:'Panel admin untuk melihat hasil dan log aktivitas.',
+  };
+  
   const aturan=`📋 ATURAN PENGGUNAAN:
 • Semua peserta bisa menulis pertanyaan dan jawaban.
 • Jawaban bisa disampaikan lewat suara, tidak harus tertulis.
