@@ -146,7 +146,27 @@ nav button:hover:not(.active){color:var(--text2);}
 .dash-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);}
 .dash-table tr:last-child td{border-bottom:none;}
 .dash-table td:last-child{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);text-align:right;}
+.dash-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:12px;
+}
 
+
+@media(max-width:768px){
+  .dash-grid{
+    grid-template-columns:1fr;
+  }
+
+  .dash-card{
+    padding:12px;
+  }
+
+  .clock-big{
+    font-size:2rem;
+  }
+}
+   
 /* ── CARDS & LISTS ────────────────────────────────────── */
 .modern-list{display:flex;flex-direction:column;gap:9px;}
 .modern-item{display:flex;align-items:center;background:var(--surface);padding:12px;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer;transition:transform .15s,border-color .2s;gap:12px;}
@@ -827,6 +847,7 @@ function renderDashboard(){
   const wanita=jemaat.filter(j=>j.Gender==='Wanita').length;
   const total=jemaat.length;
   const baptisMap={sudah:0,belum:0};
+  const efataidMap={ya:0,tidak:0,lainnya:0};
   const usia={anak:0,remaja:0,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
   jemaat.forEach(j=>{const u=parseInt(j.Usia);if(!u||isNaN(u))usia.tidaktahu++;else if(u<=12)usia.anak++;else if(u<=16)usia.remaja++;else if(u<=24)usia.pemuda++;else if(u<=35)usia.muda++;else if(u<=55)usia.dewasa++;else usia.tua++;});
   jemaat.forEach(j=>{const ef=(j['efataid']||j['Efataid']||'').toLowerCase().trim();if(['ya','y','iya'].includes(ef))efataidMap.ya++;else if(['tidak','n','tdk'].includes(ef))efataidMap.tidak++;else if(ef)efataidMap.lainnya++;});
@@ -887,7 +908,7 @@ function renderDashboard(){
     <div class="dash-card" style="margin-top:10px;"><div class="section-title">💧 Baptis</div><div class="pie-wrap">${buildPie([{val:baptisMap.sudah,color:'#10b981',label:'Sudah'},{val:baptisMap.belum,color:'#ef4444',label:'Belum'}])}</div><div class="pie-legend"><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div></div></div>
     ${Object.keys(pelayananMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title">🤝 Pelayanan</div><div class="pie-wrap">${buildPie(Object.entries(pelayananMap).map(([k,v],i)=>({val:v,color:MC[(i+3)%MC.length],label:k})))}</div><div class="pie-legend">${Object.entries(pelayananMap).map(([k,v],i)=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${MC[(i+3)%MC.length]}"></span>${k}: ${v}</div>`).join('')}</div></div>`:''}
     ${Object.keys(ibadahMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⛪ Ibadah yang Diikuti</div><div class="pie-wrap">${buildPie(Object.entries(ibadahMap).map(([k,v],i)=>({val:v,color:MC[(i+2)%MC.length],label:k})))}</div><div class="pie-legend">${Object.entries(ibadahMap).map(([k,v],i)=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${MC[(i+2)%MC.length]};"></span>${k}: ${v}</div>`).join('')}</div></div>`:''}
-    ${Object.keys(ibadahMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Grafik per Ibadah</div><div class="bar-chart-wrap">${buildBarChart(ibadahMap)}</div></div>
+    ${Object.keys(ibadahMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Grafik per Ibadah</div><div class="bar-chart-wrap">${buildBarChart(ibadahMap)}
     ${Object.keys(kategoriMap).length>0?`
     <div class="dash-card" style="margin-top:10px;">
       <div class="section-title" style="font-size:.85rem;margin-bottom:10px;">🏷 Berdasarkan Kategori</div>
