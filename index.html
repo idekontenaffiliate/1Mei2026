@@ -153,19 +153,6 @@ nav button:hover:not(.active){color:var(--text2);}
 }
 
 
-@media(max-width:768px){
-  .dash-grid{
-    grid-template-columns:1fr;
-  }
-
-  .dash-card{
-    padding:12px;
-  }
-
-  .clock-big{
-    font-size:2rem;
-  }
-}
    
 /* ── CARDS & LISTS ────────────────────────────────────── */
 .modern-list{display:flex;flex-direction:column;gap:9px;}
@@ -852,6 +839,8 @@ function renderDashboard(){
   jemaat.forEach(j=>{const u=parseInt(j.Usia);if(!u||isNaN(u))usia.tidaktahu++;else if(u<=12)usia.anak++;else if(u<=16)usia.remaja++;else if(u<=24)usia.pemuda++;else if(u<=35)usia.muda++;else if(u<=55)usia.dewasa++;else usia.tua++;});
   jemaat.forEach(j=>{const ef=(j['efataid']||j['Efataid']||'').toLowerCase().trim();if(['ya','y','iya'].includes(ef))efataidMap.ya++;else if(['tidak','n','tdk'].includes(ef))efataidMap.tidak++;else if(ef)efataidMap.lainnya++;});
   const ikutSoloMap={ya:0,tidak:0};
+  const katMap={};jemaat.forEach(j=>{const k=(j['Kategori']||'').trim();if(k)katMap[k]=(katMap[k]||0)+1;});
+  
   jemaat.forEach(j=>{const v=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().replace(/\s+/g,'').trim();if(['y','ya','yes','1'].includes(v))ikutSoloMap.ya++;else if(['n','no','tidak','0'].includes(v))ikutSoloMap.tidak++;});
   const gugusMap={};jemaat.forEach(j=>{const g=(j['Gugus']||'').trim();if(g)gugusMap[g]=(gugusMap[g]||0)+1;});
   const kelasMap={};jemaat.forEach(j=>{const k=(j['kelas']||'').trim();if(k)kelasMap[k]=(kelasMap[k]||0)+1;});
