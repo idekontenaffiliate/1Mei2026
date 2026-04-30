@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.2 @2026</span></div>
   </div>
 </div>
 
@@ -814,125 +814,397 @@ async function submitGantiPassword(){
   }catch(e){statusEl.textContent='❌ Gagal. Coba lagi.';statusEl.style.color='var(--red)';}
 }
 
+
+
 // ══════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════
-function renderDashboard(){
-  const content=document.getElementById('app-content');
-  const jemaat=db.Jemaat||[];
-  const acara=db.Acara||[];
-  const kidung=db.Kidung||[];
-  const alkitab=db.Alkitab||[];
-  const pria=jemaat.filter(j=>j.Gender==='Pria').length;
-  const wanita=jemaat.filter(j=>j.Gender==='Wanita').length;
-  const total=jemaat.length;
-  const baptisMap={sudah:0,belum:0};
-  jemaat.forEach(j=>{const t=(j['Tanggal Baptis']||'').trim();if(t&&t!=='00/01/1900')baptisMap.sudah++;else baptisMap.belum++;});
+function renderDashboard() {
+  const content = document.getElementById('app-content');
+  const jemaat = db.Jemaat || [];
+  const acara = db.Acara || [];
+  const kidung = db.Kidung || [];
+  const alkitab = db.Alkitab || [];
 
-  // Ibadah map
-  const ibadahMap={};jemaat.forEach(j=>{(j['ibadah yang diikuti']||'').split(/[,;/]/).forEach(x=>{const t=x.trim();if(t)ibadahMap[t]=(ibadahMap[t]||0)+1;});});
+  // Hitung statistik jemaat
+  const total = jemaat.length;
+  const pria = jemaat.filter(j => j.Gender === 'Pria').length;
+  const wanita = jemaat.filter(j => j.Gender === 'Wanita').length;
 
-  // Pelayanan map
-  const pelayananMap={};jemaat.forEach(j=>{(j['pelayanan']||'').split(/[,;/]/).forEach(x=>{const t=x.trim();if(t)pelayananMap[t]=(pelayananMap[t]||0)+1;});});
-
-  // Kelas map — pisah G dan non-G
-  const kelasGMap={};const kelasNonGMap={};
-  jemaat.forEach(j=>{
-    const k=(j['kelas']||j['Kelas']||'').trim();
-    if(!k)return;
-    if(k.toUpperCase().startsWith('G ')||k.toUpperCase().startsWith('G-')||/^G\b/.test(k)){kelasGMap[k]=(kelasGMap[k]||0)+1;}
-    else{kelasNonGMap[k]=(kelasNonGMap[k]||0)+1;}
+  // Usia
+  const usia = {anak:0,remaja:0,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
+  jemaat.forEach(j => {
+    const u = parseInt(j.Usia);
+    if (!u || isNaN(u)) usia.tidaktahu++;
+    else if (u <= 12) usia.anak++;
+    else if (u <= 16) usia.remaja++;
+    else if (u <= 24) usia.pemuda++;
+    else if (u <= 35) usia.muda++;
+    else if (u <= 55) usia.dewasa++;
+    else usia.tua++;
   });
 
-  // Kategori table
-  const kategoriMap={};
-  jemaat.forEach(j=>{const k=(j['Kategori']||j['kategori']||'').trim();if(k)kategoriMap[k]=(kategoriMap[k]||0)+1;});
+  // Baptis
+  const baptisMap = {sudah:0,belum:0};
+  jemaat.forEach(j => {
+    const t = (j['Tanggal Baptis'] || '').trim();
+    if (t && t !== '00/01/1900' && t !== '-' && t !== '') baptisMap.sudah++;
+    else baptisMap.belum++;
+  });
 
-  const acaraSection=buildDashAcaraSection(acara);
+  // EfataID
+  const efataidMap = {ya:0,tidak:0,lainnya:0};
+  jemaat.forEach(j => {
+    const ef = (j['efataid'] || j['Efataid'] || '').toLowerCase().trim();
+    if (['ya','y','iya'].includes(ef)) efataidMap.ya++;
+    else if (['tidak','n','tdk'].includes(ef)) efataidMap.tidak++;
+    else if (ef) efataidMap.lainnya++;
+  });
 
-  content.innerHTML=`
-    <div class="clock-card"><div class="clock-big" id="dash-clock">--:--:--</div><div class="clock-date" id="dash-date">-- --- 2026</div></div>
+  // Ikut Solo
+  const ikutSoloMap = {ya:0,tidak:0};
+  jemaat.forEach(j => {
+    const v = String(j['ikutSolo'] || j['Ikut Solo'] || '').toLowerCase().replace(/\s+/g,'').trim();
+    if (['y','ya','yes','1'].includes(v)) ikutSoloMap.ya++;
+    else if (v) ikutSoloMap.tidak++;
+  });
+
+  // Kategori
+  const katMap = {};
+  jemaat.forEach(j => {
+    const k = (j['Kategori'] || j['kategori'] || '').trim();
+    if (k) katMap[k] = (katMap[k] || 0) + 1;
+  });
+
+  // Gugus
+  const gugusMap = {};
+  jemaat.forEach(j => {
+    const g = (j['Gugus'] || j['gugus'] || '').trim();
+    if (g) gugusMap[g] = (gugusMap[g] || 0) + 1;
+  });
+
+  // Kelas
+  const kelasGMap = {}, kelasNonGMap = {};
+  jemaat.forEach(j => {
+    const k = (j['kelas'] || j['Kelas'] || '').trim();
+    if (!k) return;
+    if (/^G[\s\-]/i.test(k)) kelasGMap[k] = (kelasGMap[k] || 0) + 1;
+    else kelasNonGMap[k] = (kelasNonGMap[k] || 0) + 1;
+  });
+
+  // Ibadah
+  const ibadahMap = {};
+  jemaat.forEach(j => {
+    (j['ibadah yang diikuti'] || '').split(/[,;\/]/).forEach(x => {
+      const t = x.trim(); if (t) ibadahMap[t] = (ibadahMap[t] || 0) + 1;
+    });
+  });
+
+  // Pelayanan
+  const pelayananMap = {};
+  jemaat.forEach(j => {
+    (j['pelayanan'] || '').split(/[,;\/]/).forEach(x => {
+      const t = x.trim(); if (t) pelayananMap[t] = (pelayananMap[t] || 0) + 1;
+    });
+  });
+
+  // Bangun section acara
+  const acaraSection = buildDashAcaraSection(acara);
+
+  // Bangun HTML
+  let html = `
+    <div class="clock-card">
+      <div class="clock-big" id="dash-clock">--:--:--</div>
+      <div class="clock-date" id="dash-date">-- --- 2026</div>
+    </div>
+
     ${acaraSection}
-    <div class="dash-grid">
-      <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val">${total||'—'}</div><div class="dash-card-label">Total Jemaat</div></div>
-      <div class="dash-card"><span class="dash-card-icon">📅</span><div class="dash-card-val">${acara.length||'—'}</div><div class="dash-card-label">Sesi Acara</div></div>
-      <div class="dash-card"><span class="dash-card-icon">🎵</span><div class="dash-card-val">${kidung.length||'—'}</div><div class="dash-card-label">Kidung</div></div>
-      <div class="dash-card"><span class="dash-card-icon">📖</span><div class="dash-card-val">${alkitab.length||'—'}</div><div class="dash-card-label">Alkitab</div></div>
-    </div>
-    ${total>0?`
-    <div class="dash-grid" style="margin-top:10px;">
-      <div class="dash-card"><div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⚥ Gender</div>
-        <div class="pie-wrap">${buildPie([{val:pria,color:'#3b82f6',label:'Pria'},{val:wanita,color:'#ec4899',label:'Wanita'}])}</div>
-        <div class="pie-legend"><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#3b82f6;"></span>Pria: ${pria}</div><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ec4899;"></span>Wanita: ${wanita}</div></div>
-      </div>
-      <div class="dash-card"><div class="section-title" style="font-size:.85rem;margin-bottom:8px;">💧 Baptis</div>
-        <div class="pie-wrap">${buildPie([{val:baptisMap.sudah,color:'#10b981',label:'Sudah'},{val:baptisMap.belum,color:'#ef4444',label:'Belum'}])}</div>
-        <div class="pie-legend"><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div><div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div></div>
-      </div>
-    </div>
-    ${Object.keys(kategoriMap).length>0?`
-    <div class="dash-card" style="margin-top:10px;">
-      <div class="section-title" style="font-size:.85rem;margin-bottom:10px;">🏷 Berdasarkan Kategori</div>
-      <table class="dash-table"><thead><tr><th>Kategori</th><th style="text-align:right;">Jumlah</th></tr></thead><tbody>
-        ${Object.entries(kategoriMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${escHtml(k)}</td><td>${v}</td></tr>`).join('')}
-        <tr style="font-weight:700;"><td>Total</td><td>${jemaat.length}</td></tr>
-      </tbody></table>
-    </div>`:''}
-    ${Object.keys(pelayananMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🤝 Pelayanan</div><div class="pie-wrap">${buildPie(Object.entries(pelayananMap).map(([k,v],i)=>({val:v,color:MC[(i+3)%MC.length],label:k})))}</div><div class="pie-legend">${Object.entries(pelayananMap).map(([k,v],i)=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${MC[(i+3)%MC.length]}"></span>${k}: ${v}</div>`).join('')}</div></div>`:''}
-    ${Object.keys(ibadahMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Grafik per Ibadah</div><div class="bar-chart-wrap">${buildBarChart(ibadahMap)}</div></div>`:''}
-    ${Object.keys(kelasGMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Gembala Kelas (dimulai G)</div><div class="bar-chart-wrap">${buildBarChart(kelasGMap)}</div></div>`:''}
-    ${Object.keys(kelasNonGMap).length>0?`<div class="dash-card" style="margin-top:10px;"><div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Kelas</div><div class="bar-chart-wrap">${buildBarChart(kelasNonGMap)}</div></div>`:''}
-    `:''}`;
 
-  const updateDashClock=()=>{
-    const n=new Date();const pad=x=>String(x).padStart(2,'0');
-    const dc=document.getElementById('dash-clock');const dd=document.getElementById('dash-date');
-    if(dc)dc.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
-    const days=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-    const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    if(dd)dd.textContent=`${days[n.getDay()]}, ${pad(n.getDate())} ${months[n.getMonth()]} ${n.getFullYear()}`;
+    <div class="dash-grid">
+      <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val">${total || '—'}</div><div class="dash-card-label">Total Jemaat</div></div>
+      <div class="dash-card"><span class="dash-card-icon">📅</span><div class="dash-card-val">${acara.length || '—'}</div><div class="dash-card-label">Sesi Acara</div></div>
+      <div class="dash-card"><span class="dash-card-icon">🎵</span><div class="dash-card-val">${kidung.length || '—'}</div><div class="dash-card-label">Kidung</div></div>
+      <div class="dash-card"><span class="dash-card-icon">📖</span><div class="dash-card-val">${alkitab.length || '—'}</div><div class="dash-card-label">Alkitab</div></div>
+    </div>`;
+
+  if (total > 0) {
+    // Gender & Baptis row
+    html += `
+    <div class="dash-grid" style="margin-top:10px;">
+      <div class="dash-card">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⚥ Gender</div>
+        <div class="pie-wrap">${buildPie([{val:pria,color:'#3b82f6',label:'Pria'},{val:wanita,color:'#ec4899',label:'Wanita'}])}</div>
+        <div class="pie-legend">
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#3b82f6;"></span>Pria: ${pria}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ec4899;"></span>Wanita: ${wanita}</div>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">💧 Baptis</div>
+        <div class="pie-wrap">${buildPie([{val:baptisMap.sudah,color:'#10b981',label:'Sudah'},{val:baptisMap.belum,color:'#ef4444',label:'Belum'}])}</div>
+        <div class="pie-legend">
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Sudah: ${baptisMap.sudah}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Belum: ${baptisMap.belum}</div>
+        </div>
+      </div>
+    </div>`;
+
+    // Usia
+    const usiaSegments = [
+      {val:usia.tidaktahu,color:'#eff4b4',label:'?'},
+      {val:usia.anak,color:'#506981',label:'≤12'},
+      {val:usia.remaja,color:'#14b9f1',label:'13-16'},
+      {val:usia.pemuda,color:'#10491f',label:'17-24'},
+      {val:usia.muda,color:'#10b981',label:'25-35'},
+      {val:usia.dewasa,color:'#f59e0b',label:'36-55'},
+      {val:usia.tua,color:'#ef4444',label:'55+'},
+    ].filter(s => s.val > 0);
+    html += `
+    <div class="dash-card" style="margin-top:10px;">
+      <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎂 Sebaran Usia</div>
+      <div class="pie-wrap">${buildPie(usiaSegments)}</div>
+      <div class="pie-legend">
+        ${usia.tidaktahu>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#eff4b4;"></span>?: ${usia.tidaktahu}</div>`:''}
+        ${usia.anak>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#506981;"></span>≤12 th: ${usia.anak}</div>`:''}
+        ${usia.remaja>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#14b9f1;"></span>13–16 th: ${usia.remaja}</div>`:''}
+        ${usia.pemuda>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10491f;"></span>17–24 th: ${usia.pemuda}</div>`:''}
+        ${usia.muda>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>25–35 th: ${usia.muda}</div>`:''}
+        ${usia.dewasa>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>36–55 th: ${usia.dewasa}</div>`:''}
+        ${usia.tua>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>55+ th: ${usia.tua}</div>`:''}
+      </div>
+    </div>`;
+
+    // EfataID & Ikut Solo
+    html += `
+    <div class="dash-grid" style="margin-top:10px;">
+      <div class="dash-card">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">✝ EfataID</div>
+        ${build3DPie([{val:efataidMap.ya,color:'#10b981',label:'Ya'},{val:efataidMap.tidak,color:'#ef4444',label:'Tidak'},{val:efataidMap.lainnya,color:'#f59e0b',label:'Lain'}])}
+        <div class="pie-legend" style="margin-top:8px;">
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${efataidMap.ya}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${efataidMap.tidak}</div>
+          ${efataidMap.lainnya>0?`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:#f59e0b;"></span>Lain: ${efataidMap.lainnya}</div>`:''}
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🎤 Ikut Solo</div>
+        ${build3DPie([{val:ikutSoloMap.ya,color:'#10b981',label:'Ya'},{val:ikutSoloMap.tidak,color:'#ef4444',label:'Tidak'}])}
+        <div class="pie-legend" style="margin-top:8px;">
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#10b981;"></span>Ya: ${ikutSoloMap.ya}</div>
+          <div class="pie-leg-item"><span class="pie-leg-dot" style="background:#ef4444;"></span>Tidak: ${ikutSoloMap.tidak}</div>
+        </div>
+      </div>
+    </div>`;
+
+    // Kategori
+    if (Object.keys(katMap).length > 0) {
+      const katSegments = Object.entries(katMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">👦 Kategori Jemaat</div>
+        <div class="pie-wrap">${buildPie(katSegments)}</div>
+        <div class="pie-legend">${katSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
+        <div style="margin-top:10px;">
+          <table class="dash-table">
+            <thead><tr><th>Kategori</th><th style="text-align:right;">Jumlah</th></tr></thead>
+            <tbody>
+              ${Object.entries(katMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${escHtml(k)}</td><td>${v}</td></tr>`).join('')}
+              <tr style="font-weight:700;"><td>Total</td><td>${total}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+
+    // Gugus
+    if (Object.keys(gugusMap).length > 0) {
+      const gugusSegments = Object.entries(gugusMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🏠 Gugus</div>
+        <div class="pie-wrap">${buildPie(gugusSegments)}</div>
+        <div class="pie-legend">${gugusSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
+      </div>`;
+    }
+
+    // Ibadah yang diikuti — pie + bar chart
+    if (Object.keys(ibadahMap).length > 0) {
+      const ibadahSegments = Object.entries(ibadahMap).map(([k,v],i) => ({val:v,color:MC[(i+2)%MC.length],label:k}));
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">⛪ Ibadah yang Diikuti</div>
+        <div class="pie-wrap">${buildPie(ibadahSegments)}</div>
+        <div class="pie-legend">${ibadahSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
+        <div style="margin-top:12px;"><div style="font-size:.78rem;font-weight:600;color:var(--text3);margin-bottom:8px;">📊 Grafik per Ibadah</div>
+        <div class="bar-chart-wrap">${buildBarChart(ibadahMap)}</div></div>
+      </div>`;
+    }
+
+    // Pelayanan — pie + bar chart
+    if (Object.keys(pelayananMap).length > 0) {
+      const pelayananSegments = Object.entries(pelayananMap).map(([k,v],i) => ({val:v,color:MC[(i+3)%MC.length],label:k}));
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:8px;">🤝 Pelayanan</div>
+        <div class="pie-wrap">${buildPie(pelayananSegments)}</div>
+        <div class="pie-legend">${pelayananSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
+      </div>`;
+    }
+
+    // Kelas Gembala (dimulai G)
+    if (Object.keys(kelasGMap).length > 0) {
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Gembala Kelas (G-)</div>
+        <div class="bar-chart-wrap">${buildBarChart(kelasGMap)}</div>
+      </div>`;
+    }
+
+    // Kelas non-G
+    if (Object.keys(kelasNonGMap).length > 0) {
+      html += `
+      <div class="dash-card" style="margin-top:10px;">
+        <div class="section-title" style="font-size:.85rem;margin-bottom:10px;">📊 Kelas</div>
+        <div class="bar-chart-wrap">${buildBarChart(kelasNonGMap)}</div>
+      </div>`;
+    }
+  }
+
+  content.innerHTML = html;
+
+  // Clock update
+  const updateDashClock = () => {
+    const n = new Date();
+    const pad = x => String(x).padStart(2,'0');
+    const dc = document.getElementById('dash-clock');
+    const dd = document.getElementById('dash-date');
+    if (dc) dc.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    if (dd) dd.textContent = `${days[n.getDay()]}, ${pad(n.getDate())} ${months[n.getMonth()]} ${n.getFullYear()}`;
   };
   updateDashClock();
-  if(window._dashClockInterval)clearInterval(window._dashClockInterval);
-  window._dashClockInterval=setInterval(updateDashClock,1000);
+  if (window._dashClockInterval) clearInterval(window._dashClockInterval);
+  window._dashClockInterval = setInterval(updateDashClock, 1000);
 
-  if(!db.Jemaat)Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;renderDashboard();}});
-  if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
-  if(!db.Kidung)Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
-  if(!db.Alkitab)Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
+  // Lazy-load data yang belum ada
+  if (!db.Jemaat) Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;renderDashboard();}});
+  if (!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
+  if (!db.Kidung) Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
+  if (!db.Alkitab) Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
 }
 
-function parseAcaraWaktu(wkt){
-  if(!wkt||!wkt.trim())return null;
-  const months={Jan:0,Feb:1,Mar:2,Apr:3,Mei:4,May:4,Jun:5,Jul:6,Agu:7,Aug:7,Sep:8,Okt:9,Oct:9,Nov:10,Des:11,Dec:11};
-  const m=wkt.trim().match(/(\d{1,2})\s+(\w+)\s+(\d{4})(?:\s+jam\s+|\s+)(\d{1,2})[.:](\d{2})/i);
-  if(m){const mo=months[m[2]];if(mo===undefined)return null;return new Date(parseInt(m[3]),mo,parseInt(m[1]),parseInt(m[4]),parseInt(m[5]),0);}
-  return null;
-}
-function buildDashAcaraSection(acara){
-  const now=new Date();
-  const withTime=acara.map((a,i)=>{const wkt=a['waktu']||a['Waktu']||a['WAKTU']||a['jam']||'';const dt=parseAcaraWaktu(wkt);return{...a,_dt:dt,_idx:i,_wkt:wkt};}).filter(a=>a._dt).sort((a,b)=>a._dt-b._dt);
-  if(!withTime.length)return`<div class="acara-now-box" style="margin-bottom:10px;"><div style="font-size:.85rem;font-weight:700;">📋 Tidak ada acara terjadwal</div></div>`;
-  const past=withTime.filter(a=>a._dt<now);const future=withTime.filter(a=>a._dt>=now);
-  const lastPast=past.length?[past[past.length-1]]:[];const nextThree=future.slice(0,3);
-  const displayAcara=[...lastPast,...nextThree];
-  const tableRows=displayAcara.map(a=>{
-    const isFuture=a._dt>=now;const isNext=future.length&&future[0]===a;
-    const timeLbl=`${String(a._dt.getHours()).padStart(2,'0')}.${String(a._dt.getMinutes()).padStart(2,'0')}`;
-    const dateStr=`${a._dt.getDate()} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][a._dt.getMonth()]}`;
-    return`<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:${isNext?'var(--yellow)':'var(--accent)'};min-width:42px;">${timeLbl}</span>
-      <span style="font-size:.68rem;color:var(--text3);min-width:44px;">${dateStr}</span>
-      <span style="font-size:.85rem;font-weight:${isNext?'700':'500'};color:${isNext?'var(--yellow)':isFuture?'var(--text)':'var(--text3)'};">${a['nama acara']||a.nama||'-'}</span>
-      ${isNext?'<span style="background:var(--yellow);color:#000;font-size:.6rem;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:auto;">BERIKUTNYA</span>':''}
+// ══════════════════════════════════════════════════
+// ACARA SECTION DASHBOARD
+// Tampil: 1 acara terakhir yg sudah lewat + acara yg sedang berlangsung (jika ada) + 3 acara mendatang
+// Total maks 5 baris. Jika tidak ada data waktu, tetap tampil pesan informatif.
+// ══════════════════════════════════════════════════
+function buildDashAcaraSection(acara) {
+  const now = new Date();
+  const HARI = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Parse semua acara yang punya waktu valid
+  const withTime = acara
+    .map((a, i) => {
+      const wkt = a['waktu'] || a['Waktu'] || a['WAKTU'] || a['jam'] || a['Jam'] || '';
+      const dt = parseAcaraWaktu(wkt);
+      return { ...a, _dt: dt, _idx: i, _wkt: wkt };
+    })
+    .filter(a => a._dt)
+    .sort((a, b) => a._dt - b._dt);
+
+  // Acara tanpa waktu yang valid
+  const noTime = acara.filter((a) => {
+    const wkt = a['waktu'] || a['Waktu'] || a['WAKTU'] || a['jam'] || a['Jam'] || '';
+    return !parseAcaraWaktu(wkt);
+  });
+
+  // Durasi acara default: 90 menit (untuk menentukan "sedang berlangsung")
+  const DURASI_DEFAULT_MS = 90 * 60 * 1000;
+
+  const past = withTime.filter(a => a._dt < now && (now - a._dt) > DURASI_DEFAULT_MS);
+  const current = withTime.filter(a => a._dt <= now && (now - a._dt) <= DURASI_DEFAULT_MS);
+  const future = withTime.filter(a => a._dt > now);
+
+  // 1 acara terakhir yang sudah lewat
+  const lastPast = past.length ? [past[past.length - 1]] : [];
+  // Acara berlangsung (max 1)
+  const nowAcara = current.slice(-1);
+  // 3 acara mendatang
+  const nextThree = future.slice(0, 3);
+
+  const display = [...lastPast, ...nowAcara, ...nextThree];
+
+  const pad2 = x => String(x).padStart(2, '0');
+
+  const buildRow = (a) => {
+    const isNow = nowAcara.includes(a);
+    const isFuture = a._dt > now;
+    const isPast = !isNow && !isFuture;
+    const isNext = !isNow && future.length > 0 && future[0] === a;
+    const timeStr = `${pad2(a._dt.getHours())}.${pad2(a._dt.getMinutes())}`;
+    const dateStr = `${HARI[a._dt.getDay()]} ${pad2(a._dt.getDate())}/${pad2(a._dt.getMonth()+1)}`;
+    const namaAcara = a['nama acara'] || a['nama'] || a['Nama Acara'] || a['Nama'] || '-';
+
+    let badgeHtml = '';
+    if (isNow) badgeHtml = `<span class="acara-badge" style="background:#f59e0b;color:#000;">🔴 SEKARANG</span>`;
+    else if (isNext) badgeHtml = `<span class="acara-badge" style="background:rgba(59,130,246,.2);color:var(--accent);border:1px solid var(--accent);">BERIKUTNYA</span>`;
+
+    const rowClass = isNow ? 'acara-row now-row' : (isPast ? 'acara-row past-row' : 'acara-row future-row');
+    const nameWeight = isNow ? '700' : (isNext ? '600' : '400');
+    const timeColor = isNow ? '#f59e0b' : (isFuture ? 'var(--accent)' : 'var(--text3)');
+
+    return `<div class="${rowClass}">
+      <span class="acara-time" style="color:${timeColor};">${timeStr}</span>
+      <span class="acara-date">${dateStr}</span>
+      <span class="acara-name" style="font-weight:${nameWeight};color:${isNow?'#f59e0b':isPast?'var(--text3)':'var(--text)'};">${escHtml(namaAcara)}</span>
+      ${badgeHtml}
     </div>`;
-  }).join('');
-  return`<div class="acara-now-box" style="margin-bottom:10px;">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:8px;">📋 Jadwal Acara (${future.length} berikutnya)</div>
-    ${tableRows||'<div style="font-size:.8rem;color:var(--text3);">Semua acara telah selesai.</div>'}
+  };
+
+  const futureCount = future.length;
+  const titleLabel = futureCount > 0
+    ? `📋 Jadwal Acara · <span style="color:var(--accent);">${futureCount} mendatang</span>`
+    : `📋 Jadwal Acara · <span style="color:var(--text3);">semua selesai</span>`;
+
+  let rowsHtml = '';
+  if (display.length > 0) {
+    rowsHtml = display.map(buildRow).join('');
+  } else if (withTime.length > 0) {
+    // Semua sudah lewat, tampilkan 3 terakhir
+    const last3 = past.slice(-3);
+    rowsHtml = last3.map(buildRow).join('');
+  } else {
+    rowsHtml = `<div style="font-size:.8rem;color:var(--text3);padding:8px 0;">⏳ Data waktu acara belum tersedia atau format tidak dikenali.</div>`;
+  }
+
+  // Tampilkan juga acara tanpa waktu jika ada
+  const noTimeNote = noTime.length > 0
+    ? `<div style="font-size:.7rem;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">📌 ${noTime.length} acara lain tanpa jadwal waktu</div>`
+    : '';
+
+  return `<div class="acara-now-box">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:10px;">${titleLabel}</div>
+    <div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0;align-items:center;">
+      <div style="font-size:.6rem;color:var(--text3);padding:0 8px 6px 6px;font-weight:600;">JAM</div>
+      <div style="font-size:.6rem;color:var(--text3);padding:0 8px 6px 0;font-weight:600;">TGL</div>
+      <div style="font-size:.6rem;color:var(--text3);padding:0 0 6px 0;font-weight:600;">ACARA</div>
+      <div></div>
+    </div>
+    ${rowsHtml}
+    ${noTimeNote}
   </div>`;
 }
 
+function build3DPie(segments){
+  const total=segments.reduce((s,x)=>s+x.val,0);
+  if(total===0)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:10px;">No data</div>';
+  const cx=100,cy=45,rx=80,ry=28,depth=18;let svgPaths='',svgSides='',offset=0;
+  segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;if(Math.sin(offset-angle/2)>0)svgSides+=`<path d="M${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} L${x2},${y2+depth} A${rx},${ry} 0 ${large},0 ${x1},${y1+depth} Z" fill="${seg.color}" opacity=".55" stroke="rgba(0,0,0,.15)" stroke-width=".5"/>`;});
+  offset=0;segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;svgPaths+=`<path d="M${cx},${cy} L${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} Z" fill="${seg.color}" opacity=".95" stroke="rgba(0,0,0,.1)" stroke-width=".5"><title>${seg.label}: ${seg.val}</title></path>`;});
+  return`<div style="text-align:center;"><svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:200px;">${svgSides}${svgPaths}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" font-weight="bold" fill="white">${total}</text></svg></div>`;
+}
 function buildPie(segments){
   const total=segments.reduce((s,x)=>s+x.val,0);
   if(!total)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:20px;">No data</div>';
@@ -942,7 +1214,8 @@ function buildPie(segments){
 }
 function buildBarChart(map){
   const maxVal=Math.max(...Object.values(map),1);
-  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>{const pct=Math.round(v/maxVal*100);return`<div class="bar-item"><div class="bar-label" title="${k}">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${MC[i%MC.length]},${MC[(i+1)%MC.length]});"><span class="bar-val">${v}</span></div></div></div>`;}).join('');}
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>{const pct=Math.round(v/maxVal*100);return`<div class="bar-item"><div class="bar-label" title="${k}">${escHtml(k.length>15?k.slice(0,15)+'…':k)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${MC[i%MC.length]},${MC[(i+1)%MC.length]});"><span class="bar-val">${v}</span></div></div></div>`;}).join('');}
+
 
 // ══════════════════════════════════════════════════
 // IMAGE VIEWER
