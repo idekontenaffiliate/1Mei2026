@@ -960,7 +960,14 @@ function buildDashAcaraSection(acara){
     ${tableRows||'<div style="font-size:.8rem;color:var(--text3);">Semua acara telah selesai.</div>'}
   </div>`;
 }
-
+function build3DPie(segments){
+  const total=segments.reduce((s,x)=>s+x.val,0);
+  if(total===0)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:10px;">No data</div>';
+  const cx=100,cy=45,rx=80,ry=28,depth=18;let svgPaths='',svgSides='',offset=0;
+  segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;if(Math.sin(offset-angle/2)>0)svgSides+=`<path d="M${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} L${x2},${y2+depth} A${rx},${ry} 0 ${large},0 ${x1},${y1+depth} Z" fill="${seg.color}" opacity=".55" stroke="rgba(0,0,0,.15)" stroke-width=".5"/>`;});
+  offset=0;segments.forEach(seg=>{if(seg.val===0)return;const frac=seg.val/total;const angle=frac*2*Math.PI;const x1=cx+rx*Math.sin(offset);const y1=cy-ry*Math.cos(offset);offset+=angle;const x2=cx+rx*Math.sin(offset);const y2=cy-ry*Math.cos(offset);const large=frac>.5?1:0;svgPaths+=`<path d="M${cx},${cy} L${x1},${y1} A${rx},${ry} 0 ${large},1 ${x2},${y2} Z" fill="${seg.color}" opacity=".95" stroke="rgba(0,0,0,.1)" stroke-width=".5"><title>${seg.label}: ${seg.val}</title></path>`;});
+  return`<div style="text-align:center;"><svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:200px;">${svgSides}${svgPaths}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" font-weight="bold" fill="white">${total}</text></svg></div>`;
+}
 function buildPie(segments){
   const total=segments.reduce((s,x)=>s+x.val,0);
   if(!total)return'<div style="color:var(--text3);font-size:.8rem;text-align:center;padding:20px;">No data</div>';
