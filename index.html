@@ -435,7 +435,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v18.0 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v19.0 @2026</span></div>
   </div>
 </div>
 
@@ -746,14 +746,9 @@ document.addEventListener('click',e=>{
 // ══════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════
-function attemptLogin(){
+   function attemptLogin(){
   const errEl=document.getElementById('login-error');errEl.style.display='none';
-  if(!db.Awal||!db.Awal.length){
-    toast('⏳ Memuat data login, harap tunggu 1–2 detik...');
-    // Retry setelah 1.5 detik
-    setTimeout(()=>attemptLogin(),1500);
-    return;
-  }
+  if(!db.Awal||!db.Awal.length)return toast('⏳ Memuat data, harap tunggu...');
   const u=document.getElementById('user').value.trim();
   const p=document.getElementById('pass').value;
   if(!u||!p)return toast('⚠️ Isi username dan password');
@@ -762,9 +757,10 @@ function attemptLogin(){
   currentUser=found;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
+  // PERUBAHAN: hanya tampilkan nama user di header, tidak perlu akses menu
   document.getElementById('header-title').textContent=found.username;
   document.getElementById('header-sub').textContent=found.level||found.tipe||'user';
-  // Preload data Acara di background agar Dashboard cepat
+  Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
   if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
   setupNavigation();
   logHistory('login','masuk aplikasi');
