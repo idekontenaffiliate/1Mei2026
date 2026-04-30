@@ -435,7 +435,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v17.0 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v18.0 @2026</span></div>
   </div>
 </div>
 
@@ -2061,9 +2061,12 @@ ${item.keputusan?`\n🏷 Keputusan: ${escHtml(item.keputusan)}`:''}
 // ══════════════════════════════════════════════════
 // ADMIN
 // ══════════════════════════════════════════════════
-function renderAdmin(){
-  const tiypes=(currentUser?.tipe||'');
-  if(!tiypes.toLowerCase().includes('admin')){document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔒</div><p>Akses Ditolak</p></div>`;return;}
+function renderAdmin() {
+  if (!isAdminUser() && !(currentUser?.tipe||'').toLowerCase().includes('admin')) {
+    document.getElementById('app-content').innerHTML = 
+      `<div class="empty-state"><div class="icon">🔒</div><p>Akses Ditolak</p></div>`;
+    return;
+  }
   const content=document.getElementById('app-content');
   content.innerHTML=`
     <div class="section-header"><span class="section-title">Dashboard Admin</span></div>
@@ -2092,13 +2095,26 @@ function loadHistoryLog(){
 }
 
 // HISTORY LOG
-async function logHistory(menu,action){
-  let ip='?';
-  try{const r=await fetch('https://api.ipify.org?format=json');const d=await r.json();ip=d.ip;}catch(e){}
-  const entry={user:currentUser?.username||'anon',menu,action,waktu:new Date().toISOString(),ip};
-  const ex=JSON.parse(localStorage.getItem('activity_log')||'[]');ex.push(entry);if(ex.length>500)ex.splice(0,ex.length-500);localStorage.setItem('activity_log',JSON.stringify(ex));
-  if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
+async function logHistory(menu, action) {
+  let ip = '?';
+  try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); ip = d.ip; } catch(e) {}
+  const entry = { user: currentUser?.username || 'anon', menu, action, waktu: new Date().toISOString(), ip };
+  const ex = JSON.parse(localStorage.getItem('activity_log') || '[]');
+  ex.push(entry); if(ex.length > 500) ex.splice(0, ex.length - 500);
+  localStorage.setItem('activity_log', JSON.stringify(ex));
+  
+  // Kirim ke server (APPS_SCRIPT_AWAL untuk history)
+  const targetUrl = APPS_SCRIPT_AWAL && !APPS_SCRIPT_AWAL.includes('GANTI') 
+    ? APPS_SCRIPT_AWAL : APPS_SCRIPT_URL;
+  if (!targetUrl.includes('GANTI')) {
+    fetch(targetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ action: 'history', ...entry }).toString()
+    }).catch(() => {});
+  }
 }
+   
 </script>
 </body>
 </html>
