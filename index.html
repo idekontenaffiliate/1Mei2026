@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v7.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.3 @2026</span></div>
   </div>
 </div>
 
@@ -1538,11 +1538,38 @@ function multiMatch(fieldVal,filterArr,mode){
   return fLow.some(f=>parts.some(p=>p.includes(f)||f.includes(p)));
 }
 function filterJemaat(){
-  const search=(document.getElementById('j-search')?.value||'').toLowerCase();const gender=document.getElementById('j-gender')?.value||'';const kategori=document.getElementById('j-kategori')?.value||'';const ikutSolo=document.getElementById('j-ikut-solo')?.value||'';
-  lastFilteredJemaat=(db.Jemaat||[]).filter(j=>{
+  const search=(document.getElementById('j-search')?.value||'').toLowerCase();
+   const gender=document.getElementById('j-gender')?.value||'';
+   const kategori=document.getElementById('j-kategori')?.value||'';
+   const ikutSolo=document.getElementById('j-ikut-solo')?.value||'';
+  const usiaOp=document.getElementById('j-usia-op')?.value||'';
+  const usiaVal=parseFloat(document.getElementById('j-usia-val')?.value)||0;
+  const rhOp=document.getElementById('j-rh-op')?.value||'';
+  const rhVal=parseFloat(document.getElementById('j-rh-val')?.value)||0;
+  const ktm=document.getElementById('j-ktm')?.value||'';
+  const ktmTahir=document.getElementById('j-ktm-tahir')?.value||'';
+  const kelas=document.getElementById('j-kelas')?.value||'';
+
+   
+   lastFilteredJemaat=(db.Jemaat||[]).filter(j=>{
     const nama=(j['Nama Lengkap']||j['Nama Panggilan']||'').toLowerCase();
+    const usiaJ=parseInt(j.Usia)||0;
+    const rhJ=parseFloat(j['rata-rata hadir']||j['Rata-rata Hadir']||0)||0;
+    const ibadahJ=(j['ibadah yang diikuti']||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+    const pelayananJ=(j['pelayanan']||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+    const ktmJ=(j['KTM']||j['ktm']||'').trim().toLowerCase();
+    const ktmTahirJ=(j['KTM Tahir']||j['ktm tahir']||'').trim().toLowerCase();
+    const kategoriJ=(j['Kategori']||j['kategori']||'').trim();
+    const kelasJ=(j['kelas']||j['Kelas']||'').trim();
+    const ikutSoloJ=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().replace(/\s+/g,'').trim();
     if(search&&!nama.includes(search))return false;
     if(gender&&j.Gender!==gender)return false;
+    if(usiaVal>0&&usiaOp){if(usiaOp==='lt'&&!(usiaJ<usiaVal))return;if(usiaOp==='gt'&&!(usiaJ>usiaVal))return;if(usiaOp==='eq'&&!(usiaJ===usiaVal))return;}
+    if(rhVal>0&&rhOp){if(rhOp==='lt'&&!(rhJ<rhVal))return;if(rhOp==='gt'&&!(rhJ>rhVal))return;if(rhOp==='eq'&&!(Math.abs(rhJ-rhVal)<0.01))return;}
+    if(ktm&&ktmJ!==ktm)return;
+    if(ktmTahir&&ktmTahirJ!==ktmTahir)return;
+    if(kategori&&kategoriJ!==kategori)return;
+    if(kelas&&kelasJ!==kelas)return;
     if(kategori&&(j['Kategori']||j['kategori']||'')!==kategori)return false;
     if(ikutSolo){const v=String(j['ikutSolo']||j['Ikut Solo']||'').toLowerCase().trim();const ys=['y','ya','yes','1'];const ns=['n','no','tidak','0'];if(ikutSolo==='y'&&!ys.includes(v))return false;if(ikutSolo==='n'&&!ns.includes(v))return false;}
     if(!multiMatch(j['ibadah yang diikuti'],jemaatFilterIbadah,jemaatFilterIbadahMode))return false;
@@ -1597,7 +1624,7 @@ function openJemaatPopup(j,foto,idx){
   const canEdit=editableCols.length>0;
 
   // Map field label
-  const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','KamarHotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan'};
+  const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','Kamar Hotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan'};
 
   // Build grid fields
   const fieldKeys=visibleCols;
