@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v7.1 @2026</span></div>
   </div>
 </div>
 
@@ -752,19 +752,6 @@ function openInfoModal(){
   const noEfataID=u.no_Efataid||u.no_EfataID||u['no_Efataid']||u['No_EfataID']||'-';
   const akses=u.akses||u.tipe||level;
 
-  const menuDesc={
-    Dashboard:'Menampilkan semua Data Kaum Saleh secara ringkas.',
-    Kidung:'Menampilkan Kidung yang dinyanyikan, lengkap dengan lirik dan player.',
-    Alkitab:'Menampilkan referensi Alkitab yang digunakan.',
-    Acara:'Melihat jadwal acara yang disusun.',
-    Kegiatan:'Melihat kegiatan dan program yang ada.',
-    Jemaat:'Menampilkan data jemaat yang hadir.',
-    Link:'Kumpulan link dan sumber daya yang berguna.',
-    Pertanyaan:'Menulis pertanyaan selama acara berlangsung.',
-    'Hasil Pertanyaan':'Melihat dan menjawab semua pertanyaan yang masuk.',
-  };
-
- 
   const aturan=`📋 ATURAN PENGGUNAAN:
 • Semua peserta bisa menulis pertanyaan dan jawaban.
 • Jawaban bisa disampaikan lewat suara, tidak harus tertulis.
@@ -788,10 +775,6 @@ function openInfoModal(){
       <div class="info-row"><span class="info-row-label">Akses</span><span class="info-row-val" style="font-size:.68rem;max-width:200px;text-align:right;word-break:break-all;">${escHtml(akses)}</span></div>
     </div>
     <div class="info-section">
-      <div class="info-section-title">📂 Menu yang Dapat Diakses</div>
-      ${menus.length?menus.map(m=>`<div class="info-row"><span class="info-row-label">${escHtml(menuLabel(m))}</span><span class="info-row-val" style="font-size:.7rem;font-family:'DM Sans',sans-serif;color:var(--text2);">${escHtml(menuDesc[m]||'-')}</span></div>`).join(''):'<div style="font-size:.8rem;color:var(--text3);">-</div>'}
-    </div>
-    <div class="info-section">
       <div class="info-section-title">📘 Tentang Aplikasi</div>
       <div style="font-size:.8rem;color:var(--text2);line-height:1.7;white-space:pre-line;">${escHtml(aturan)}</div>
     </div>
@@ -801,9 +784,6 @@ PASSWORD: ${u.password||'-'}
 LEVEL: ${level}
 NO EFATAID: ${noEfataID}
 AKSES: ${akses}
-
-MENU YANG DAPAT DIAKSES:
-${menus.map(m=>`• ${m}: ${menuDesc[m]||'-'}`).join('\n')}
 
 ${aturan}</div>`;
   overlay.classList.add('open');
