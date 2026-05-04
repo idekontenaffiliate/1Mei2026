@@ -556,8 +556,7 @@ const LOGIN_VIDEO_URL="";
 const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
 const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
-// Apps Script untuk update jemaat (pisah atau sama)
-const APPS_SCRIPT_JEMAAT=APPS_SCRIPT_PERTANYAAN;
+const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbztB9SQ6s1lR69XxrwkALNWtc_1ywOXq-uwDOeOhBoJlgufERqNjFD6eIL5p3f_N8OR1w/exec";
 
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -1728,7 +1727,7 @@ function openJemaatPopup(j,foto,idx){
       ${canEdit?`<button class="jp-save-btn" onclick="saveJemaatEdit(${idx})">💾 Simpan Perubahan</button>`:''}
       <div id="jp-copy-data-${idx}" style="display:none;">Nama: ${j['Nama Lengkap']||'-'}
 Panggilan: ${j['Nama Panggilan']||'-'}
-No EfataID: ${j['no_EfataID']||j['no_Efataid']||'-'}
+No EfataID: ${j['No_EfataID']||j['no_Efataid']||'-'}
 Gender: ${j.Gender||'-'}
 Baptis: ${j['Tanggal Baptis']||'-'}
 Pelayanan: ${j['pelayanan']||'-'}
