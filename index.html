@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v15.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v16.5 @2026</span></div>
   </div>
 </div>
 
@@ -556,7 +556,10 @@ const LOGIN_VIDEO_URL="";
 const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
 const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
-const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbztB9SQ6s1lR69XxrwkALNWtc_1ywOXq-uwDOeOhBoJlgufERqNjFD6eIL5p3f_N8OR1w/exec";
+const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbymPg0yBGy6javkbTGYBJOcgn6q_wRbo6F19XBV6jotSeBA0pWnJR067SFnL9sOHzik/exec";
+// ⚠️ PENTING: Ganti dengan URL deploy Apps Script sheet "Awal" Anda
+// (script yang berisi fungsi gantiPassword / ganti_password)
+const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbxZox_RdqPp9wwRv_vLt46nRnVvxbHik-WycpJpppYKFgvTqaCxmuIFkyepLopi2yacMA/exec";
 
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -645,6 +648,8 @@ function getEditableJemaatCols(){
   if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
   return[];
 }
+// Hanya Administrator dan Gembala Distrik yang boleh edit link_efata
+function canEditEfataLink(){return isLevelAdmin()||isLevelGemDistr();}
 function getVisibleJemaatCols(){
   if(isAdminUser())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
   // user biasa: sembunyikan KTM, KTM Tahir, Kamar Hotel, Tipe Kamar, Usia
@@ -836,7 +841,8 @@ async function submitGantiPassword(){
   const oldPassword=currentUser?.password||'';
   const formData=new URLSearchParams({action:'ganti_password',requester:currentUser?.username||'',username:currentUser?.username||'',new_password:pw1,level:currentUser?.level||currentUser?.tipe||''});
   try{
-    await fetch(APPS_SCRIPT_PERTANYAAN,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
+    // FIX: kirim ke APPS_SCRIPT_AWAL (bukan PERTANYAAN) karena fungsi gantiPassword ada di sheet Awal
+    await fetch(APPS_SCRIPT_AWAL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
     // Update password di currentUser
     if(currentUser){currentUser.password=pw1;}
     // Update juga di db.Awal agar konsisten
@@ -1575,6 +1581,7 @@ function renderJemaat(){
         <button class="view-toggle-btn active" id="vtbtn-grid" onclick="setJemaatView('grid')">⊞ Kotak</button>
         <button class="view-toggle-btn" id="vtbtn-detail" onclick="setJemaatView('detail')">🗂 Detail</button>
         <button class="view-toggle-btn" id="vtbtn-text" onclick="setJemaatView('text')">📝 Teks</button>
+        <button class="view-toggle-btn" id="vtbtn-qrcode" onclick="setJemaatView('qrcode')">📷 QRCode</button>
       </div>
       <button class="btn-action" onclick="copyJemaatFilter()" style="margin-left:auto;">📋 Copy</button>
     </div>
@@ -1598,7 +1605,7 @@ function toggleAndOr(type){
   else if(type==='gugus'){jemaatFilterGugusMode=flip(jemaatFilterGugusMode);const b=document.getElementById('gugus-andor');if(b){b.textContent=jemaatFilterGugusMode;b.classList.toggle('active',jemaatFilterGugusMode==='AND');}}
   filterJemaat();
 }
-function setJemaatView(mode){jemaatViewMode=mode;['grid','detail','text'].forEach(m=>{const b=document.getElementById('vtbtn-'+m);if(b)b.classList.toggle('active',m===mode);});filterJemaat();}
+function setJemaatView(mode){jemaatViewMode=mode;['grid','detail','text','qrcode'].forEach(m=>{const b=document.getElementById('vtbtn-'+m);if(b)b.classList.toggle('active',m===mode);});filterJemaat();}
 function multiMatch(fieldVal,filterArr,mode){
   if(!filterArr.length)return true;
   const parts=(fieldVal||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
@@ -1657,6 +1664,7 @@ function filterJemaat(){
 function renderJemaatResult(data){
   const container=document.getElementById('jemaat-result-container');if(!container)return;
   if(!data.length){container.innerHTML=`<div class="empty-state"><div class="icon">👥</div><p>Tidak ada jemaat</p></div>`;return;}
+  if(jemaatViewMode==='qrcode'){renderJemaatQRCode(data,container);return;}
   if(jemaatViewMode==='grid'){
     container.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;" id="jemaat-grid"></div>`;
     const grid=document.getElementById('jemaat-grid');
@@ -1724,7 +1732,8 @@ function openJemaatPopup(j,foto,idx){
     <div class="jp-body">
       <div class="jp-grid">${gridHtml}</div>
       ${(()=>{const efata=j['link_efata']||j['Link_efata']||j['Link Efata']||j['link efata']||'';if(!efata)return '';const efataImgUrl=fmtImg(efata);return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;"><div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;">📸 Foto Efata</div><button class="btn-action accent" style="width:100%;padding:10px;" onclick="viewEfataPhoto('${escHtml(efataImgUrl)}','${escHtml(j['Nama Lengkap']||'Foto Efata')}')">🖼️ Lihat Foto Efata</button><div id="efata-photo-box-${idx}" style="display:none;margin-top:8px;text-align:center;"><img src="${efataImgUrl}" style="max-width:100%;border-radius:10px;border:1px solid var(--border);cursor:pointer;" onclick="openImgViewer(['${efataImgUrl}'],0,'${escHtml(j['Nama Lengkap']||'Foto Efata')}')" onerror="this.style.display='none';document.getElementById('efata-err-${idx}').style.display='block';"><div id="efata-err-${idx}" style="display:none;font-size:.78rem;color:var(--red);padding:8px;">⚠️ Gagal memuat gambar. Pastikan link Google Drive valid dan publik.</div></div></div>`;})()}
-      ${canEdit?`<button class="jp-save-btn" onclick="saveJemaatEdit(${idx})">💾 Simpan Perubahan</button>`:''}
+      ${(canEditEfataLink())?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;"><div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">🔗 Link Efata (Foto/QR)</div><input class="jp-edit-input" id="jp-edit-link_efata" value="${escHtml(j['link_efata']||j['Link_efata']||j['Link Efata']||j['link efata']||'')}" placeholder="Paste link Google Drive foto/QR..."><div style="font-size:.65rem;color:var(--text3);margin-top:4px;">Hanya Administrator &amp; Gembala Distrik</div></div>`:''}
+    ${(canEdit||canEditEfataLink())?`<button class="jp-save-btn" onclick="saveJemaatEdit(${idx})">💾 Simpan Perubahan</button>`:''}
       <div id="jp-copy-data-${idx}" style="display:none;">Nama: ${j['Nama Lengkap']||'-'}
 Panggilan: ${j['Nama Panggilan']||'-'}
 No EfataID: ${j['No_EfataID']||j['no_Efataid']||'-'}
@@ -1738,6 +1747,43 @@ Keterangan: ${j['keterangan']||'-'}</div>
   document.getElementById('jemaat-popup-overlay').classList.add('open');
 }
 function closeJemaatPopup(){document.getElementById('jemaat-popup-overlay').classList.remove('open');}
+
+// ══════════════════════════════════════════════════
+// QRCODE VIEW — Tampilkan semua foto efata sekaligus
+// ══════════════════════════════════════════════════
+function renderJemaatQRCode(data,container){
+  // Kumpulkan semua jemaat yang punya link_efata
+  const withPhoto=data.map((j,i)=>({j,i,url:fmtImg(j['link_efata']||j['Link_efata']||j['Link Efata']||j['link efata']||'')})).filter(x=>x.url);
+  if(!withPhoto.length){
+    container.innerHTML=`<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata</p></div>`;
+    return;
+  }
+  // Build all image URLs array for fullscreen viewer
+  const allUrls=withPhoto.map(x=>x.url);
+  const allNames=withPhoto.map(x=>x.j['Nama Lengkap']||x.j['Nama Panggilan']||'-');
+  container.innerHTML=`
+    <div style="padding:8px 4px;">
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;text-align:center;">${withPhoto.length} foto dari ${data.length} jemaat · Tap gambar untuk fullscreen</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;" id="qrcode-grid"></div>
+    </div>`;
+  const grid=document.getElementById('qrcode-grid');
+  withPhoto.forEach((x,vi)=>{
+    const card=document.createElement('div');
+    card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;';
+    card.onmouseover=()=>{card.style.transform='scale(1.03)';card.style.boxShadow='0 4px 16px rgba(0,0,0,.3)';};
+    card.onmouseout=()=>{card.style.transform='';card.style.boxShadow='';};
+    card.onclick=()=>openImgViewer(allUrls,vi,'📷 '+allNames[vi]);
+    card.innerHTML=`
+      <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
+        <img src="${x.url}" alt="${escHtml(x.j['Nama Lengkap']||'-')}"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:6px;"
+          onerror="this.parentElement.innerHTML='<div style=\'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;\'>❌</div>'">
+      </div>
+      <div style="padding:6px 8px;font-size:.68rem;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);">${escHtml(x.j['Nama Lengkap']||x.j['Nama Panggilan']||'-')}</div>`;
+    grid.appendChild(card);
+  });
+}
+
 
 function viewEfataPhoto(imgUrl, namaJemaat){
   // Cari kotak foto di popup yang sedang terbuka
@@ -1760,13 +1806,29 @@ async function saveJemaatEdit(idx){
     const input=document.getElementById('jp-edit-'+key);
     if(input)updates[key]=input.value.trim();
   });
+  // Juga tangkap field link_efata jika ada inputnya (untuk admin/gembala distrik)
+  const efataInput=document.getElementById('jp-edit-link_efata');
+  if(efataInput&&canEditEfataLink()){updates['link_efata']=efataInput.value.trim();}
   // Update lokal
   Object.assign(j,updates);
   toast('⏳ Menyimpan...');
-  // Kirim ke server
-  const payload={action:'update_jemaat',username:currentUser?.username||'',level:currentUser?.level||currentUser?.tipe||'',efataid:j['no_EfataID']||j['no_Efataid']||'',updates:JSON.stringify(updates)};
-  const formData=new URLSearchParams();Object.entries(payload).forEach(([k,v])=>formData.append(k,v));
-  try{await fetch(APPS_SCRIPT_JEMAAT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});toast('✅ Data berhasil disimpan!');}catch(e){toast('✅ Tersimpan lokal (offline mode)');}
+  // FIX: level harus diambil dari field 'level' di data user (bukan tipe)
+  const levelUser=currentUser?.level||currentUser?.tipe||'';
+  const payload={
+    action:'update_jemaat',
+    username:currentUser?.username||'',
+    level:levelUser,
+    // FIX: coba semua kemungkinan nama kolom EfataID
+    efataid:j['no_EfataID']||j['No_EfataID']||j['no_Efataid']||j['no_efataid']||j['no_efataID']||'',
+    updates:JSON.stringify(updates)
+  };
+  // FIX: buat formData dari payload (bukan ulang dari nol)
+  const formData=new URLSearchParams();
+  Object.entries(payload).forEach(([k,v])=>formData.append(k,v));
+  try{
+    await fetch(APPS_SCRIPT_JEMAAT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
+    toast('✅ Data berhasil disimpan!');
+  }catch(e){toast('✅ Tersimpan lokal (offline mode)');}
   closeJemaatPopup();filterJemaat();
 }
 
