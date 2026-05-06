@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v7.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v8.1 @2026</span></div>
   </div>
 </div>
 
@@ -556,7 +556,7 @@ const LOGIN_VIDEO_URL="";
 const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
 const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
-const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbz4tURmIasvRDmLYnvF6k3xpniwrwf3169h98hnCj6uxt-AFmJ3aBjcfwU2IItmdFyJ7A/exec";
+const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 // ⚠️ PENTING: Ganti dengan URL deploy Apps Script sheet "Awal" Anda
 // (script yang berisi fungsi gantiPassword / ganti_password)
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwXe8VAb86thMjtV4gzuhwOcLdIOscU-u6WHIZHiVp5mnGzRCwXCUZTVEsLYur6S2ZiXg/exec";
@@ -644,17 +644,17 @@ function isLevelPenatua(){return getUserLevel().includes('Penatua');}
 function isLevelGemDistr(){return getUserLevel().includes('Gembala Distrik');}
 // Kolom yang boleh diedit per level
 function getEditableJemaatCols(){
-  if(isLevelAdmin())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
-  if(isLevelGemDistr())return['no_EfataID','Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
-  if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
+  if(isLevelAdmin())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
+  if(isLevelGemDistr())return['no_EfataID','Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
+  if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
   return[];
 }
 // Hanya Administrator dan Gembala Distrik yang boleh edit link_efata
 function canEditEfataLink(){return isLevelAdmin()||isLevelGemDistr();}
 function getVisibleJemaatCols(){
-  if(isAdminUser())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','keterangan'];
-  // user biasa: sembunyikan KTM, KTM Tahir, Kamar Hotel, Tipe Kamar, Usia
-  return['no_EfataID','Nama Lengkap','Nama Panggilan','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','Rata-rata Hadir','keterangan'];
+  if(isAdminUser())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
+  // user biasa: sembunyikan KTM, KTM Tahir, Kamar Hotel, Tipe Kamar, Usia, Keterangan
+  return['no_EfataID','Nama Lengkap','Nama Panggilan','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','Rata-rata Hadir','Keterangan'];
 }
 // Fungsi baru — viewer dengan nama per slide
 function openImgViewerWithNames(images, names, startIndex, title) {
@@ -1878,7 +1878,7 @@ function openJemaatPopup(j,foto,idx){
   const canEdit=editableCols.length>0;
 
   // Map field label
-  const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','Kamar Hotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan'};
+  const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','Kamar Hotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan','KetKTM':'KetKTM'};
 
   // Build grid fields
   const fieldKeys=visibleCols;
@@ -1886,7 +1886,7 @@ function openJemaatPopup(j,foto,idx){
     const label=fieldLabels[key]||key;
     const val = getJemaatFieldVal(j, key) || '-';
     const editable=editableCols.includes(key);
-    const isFullWidth=['Nama Lengkap','pelayanan','ibadah yang diikuti','keterangan','Kamar Hotel','KTM','KTM Tahir'].includes(key);
+    const isFullWidth=['Nama Lengkap','pelayanan','ibadah yang diikuti','Keterangan','Kamar Hotel','KTM','KTM Tahir','KetKTM'].includes(key);
     return`<div class="jp-field${isFullWidth?' full':''}">
       <div class="jp-field-label">${escHtml(label)}</div>
       ${editable
@@ -1918,7 +1918,9 @@ Gender: ${j.Gender||'-'}
 Baptis: ${j['Tanggal Baptis']||'-'}
 Pelayanan: ${j['pelayanan']||'-'}
 Ibadah: ${j['ibadah yang diikuti']||'-'}
-Keterangan: ${j['keterangan']||'-'}</div>
+Keterangan: ${j['Keterangan']||'-'}
+KetKTM: ${j['KetKTM']||'-'}
+</div>
       <button class="jp-copy-btn" style="margin-top:8px;" onclick="navigator.clipboard.writeText(document.getElementById('jp-copy-data-${idx}').innerText).then(()=>toast('✅ Info disalin!'))">📋 Copy Info</button>
     </div>`;
   document.getElementById('jemaat-popup-overlay').classList.add('open');
