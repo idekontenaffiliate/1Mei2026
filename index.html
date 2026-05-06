@@ -1684,13 +1684,16 @@ function renderJemaat(){
     </div>
     <div class="filter-group">
       <select id="j-kategori" class="k-input" onchange="filterJemaat()"><option value="">Semua Kategori</option><option>Tamu</option><option>Kaum Saleh</option><option>Remaja</option><option>Anak</option><option>Pemuda</option></select>
+    </div>
+${isAdminUser() ? `
+    <div class="filter-group">
       <select id="j-ikut-solo" class="k-input" onchange="filterJemaat()"><option value="">Ikut Solo (semua)</option><option value="y">Ikut: Ya</option><option value="n">Ikut: Tidak</option></select>
     </div>
     <div class="checklist-filter-wrap">
       <div class="checklist-filter-title">🏫 Kelas <button class="andor-toggle" id="kelas-andor" onclick="toggleAndOr('kelas')">OR</button></div>
       <div class="checklist-items" id="kelas-checklist">${KELAS_OPTIONS.map(v=>`<div class="checklist-item" onclick="toggleChecklist('kelas','${escHtml(v)}')" data-val="${escHtml(v)}">${escHtml(v.length>30?v.slice(0,30)+'…':v)}</div>`).join('')}</div>
     </div>
-${isAdminUser() ? `
+    
     <div class="checklist-filter-wrap">
       <div class="checklist-filter-title">🏷 KTM</div>
       <div class="checklist-items" id="ktm-checklist">
