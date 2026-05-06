@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v9.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.1 @2026</span></div>
   </div>
 </div>
 
@@ -843,14 +843,16 @@ async function submitGantiPassword(){
   if(pw1!==pw2){statusEl.textContent='❌ Password tidak sama';statusEl.style.color='var(--red)';return;}
   if(pw1.length<3){statusEl.textContent='❌ Password minimal 3 karakter';statusEl.style.color='var(--red)';return;}
   if(pw1===currentUser?.password){statusEl.textContent='⚠️ Sama dengan password lama';statusEl.style.color='var(--yellow)';return;}
-  statusEl.textContent='⏳ Saat Menyimpan, tunggu...';statusEl.style.color='var(--text3)';
+  statusEl.textContent='⏳ Saat Menyimpan, tunggu dulu...';statusEl.style.color='var(--text3)';
 
   // Gunakan GET request dengan parameter — lebih reliable dari POST no-cors
   const params = new URLSearchParams({
     action: 'ganti_password',
+    requester : currentUser?.username || '', 
     username: currentUser?.username || '',
     new_password: pw1,
-    level: currentUser?.level || currentUser?.tipe || ''
+    level: currentUser?.level || currentUser?.tipe || '',
+    No_EfataID : currentuser?.No_EfataID || '' 
   });
 
   try{
