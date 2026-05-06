@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v18.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v1.5 @2026</span></div>
   </div>
 </div>
 
@@ -1164,6 +1164,7 @@ function clearAllJemaatFilter(){
   jemaatFilterKelas = []; jemaatFilterGugus = [];
   jemaatFilterIbadahMode = 'OR'; jemaatFilterPelayananMode = 'OR';
   jemaatFilterKelasMode = 'OR'; jemaatFilterGugusMode = 'OR';
+  jemaatFilterKTM = []; jemaatFilterKTMTahir = [];
   
   // Reset input fields
   const s = document.getElementById('j-search'); if(s) s.value = '';
@@ -1176,6 +1177,8 @@ function clearAllJemaatFilter(){
   document.querySelectorAll('#pelayanan-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
   document.querySelectorAll('#kelas-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
   document.querySelectorAll('#gugus-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  document.querySelectorAll('#ktm-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  document.querySelectorAll('#ktmtahir-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
   
   // Reset AND/OR buttons
   ['ibadah','pelayanan','kelas','gugus'].forEach(type=>{
@@ -1648,11 +1651,13 @@ function renderLink(){
 // ══════════════════════════════════════════════════
 let jemaatFilterKelas=[],jemaatFilterGugus=[];
 let jemaatFilterKelasMode='OR',jemaatFilterGugusMode='OR';
+let jemaatFilterKTM=[], jemaatFilterKTMTahir=[];
 
 function renderJemaat(){
   const content=document.getElementById('app-content');
   const data=db.Jemaat||[];
   jemaatFilterIbadah=[];jemaatFilterPelayanan=[];jemaatFilterKelas=[];jemaatFilterGugus=[];
+  jemaatFilterKTM=[];jemaatFilterKTMTahir=[];
   jemaatFilterIbadahMode='OR';jemaatFilterPelayananMode='OR';jemaatFilterKelasMode='OR';jemaatFilterGugusMode='OR';
 
   const canEdit=isAdminUser();
@@ -1685,6 +1690,21 @@ function renderJemaat(){
       <div class="checklist-filter-title">🏫 Kelas <button class="andor-toggle" id="kelas-andor" onclick="toggleAndOr('kelas')">OR</button></div>
       <div class="checklist-items" id="kelas-checklist">${KELAS_OPTIONS.map(v=>`<div class="checklist-item" onclick="toggleChecklist('kelas','${escHtml(v)}')" data-val="${escHtml(v)}">${escHtml(v.length>30?v.slice(0,30)+'…':v)}</div>`).join('')}</div>
     </div>
+${isAdminUser() ? `
+    <div class="checklist-filter-wrap">
+      <div class="checklist-filter-title">🏷 KTM</div>
+      <div class="checklist-items" id="ktm-checklist">
+        <div class="checklist-item" onclick="toggleChecklist('ktm','y')" data-val="y">✅ Ya</div>
+        <div class="checklist-item" onclick="toggleChecklist('ktm','n')" data-val="n">❌ Tidak</div>
+      </div>
+    </div>
+    <div class="checklist-filter-wrap">
+      <div class="checklist-filter-title">🏷 KTM Tahir</div>
+      <div class="checklist-items" id="ktmtahir-checklist">
+        <div class="checklist-item" onclick="toggleChecklist('ktmtahir','y')" data-val="y">✅ Ya</div>
+        <div class="checklist-item" onclick="toggleChecklist('ktmtahir','n')" data-val="n">❌ Tidak</div>
+      </div>
+    </div>` : ''}    
     <div class="checklist-filter-wrap">
       <div class="checklist-filter-title">🏠 Gugus <button class="andor-toggle" id="gugus-andor" onclick="toggleAndOr('gugus')">OR</button></div>
       <div class="checklist-items" id="gugus-checklist">${GUGUS_OPTIONS.map(v=>`<div class="checklist-item" onclick="toggleChecklist('gugus','${v}')" data-val="${v}">${v}</div>`).join('')}</div>
@@ -1719,6 +1739,8 @@ function toggleChecklist(type,val){
   else if(type==='pelayanan'){update(jemaatFilterPelayanan,val);document.querySelectorAll('#pelayanan-checklist .checklist-item').forEach(el=>el.classList.toggle('checked',jemaatFilterPelayanan.includes(el.dataset.val)));}
   else if(type==='kelas'){update(jemaatFilterKelas,val);document.querySelectorAll('#kelas-checklist .checklist-item').forEach(el=>el.classList.toggle('checked',jemaatFilterKelas.includes(el.dataset.val)));}
   else if(type==='gugus'){update(jemaatFilterGugus,val);document.querySelectorAll('#gugus-checklist .checklist-item').forEach(el=>el.classList.toggle('checked',jemaatFilterGugus.includes(el.dataset.val)));}
+  else if(type==='ktm'){update(jemaatFilterKTM,val);document.querySelectorAll('#ktm-checklist .checklist-item').forEach(el=>el.classList.toggle('checked',jemaatFilterKTM.includes(el.dataset.val)));}
+  else if(type==='ktmtahir'){update(jemaatFilterKTMTahir,val);document.querySelectorAll('#ktmtahir-checklist .checklist-item').forEach(el=>el.classList.toggle('checked',jemaatFilterKTMTahir.includes(el.dataset.val)));}
   filterJemaat();
 }
 function toggleAndOr(type){
@@ -1776,6 +1798,18 @@ function filterJemaat(){
     if(!multiMatch(j['pelayanan'],jemaatFilterPelayanan,jemaatFilterPelayananMode))return false;
     if(!multiMatch(j['kelas']||j['Kelas'],jemaatFilterKelas,jemaatFilterKelasMode))return false;
     if(!multiMatch(j['Gugus']||j['gugus'],jemaatFilterGugus,jemaatFilterGugusMode))return false;
+    // Filter KTM & KTM Tahir — hanya aktif jika ada pilihan
+    if(jemaatFilterKTM.length){
+      const ktmVal=(j['KTM']||j['ktm']||'').toString().toLowerCase().trim();
+      // normalisasi: 'yes','y','1','ya' → 'y' | 'no','n','0','tidak' → 'n'
+      const ktmNorm=['y','ya','yes','1'].includes(ktmVal)?'y':['n','no','tidak','0'].includes(ktmVal)?'n':ktmVal;
+      if(!jemaatFilterKTM.includes(ktmNorm))return false;
+    }
+    if(jemaatFilterKTMTahir.length){
+      const ktmtVal=(j['KTM Tahir']||j['ktm tahir']||j['KTM_Tahir']||'').toString().toLowerCase().trim();
+      const ktmtNorm=['y','ya','yes','1'].includes(ktmtVal)?'y':['n','no','tidak','0'].includes(ktmtVal)?'n':ktmtVal;
+      if(!jemaatFilterKTMTahir.includes(ktmtNorm))return false;
+    }
     return true;
   });
   const count=lastFilteredJemaat.length;const pria=lastFilteredJemaat.filter(j=>j.Gender==='Pria').length;const wanita=lastFilteredJemaat.filter(j=>j.Gender==='Wanita').length;
