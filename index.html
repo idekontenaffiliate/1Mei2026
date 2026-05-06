@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.21 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.213 @2026</span></div>
   </div>
 </div>
 
@@ -1871,7 +1871,7 @@ function openJemaatPopup(j,foto,idx){
   const fotoUrl=foto||fmtImg(j['Link Foto']||'')||`https://api.dicebear.com/7.x/avataaars/svg?seed=${idx}`;
   const editableCols=getEditableJemaatCols();
   const visibleCols=getVisibleJemaatCols();
-  const canEdit=editableCols.length>0;
+  const canEdit=editableCols.length>0 && !isLevelPenatua();
 
   // Map field label
   const fieldLabels={'no_EfataID':'No EfataID','Nama Lengkap':'Nama Lengkap','Nama Panggilan':'Nama Panggilan','Usia':'Usia','Gender':'Gender','Tanggal Baptis':'Tanggal Baptis','pelayanan':'Pelayanan','ibadah yang diikuti':'Ibadah yang Diikuti','KTM':'KTM','KTM Tahir':'KTM Tahir','Kamar Hotel':'Kamar Hotel','tipe Kamar':'Tipe Kamar','Rata-rata Hadir':'Rata-rata Hadir','keterangan':'Keterangan','KetKTM':'KetKTM'};
@@ -1885,7 +1885,7 @@ function openJemaatPopup(j,foto,idx){
     const isFullWidth=['Nama Lengkap','pelayanan','ibadah yang diikuti','Keterangan','Kamar Hotel','KTM','KTM Tahir','KetKTM'].includes(key);
     return`<div class="jp-field${isFullWidth?' full':''}">
       <div class="jp-field-label">${escHtml(label)}</div>
-      ${editable
+      ${(editable && !isLevelPenatua())
         ?`<input class="jp-edit-input" id="jp-edit-${escHtml(key)}" value="${escHtml(val==='-'?'':val)}" placeholder="${escHtml(label)}...">`
         :`<div class="jp-field-value" style="font-size:.78rem;white-space:normal;">${escHtml(String(val))}</div>`
       }
