@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v3.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.5 @2026</span></div>
   </div>
 </div>
 
@@ -567,6 +567,7 @@ const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 // STATE
 // ══════════════════════════════════════════════════
 let currentUser=null,db={},currentFontSize=13,currentTranspose=0;
+let ivNames = [];
 let ivImages=[],ivIndex=0,ivScale=1,ivPanX=0,ivPanY=0,ivPinching=false;
 let quizAnswers={},quizSubmitted=false;
 let tonePlayerState={url:'',transpose:0};
@@ -655,7 +656,11 @@ function getVisibleJemaatCols(){
   // user biasa: sembunyikan KTM, KTM Tahir, Kamar Hotel, Tipe Kamar, Usia
   return['no_EfataID','Nama Lengkap','Nama Panggilan','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','Rata-rata Hadir','keterangan'];
 }
-
+// Fungsi baru — viewer dengan nama per slide
+function openImgViewerWithNames(images, names, startIndex, title) {
+  ivNames = names || [];
+  openImgViewer(images, startIndex, title || (ivNames[startIndex] || 'Foto'));
+}
 // ══════════════════════════════════════════════════
 // THEME
 // ══════════════════════════════════════════════════
@@ -1309,8 +1314,43 @@ function buildBarChart(map){
 // ══════════════════════════════════════════════════
 // IMAGE VIEWER
 // ══════════════════════════════════════════════════
-function openImgViewer(images,startIndex,title){ivImages=Array.isArray(images)?images:[images];ivIndex=Math.max(0,Math.min(ivImages.length-1,startIndex||0));ivScale=1;ivPanX=0;ivPanY=0;document.getElementById('iv-title').textContent=title||'Foto';const viewer=document.getElementById('img-viewer');viewer.style.display='flex';const dots=document.getElementById('iv-dots');dots.innerHTML=ivImages.map((_,i)=>`<div class="iv-dot${i===ivIndex?' active':''}" onclick="ivGoTo(${i})"></div>`).join('');ivRender();}
-function ivRender(){const img=document.getElementById('iv-main-img');const container=document.getElementById('iv-img-container');img.style.opacity=0;setTimeout(()=>{img.src=ivImages[ivIndex];img.style.opacity=1;},100);ivScale=1;ivPanX=0;ivPanY=0;applyIvTransform(container);document.getElementById('iv-counter').textContent=`${ivIndex+1}/${ivImages.length}`;document.getElementById('iv-zoom-label').textContent='100%';document.querySelectorAll('.iv-dot').forEach((d,i)=>d.classList.toggle('active',i===ivIndex));document.getElementById('iv-prev').style.display=ivImages.length>1&&ivIndex>0?'flex':'none';document.getElementById('iv-next').style.display=ivImages.length>1&&ivIndex<ivImages.length-1?'flex':'none';}
+function openImgViewer(images, startIndex, title) {
+  ivImages = Array.isArray(images) ? images : [images];
+  ivIndex  = Math.max(0, Math.min(ivImages.length - 1, startIndex || 0));
+  ivScale  = 1; ivPanX = 0; ivPanY = 0;
+  
+  // ✅ Reset nama jika tidak pakai openImgViewerWithNames
+  if (!ivNames || ivNames.length !== ivImages.length) ivNames = [];
+
+  document.getElementById('iv-title').textContent = title || 'Foto';
+  const viewer = document.getElementById('img-viewer');
+  viewer.style.display = 'flex';
+  const dots = document.getElementById('iv-dots');
+  dots.innerHTML = ivImages.map((_, i) =>
+    `<div class="iv-dot${i === ivIndex ? ' active' : ''}" onclick="ivGoTo(${i})"></div>`
+  ).join('');
+  ivRender();
+}
+function ivRender(){
+  const img       = document.getElementById('iv-main-img');
+  const container = document.getElementById('iv-img-container');
+  img.style.opacity = 0;
+  setTimeout(() => { img.src = ivImages[ivIndex]; img.style.opacity = 1; }, 100);
+  ivScale = 1; ivPanX = 0; ivPanY = 0;
+  applyIvTransform(container);
+
+  document.getElementById('iv-counter').textContent = `${ivIndex + 1}/${ivImages.length}`;
+  document.getElementById('iv-zoom-label').textContent = '100%';
+  document.querySelectorAll('.iv-dot').forEach((d, i) => d.classList.toggle('active', i === ivIndex));
+  document.getElementById('iv-prev').style.display = ivImages.length > 1 && ivIndex > 0 ? 'flex' : 'none';
+  document.getElementById('iv-next').style.display = ivImages.length > 1 && ivIndex < ivImages.length - 1 ? 'flex' : 'none';
+
+  // ✅ PERBAIKAN: Update judul sesuai nama yang aktif (untuk QRCode view)
+  const titleEl = document.getElementById('iv-title');
+  if (titleEl && ivNames.length > 0) {
+    titleEl.textContent = ivNames[ivIndex] || titleEl.textContent;
+  }
+}
 function applyIvTransform(c){if(!c)c=document.getElementById('iv-img-container');c.style.transform=`translate(${ivPanX}px,${ivPanY}px) scale(${ivScale})`;const zl=document.getElementById('iv-zoom-label');if(zl)zl.textContent=Math.round(ivScale*100)+'%';}
 function ivNav(dir){ivIndex=Math.max(0,Math.min(ivImages.length-1,ivIndex+dir));ivRender();}
 function ivGoTo(i){ivIndex=i;ivRender();}
@@ -1692,6 +1732,19 @@ function renderJemaatResult(data){
 function copyJemaatTextAll(){const el=document.getElementById('jemaat-text-all-copy');if(!el)return;navigator.clipboard.writeText(el.innerText).then(()=>toast('✅ Disalin!'));}
 function copyJemaatFilter(){const result='Filter Jemaat ('+lastFilteredJemaat.length+'):\n'+lastFilteredJemaat.map((j,i)=>`${i+1}. ${j['Nama Lengkap']||j['Nama Panggilan']||'-'}`).join('\n');navigator.clipboard.writeText(result).then(()=>toast('✅ Data filter disalin!'));}
 
+   // Tambahkan helper ini sebelum openJemaatPopup
+function getJemaatFieldVal(j, key) {
+  // Coba langsung
+  if (j[key] !== undefined && String(j[key]).trim() !== '') return j[key];
+  // Coba berbagai variasi nama kolom untuk No_EfataID
+  const efataVariants = ['no_EfataID','No_EfataID','no_efataid','No_Efataid','no_Efataid','No EfataID','no efataid','no_efata_id','EfataID','efataid'];
+  if (efataVariants.includes(key) || key.toLowerCase().replace(/[_\s]/g,'').includes('efataid')) {
+    for (const v of efataVariants) {
+      if (j[v] !== undefined && String(j[v]).trim() !== '') return j[v];
+    }
+  }
+  return j[key.toLowerCase()] || j[key] || '-';
+}
 function openJemaatPopup(j,foto,idx){
   if(!j)return;
   const gColor=j.Gender==='Pria'?'var(--accent)':'var(--accent3)';
@@ -1707,7 +1760,7 @@ function openJemaatPopup(j,foto,idx){
   const fieldKeys=visibleCols;
   let gridHtml=fieldKeys.map(key=>{
     const label=fieldLabels[key]||key;
-    const val=j[key]||j[key.toLowerCase()]||'-';
+    const val = getJemaatFieldVal(j, key) || '-';
     const editable=editableCols.includes(key);
     const isFullWidth=['Nama Lengkap','pelayanan','ibadah yang diikuti','keterangan','Kamar Hotel','KTM','KTM Tahir'].includes(key);
     return`<div class="jp-field${isFullWidth?' full':''}">
@@ -1751,39 +1804,51 @@ function closeJemaatPopup(){document.getElementById('jemaat-popup-overlay').clas
 // ══════════════════════════════════════════════════
 // QRCODE VIEW — Tampilkan semua foto efata sekaligus
 // ══════════════════════════════════════════════════
-function renderJemaatQRCode(data,container){
-  // Kumpulkan semua jemaat yang punya link_efata
-  const withPhoto=data.map((j,i)=>({j,i,url:fmtImg(j['link_efata']||j['Link_efata']||j['Link Efata']||j['link efata']||'')})).filter(x=>x.url);
-  if(!withPhoto.length){
-    container.innerHTML=`<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata</p></div>`;
+function renderJemaatQRCode(data, container) {
+  const withPhoto = data.map((j, i) => ({
+    j, i,
+    url: fmtImg(j['link_efata'] || j['Link_efata'] || j['Link Efata'] || j['link efata'] || '')
+  })).filter(x => x.url);
+
+  if (!withPhoto.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata</p></div>`;
     return;
   }
-  // Build all image URLs array for fullscreen viewer
-  const allUrls=withPhoto.map(x=>x.url);
-  const allNames=withPhoto.map(x=>x.j['Nama Lengkap']||x.j['Nama Panggilan']||'-');
-  container.innerHTML=`
+
+  const allUrls  = withPhoto.map(x => x.url);
+  const allNames = withPhoto.map(x => x.j['Nama Lengkap'] || x.j['Nama Panggilan'] || '-');
+
+  container.innerHTML = `
     <div style="padding:8px 4px;">
-      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;text-align:center;">${withPhoto.length} foto dari ${data.length} jemaat · Tap gambar untuk fullscreen</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;text-align:center;">
+        ${withPhoto.length} foto dari ${data.length} jemaat · Tap gambar untuk fullscreen
+      </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;" id="qrcode-grid"></div>
     </div>`;
-  const grid=document.getElementById('qrcode-grid');
-  withPhoto.forEach((x,vi)=>{
-    const card=document.createElement('div');
-    card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;';
-    card.onmouseover=()=>{card.style.transform='scale(1.03)';card.style.boxShadow='0 4px 16px rgba(0,0,0,.3)';};
-    card.onmouseout=()=>{card.style.transform='';card.style.boxShadow='';};
-    card.onclick=()=>openImgViewer(allUrls,vi,'📷 '+allNames[vi]);
-    card.innerHTML=`
+
+  const grid = document.getElementById('qrcode-grid');
+
+  withPhoto.forEach((x, vi) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;';
+    card.onmouseover = () => { card.style.transform = 'scale(1.03)'; card.style.boxShadow = '0 4px 16px rgba(0,0,0,.3)'; };
+    card.onmouseout  = () => { card.style.transform = ''; card.style.boxShadow = ''; };
+
+    // ✅ PERBAIKAN: buka viewer dengan semua nama, dan gunakan callback onNav
+    card.onclick = () => openImgViewerWithNames(allUrls, allNames, vi);
+
+    card.innerHTML = `
       <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
-        <img src="${x.url}" alt="${escHtml(x.j['Nama Lengkap']||'-')}"
+        <img src="${x.url}" alt="${escHtml(x.j['Nama Lengkap'] || '-')}"
           style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:6px;"
           onerror="this.parentElement.innerHTML='<div style=\'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;\'>❌</div>'">
       </div>
-      <div style="padding:6px 8px;font-size:.68rem;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);">${escHtml(x.j['Nama Lengkap']||x.j['Nama Panggilan']||'-')}</div>`;
+      <div style="padding:6px 8px;font-size:.68px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);">
+        ${escHtml(x.j['Nama Lengkap'] || x.j['Nama Panggilan'] || '-')}
+      </div>`;
     grid.appendChild(card);
   });
 }
-
 
 function viewEfataPhoto(imgUrl, namaJemaat){
   // Cari kotak foto di popup yang sedang terbuka
