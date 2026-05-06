@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gereja Pemulihan 2026</title>
+<title>Statistik Pemulihan 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v21.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v321.5 @2026</span></div>
   </div>
 </div>
 
@@ -1707,7 +1707,7 @@ ${isAdminUser() ? `
         <div class="checklist-item" onclick="toggleChecklist('ktmtahir','y')" data-val="y">✅ Ya</div>
         <div class="checklist-item" onclick="toggleChecklist('ktmtahir','n')" data-val="n">❌ Tidak</div>
       </div>
-    </div>` : ''}    
+    </div>    
     <div class="checklist-filter-wrap">
       <div class="checklist-filter-title">🏠 Gugus <button class="andor-toggle" id="gugus-andor" onclick="toggleAndOr('gugus')">OR</button></div>
       <div class="checklist-items" id="gugus-checklist">${GUGUS_OPTIONS.map(v=>`<div class="checklist-item" onclick="toggleChecklist('gugus','${v}')" data-val="${v}">${v}</div>`).join('')}</div>
@@ -1719,7 +1719,7 @@ ${isAdminUser() ? `
     <div class="checklist-filter-wrap">
       <div class="checklist-filter-title">🤝 Pelayanan <button class="andor-toggle" id="pelayanan-andor" onclick="toggleAndOr('pelayanan')">OR</button></div>
       <div class="checklist-items" id="pelayanan-checklist">${PELAYANAN_OPTIONS.map(v=>`<div class="checklist-item" onclick="toggleChecklist('pelayanan','${v}')" data-val="${v}">${v}</div>`).join('')}</div>
-    </div>
+    </div>` : ''}
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
       <div class="view-toggle-group">
         <button class="view-toggle-btn active" id="vtbtn-grid" onclick="setJemaatView('grid')">⊞ Kotak</button>
