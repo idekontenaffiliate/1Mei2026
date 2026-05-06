@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v8.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v9.1 @2026</span></div>
   </div>
 </div>
 
@@ -559,7 +559,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 // ⚠️ PENTING: Ganti dengan URL deploy Apps Script sheet "Awal" Anda
 // (script yang berisi fungsi gantiPassword / ganti_password)
-const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwXe8VAb86thMjtV4gzuhwOcLdIOscU-u6WHIZHiVp5mnGzRCwXCUZTVEsLYur6S2ZiXg/exec";
+const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwkPYvOUDZDKmJhzFElsra9FC490bZWsi1Cof_vGEQahlPMvleWEwkkiMFO-fOW0x58Vw/exec";
 
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -834,6 +834,7 @@ function copyInfoModal(){const el=document.getElementById('info-copy-hidden');if
 // ══════════════════════════════════════════════════
 function openPwModal(){document.getElementById('pw-modal-overlay').classList.add('open');document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';document.getElementById('pw-status').textContent='';}
 function closePwModal(){document.getElementById('pw-modal-overlay').classList.remove('open');}
+   
 async function submitGantiPassword(){
   const pw1 = document.getElementById('pw-new').value.trim();
   const pw2 = document.getElementById('pw-confirm').value.trim();
@@ -841,39 +842,34 @@ async function submitGantiPassword(){
   if(!pw1||!pw2){statusEl.textContent='⚠️ Isi kedua kolom password';statusEl.style.color='var(--yellow)';return;}
   if(pw1!==pw2){statusEl.textContent='❌ Password tidak sama';statusEl.style.color='var(--red)';return;}
   if(pw1.length<3){statusEl.textContent='❌ Password minimal 3 karakter';statusEl.style.color='var(--red)';return;}
-  if(pw1===currentUser?.password){statusEl.textContent='⚠️ Password baru sama dengan password lama';statusEl.style.color='var(--yellow)';return;}
-  statusEl.textContent='⏳ Menyimpan...';statusEl.style.color='var(--text3)';
-  
-  // FIX: gunakan URLSearchParams agar encoding benar
-  const formData = new URLSearchParams();
-  formData.append('action', 'ganti_password');
-  formData.append('requester', currentUser?.username || '');
-  formData.append('username', currentUser?.username || '');   // FIX: kirim juga sebagai 'username'
-  formData.append('new_password', pw1);
-  formData.append('level', currentUser?.level || currentUser?.tipe || '');
-  
+  if(pw1===currentUser?.password){statusEl.textContent='⚠️ Sama dengan password lama';statusEl.style.color='var(--yellow)';return;}
+  statusEl.textContent='⏳ Saat Menyimpan, tunggu...';statusEl.style.color='var(--text3)';
+
+  // Gunakan GET request dengan parameter — lebih reliable dari POST no-cors
+  const params = new URLSearchParams({
+    action: 'ganti_password',
+    username: currentUser?.username || '',
+    new_password: pw1,
+    level: currentUser?.level || currentUser?.tipe || ''
+  });
+
   try{
-    const resp = await fetch(APPS_SCRIPT_AWAL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: formData.toString()
-    });
-    // Update lokal
-    if(currentUser) currentUser.password = pw1;
-    if(db.Awal){ const found=db.Awal.find(r=>r.username===currentUser?.username); if(found) found.password=pw1; }
-    statusEl.textContent='✅ Password berhasil diganti!';statusEl.style.color='var(--green)';
-    toast('✅ Password berhasil diganti!');
-    setTimeout(()=>closePwModal(), 2000);
+    const resp = await fetch(APPS_SCRIPT_AWAL + '?' + params.toString());
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      if(currentUser) currentUser.password = pw1;
+      if(db.Awal){ const found=db.Awal.find(r=>r.username===currentUser?.username); if(found) found.password=pw1; }
+      statusEl.textContent='✅ Password berhasil diganti di "Awal"!';statusEl.style.color='var(--green)';
+      toast('✅ Password berhasil diganti di "Awal"!');
+      setTimeout(()=>closePwModal(), 2000);
+    } else {
+      statusEl.textContent='❌ Gagal: '+(result.message||'error');statusEl.style.color='var(--red)';
+    }
   }catch(e){
-    if(currentUser) currentUser.password=pw1;
-    statusEl.textContent='✅ Tersimpan (offline mode)';statusEl.style.color='var(--green)';
-    toast('✅ Password berhasil diganti!');
-    setTimeout(()=>closePwModal(), 2000);
+    statusEl.textContent='❌ Gagal terhubung ke server';statusEl.style.color='var(--red)';
+    toast('❌ Gagal: '+e.message);
   }
 }
-   
-
 
 // ══════════════════════════════════════════════════
 // DASHBOARD
