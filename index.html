@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.1 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.12 @2026</span></div>
   </div>
 </div>
 
@@ -644,7 +644,7 @@ function isLevelGemDistr(){return getUserLevel().includes('Gembala Distrik');}
 function getEditableJemaatCols(){
   if(isLevelAdmin())return['no_EfataID','Nama Lengkap','Nama Panggilan','Usia','Gender','Tanggal Baptis','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
   if(isLevelGemDistr())return['no_EfataID','Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
-  if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
+  // if(isLevelPenatua())return['Usia','Gender','pelayanan','ibadah yang diikuti','KTM','KTM Tahir','Kamar Hotel','tipe Kamar','Rata-rata Hadir','Keterangan','KetKTM'];
   return[];
 }
 // Hanya Administrator dan Gembala Distrik yang boleh edit link_efata
