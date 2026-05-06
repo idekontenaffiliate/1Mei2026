@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.5 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v7.5 @2026</span></div>
   </div>
 </div>
 
@@ -556,10 +556,10 @@ const LOGIN_VIDEO_URL="";
 const LOGIN_IMAGE_URL="https://lh3.googleusercontent.com/d/1eJt3G62NYTNANOjmelXXflSm1Cuy4mQO";
 const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHHcO80EcqhrUKka9msZAdoYyTBYpT6ggww9JfQ7vUHcj8_jSmxFYSIWZpO4Dw/exec";
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
-const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwt2MS3OOUlAMoyd8wrKyB7rJ-xTD5j67EZv5ku565cYtcWvk5BlCJc05yB2W8rmuylOA/exec";
+const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbz4tURmIasvRDmLYnvF6k3xpniwrwf3169h98hnCj6uxt-AFmJ3aBjcfwU2IItmdFyJ7A/exec";
 // ⚠️ PENTING: Ganti dengan URL deploy Apps Script sheet "Awal" Anda
 // (script yang berisi fungsi gantiPassword / ganti_password)
-const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwZ4XMo2IGITySbqNJzJAXtXMSNcozz9of7-pVcxSRekkSU6A_u4ng-tIqGX5P4Hc6Hvg/exec";
+const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwXe8VAb86thMjtV4gzuhwOcLdIOscU-u6WHIZHiVp5mnGzRCwXCUZTVEsLYur6S2ZiXg/exec";
 
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -835,36 +835,44 @@ function copyInfoModal(){const el=document.getElementById('info-copy-hidden');if
 function openPwModal(){document.getElementById('pw-modal-overlay').classList.add('open');document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';document.getElementById('pw-status').textContent='';}
 function closePwModal(){document.getElementById('pw-modal-overlay').classList.remove('open');}
 async function submitGantiPassword(){
-  const pw1=document.getElementById('pw-new').value.trim();
-  const pw2=document.getElementById('pw-confirm').value.trim();
-  const statusEl=document.getElementById('pw-status');
+  const pw1 = document.getElementById('pw-new').value.trim();
+  const pw2 = document.getElementById('pw-confirm').value.trim();
+  const statusEl = document.getElementById('pw-status');
   if(!pw1||!pw2){statusEl.textContent='⚠️ Isi kedua kolom password';statusEl.style.color='var(--yellow)';return;}
   if(pw1!==pw2){statusEl.textContent='❌ Password tidak sama';statusEl.style.color='var(--red)';return;}
   if(pw1.length<3){statusEl.textContent='❌ Password minimal 3 karakter';statusEl.style.color='var(--red)';return;}
   if(pw1===currentUser?.password){statusEl.textContent='⚠️ Password baru sama dengan password lama';statusEl.style.color='var(--yellow)';return;}
   statusEl.textContent='⏳ Menyimpan...';statusEl.style.color='var(--text3)';
-  const oldPassword=currentUser?.password||'';
-  const formData=new URLSearchParams({action:'ganti_password',requester:currentUser?.username||'',username:currentUser?.username||'',new_password:pw1,level:currentUser?.level||currentUser?.tipe||''});
+  
+  // FIX: gunakan URLSearchParams agar encoding benar
+  const formData = new URLSearchParams();
+  formData.append('action', 'ganti_password');
+  formData.append('requester', currentUser?.username || '');
+  formData.append('username', currentUser?.username || '');   // FIX: kirim juga sebagai 'username'
+  formData.append('new_password', pw1);
+  formData.append('level', currentUser?.level || currentUser?.tipe || '');
+  
   try{
-    // FIX: kirim ke APPS_SCRIPT_AWAL (bukan PERTANYAAN) karena fungsi gantiPassword ada di sheet Awal
-    await fetch(APPS_SCRIPT_AWAL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
-    // Update password di currentUser
-    if(currentUser){currentUser.password=pw1;}
-    // Update juga di db.Awal agar konsisten
-    if(db.Awal){const found=db.Awal.find(r=>r.username===currentUser?.username);if(found)found.password=pw1;}
+    const resp = await fetch(APPS_SCRIPT_AWAL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: formData.toString()
+    });
+    // Update lokal
+    if(currentUser) currentUser.password = pw1;
+    if(db.Awal){ const found=db.Awal.find(r=>r.username===currentUser?.username); if(found) found.password=pw1; }
     statusEl.textContent='✅ Password berhasil diganti!';statusEl.style.color='var(--green)';
     toast('✅ Password berhasil diganti!');
-    setTimeout(()=>closePwModal(),2000);
+    setTimeout(()=>closePwModal(), 2000);
   }catch(e){
-    // Tetap update lokal meskipun gagal kirim ke server
-    if(currentUser){currentUser.password=pw1;}
-    if(db.Awal){const found=db.Awal.find(r=>r.username===currentUser?.username);if(found)found.password=pw1;}
-    statusEl.textContent='✅ Password berhasil diganti (lokal)!';statusEl.style.color='var(--green)';
+    if(currentUser) currentUser.password=pw1;
+    statusEl.textContent='✅ Tersimpan (offline mode)';statusEl.style.color='var(--green)';
     toast('✅ Password berhasil diganti!');
-    setTimeout(()=>closePwModal(),2000);
+    setTimeout(()=>closePwModal(), 2000);
   }
 }
-
+   
 
 
 // ══════════════════════════════════════════════════
@@ -1139,6 +1147,45 @@ function renderDashboard() {
 // ══════════════════════════════════════════════════
 // LAPORAN TOGGLE DI DASHBOARD
 // ══════════════════════════════════════════════════
+// ── TOGGLE TOTAL VISIBILITY ───────────────────────────────────
+let totalVisible = false; // default: tersembunyi (*****)
+let jemaatTotalActual = 0;
+
+function toggleTotalVisibility(){
+  totalVisible = !totalVisible;
+  const el = document.getElementById('jemaat-total-num');
+  if(el) el.textContent = totalVisible ? jemaatTotalActual : '*****';
+}
+
+// ── CLEAR ALL JEMAAT FILTER ──────────────────────────────────
+function clearAllJemaatFilter(){
+  // Reset semua state filter
+  jemaatFilterIbadah = []; jemaatFilterPelayanan = [];
+  jemaatFilterKelas = []; jemaatFilterGugus = [];
+  jemaatFilterIbadahMode = 'OR'; jemaatFilterPelayananMode = 'OR';
+  jemaatFilterKelasMode = 'OR'; jemaatFilterGugusMode = 'OR';
+  
+  // Reset input fields
+  const s = document.getElementById('j-search'); if(s) s.value = '';
+  const g = document.getElementById('j-gender'); if(g) g.value = '';
+  const k = document.getElementById('j-kategori'); if(k) k.value = '';
+  const is = document.getElementById('j-ikut-solo'); if(is) is.value = '';
+  
+  // Reset checklist visuals
+  document.querySelectorAll('#ibadah-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  document.querySelectorAll('#pelayanan-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  document.querySelectorAll('#kelas-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  document.querySelectorAll('#gugus-checklist .checklist-item').forEach(el=>el.classList.remove('checked'));
+  
+  // Reset AND/OR buttons
+  ['ibadah','pelayanan','kelas','gugus'].forEach(type=>{
+    const b = document.getElementById(type+'-andor');
+    if(b){b.textContent='OR';b.classList.remove('active');}
+  });
+  
+  filterJemaat();
+  toast('✅ Semua filter direset');
+}
 let dashLaporanOpen=false;
 function toggleDashLaporan(){
   dashLaporanOpen=!dashLaporanOpen;
@@ -1193,6 +1240,39 @@ function loadDashLaporan(){
 // Tampil: 1 acara terakhir yg sudah lewat + acara yg sedang berlangsung (jika ada) + 3 acara mendatang
 // Total maks 5 baris. Jika tidak ada data waktu, tetap tampil pesan informatif.
 // ══════════════════════════════════════════════════
+function parseAcaraWaktu(wkt){
+  if(!wkt || !wkt.trim()) return null;
+  const s = wkt.trim();
+  
+  // Format 1: dd/mm/yyyy hh:mm:ss  → "06/05/2026 14:00:00"
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m1){
+    const [,dd,mm,yyyy,hh,min,sec] = m1;
+    const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd), parseInt(hh), parseInt(min), parseInt(sec||0));
+    if(!isNaN(d.getTime())) return d;
+  }
+  
+  // Format 2: yyyy-mm-dd hh:mm
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})/);
+  if(m2){
+    const d = new Date(s.replace(' ','T'));
+    if(!isNaN(d.getTime())) return d;
+  }
+  
+  // Format 3: hh:mm saja (tanpa tanggal) — asumsikan hari event 1-2 Mei 2026
+  const m3 = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(m3){
+    // Asumsikan tanggal 1 Mei 2026 (hari pertama event) pukul tersebut
+    const d = new Date(2026, 4, 1, parseInt(m3[1]), parseInt(m3[2]), parseInt(m3[3]||0));
+    if(!isNaN(d.getTime())) return d;
+  }
+  
+  // Fallback: coba parse langsung
+  const fd = new Date(s);
+  if(!isNaN(fd.getTime())) return fd;
+  
+  return null;
+}
 function buildDashAcaraSection(acara) {
   const now = new Date();
   const HARI = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -1221,15 +1301,12 @@ function buildDashAcaraSection(acara) {
   const current = withTime.filter(a => a._dt <= now && (now - a._dt) <= DURASI_DEFAULT_MS);
   const future = withTime.filter(a => a._dt > now);
 
-  // 1 acara terakhir yang sudah lewat
-  const lastPast = past.length ? [past[past.length - 1]] : [];
-  // Acara berlangsung (max 1)
-  const nowAcara = current.slice(-1);
-  // 3 acara mendatang
-  const nextThree = future.slice(0, 3);
-
-  const display = [...lastPast, ...nowAcara, ...nextThree];
-
+  // BARU — 3 sebelum + acara sekarang + 3 sesudah:
+  const last3Past = past.slice(-3);           // 3 acara terakhir yang sudah lewat
+  const nowAcara = current.slice(-1);         // acara berlangsung sekarang (maks 1)
+  const next3Future = future.slice(0, 3);     // 3 acara mendatang
+  const display = [...last3Past, ...nowAcara, ...next3Future];
+   
   const pad2 = x => String(x).padStart(2, '0');
 
   const buildRow = (a) => {
@@ -1586,11 +1663,15 @@ function renderJemaat(){
   const canViewAll=isAdminUser();
 
   content.innerHTML=`
-    <div class="dash-grid" style="margin-bottom:10px;">
-      <div class="dash-card"><span class="dash-card-icon">👥</span><div class="dash-card-val" id="jemaat-total-num">${data.length}</div><div class="dash-card-label">Total</div></div>
-      <div class="dash-card"><span class="dash-card-icon">👦</span><div class="dash-card-val" id="jemaat-pria-num">${data.filter(j=>j.Gender==='Pria').length}</div><div class="dash-card-label">Pria</div></div>
-      <div class="dash-card"><span class="dash-card-icon">👧</span><div class="dash-card-val" id="jemaat-wanita-num">${data.filter(j=>j.Gender==='Wanita').length}</div><div class="dash-card-label">Wanita</div></div>
-      <div class="dash-card"><span class="dash-card-icon">🔍</span><div class="dash-card-val" id="jemaat-filter-num">${data.length}</div><div class="dash-card-label">Filter</div></div>
+<div class="dash-grid" style="margin-bottom:10px;">
+      <div class="dash-card" style="cursor:pointer;" onclick="toggleTotalVisibility()">
+        <span class="dash-card-icon">👥</span>
+        <div class="dash-card-val" id="jemaat-total-num">*****</div>
+        <div class="dash-card-label">Total <span style="font-size:.6rem;color:var(--text3);">(tap)</span></div>
+      </div>
+      <div class="dash-card"><span class="dash-card-icon">👦</span><div class="dash-card-val" id="jemaat-pria-num">0</div><div class="dash-card-label">Pria</div></div>
+      <div class="dash-card"><span class="dash-card-icon">👧</span><div class="dash-card-val" id="jemaat-wanita-num">0</div><div class="dash-card-label">Wanita</div></div>
+      <div class="dash-card"><span class="dash-card-icon">🔍</span><div class="dash-card-val" id="jemaat-filter-num">0</div><div class="dash-card-label">Filter</div></div>
     </div>
     <div class="filter-group">
       <input type="text" id="j-search" class="k-input" oninput="filterJemaat()" placeholder="🔍 Cari nama...">
@@ -1623,7 +1704,17 @@ function renderJemaat(){
         <button class="view-toggle-btn" id="vtbtn-text" onclick="setJemaatView('text')">📝 Teks</button>
         <button class="view-toggle-btn" id="vtbtn-qrcode" onclick="setJemaatView('qrcode')">📷 QRCode</button>
       </div>
-      <button class="btn-action" onclick="copyJemaatFilter()" style="margin-left:auto;">📋 Copy</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <div class="view-toggle-group">
+        <button class="view-toggle-btn active" id="vtbtn-grid" onclick="setJemaatView('grid')">⊞ Kotak</button>
+        <button class="view-toggle-btn" id="vtbtn-detail" onclick="setJemaatView('detail')">🗂 Detail</button>
+        <button class="view-toggle-btn" id="vtbtn-text" onclick="setJemaatView('text')">📝 Teks</button>
+        <button class="view-toggle-btn" id="vtbtn-qrcode" onclick="setJemaatView('qrcode')">📷 QRCode</button>
+      </div>
+      <button class="btn-action" onclick="clearAllJemaatFilter()" title="Reset semua filter" style="background:var(--red);color:#fff;border-color:var(--red);">🗑 Reset Filter</button>
+      <button class="btn-action" onclick="copyJemaatFilter()">📋 Copy</button>
+    </div>
+    
     </div>
     <div id="jemaat-result-container"></div>`;
   filterJemaat();
@@ -1695,7 +1786,9 @@ function filterJemaat(){
     return true;
   });
   const count=lastFilteredJemaat.length;const pria=lastFilteredJemaat.filter(j=>j.Gender==='Pria').length;const wanita=lastFilteredJemaat.filter(j=>j.Gender==='Wanita').length;
-  const tn=document.getElementById('jemaat-total-num');if(tn)tn.textContent=db.Jemaat?.length||0;
+  jemaatTotalActual = db.Jemaat?.length || 0;
+  const tn=document.getElementById('jemaat-total-num');
+  if(tn) tn.textContent = totalVisible ? jemaatTotalActual : '*****';
   const fn=document.getElementById('jemaat-filter-num');if(fn)fn.textContent=count;
   const pn=document.getElementById('jemaat-pria-num');if(pn)pn.textContent=pria;
   const wn=document.getElementById('jemaat-wanita-num');if(wn)wn.textContent=wanita;
@@ -1863,40 +1956,50 @@ function viewEfataPhoto(imgUrl, namaJemaat){
   });
 }
 
-async function saveJemaatEdit(idx){
-  const j=lastFilteredJemaat[idx];if(!j)return;
-  const editableCols=getEditableJemaatCols();
-  const updates={};
-  editableCols.forEach(key=>{
-    const input=document.getElementById('jp-edit-'+key);
-    if(input)updates[key]=input.value.trim();
-  });
-  // Juga tangkap field link_efata jika ada inputnya (untuk admin/gembala distrik)
-  const efataInput=document.getElementById('jp-edit-link_efata');
-  if(efataInput&&canEditEfataLink()){updates['link_efata']=efataInput.value.trim();}
-  // Update lokal
-  Object.assign(j,updates);
-  toast('⏳ Menyimpan...');
-  // FIX: level harus diambil dari field 'level' di data user (bukan tipe)
-  const levelUser=currentUser?.level||currentUser?.tipe||'';
-  const payload={
-    action:'update_jemaat',
-    username:currentUser?.username||'',
-    level:levelUser,
-    // FIX: coba semua kemungkinan nama kolom EfataID
-    efataid:j['no_EfataID']||j['No_EfataID']||j['no_Efataid']||j['no_efataid']||j['no_efataID']||'',
-    updates:JSON.stringify(updates)
-  };
-  // FIX: buat formData dari payload (bukan ulang dari nol)
-  const formData=new URLSearchParams();
-  Object.entries(payload).forEach(([k,v])=>formData.append(k,v));
-  try{
-    await fetch(APPS_SCRIPT_JEMAAT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
-    toast('✅ Data berhasil disimpan!');
-  }catch(e){toast('✅ Tersimpan lokal (offline mode)');}
-  closeJemaatPopup();filterJemaat();
-}
 
+async function saveJemaatEdit(idx){
+  const j = lastFilteredJemaat[idx]; if(!j) return;
+  const editableCols = getEditableJemaatCols();
+  const updates = {};
+  editableCols.forEach(key=>{
+    const input = document.getElementById('jp-edit-'+key);
+    if(input) updates[key] = input.value.trim();
+  });
+  const efataInput = document.getElementById('jp-edit-link_efata');
+  if(efataInput && canEditEfataLink()) updates['link_efata'] = efataInput.value.trim();
+  
+  Object.assign(j, updates);
+  toast('⏳ Menyimpan...');
+  
+  // FIX: ambil no_EfataID dengan semua variasi kolom
+  const efataid = j['no_EfataID'] || j['No_EfataID'] || j['no_Efataid'] || j['no_efataid'] || j['No_Efataid'] || j['no_efataID'] || j['EfataID'] || j['efataid'] || '';
+  const levelUser = currentUser?.level || currentUser?.tipe || '';
+  
+  // FIX: gunakan URLSearchParams yang benar
+  const formData = new URLSearchParams();
+  formData.append('action', 'update_jemaat');
+  formData.append('username', currentUser?.username || '');
+  formData.append('level', levelUser);
+  formData.append('efataid', efataid);
+  formData.append('updates', JSON.stringify(updates));
+  
+  // FIX: juga kirim row_index sebagai fallback
+  const globalIdx = (db.Jemaat || []).indexOf(j);
+  if(globalIdx >= 0) formData.append('row_index', globalIdx);
+  
+  try{
+    await fetch(APPS_SCRIPT_JEMAAT, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: formData.toString()
+    });
+    toast('✅ Data berhasil disimpan!');
+  }catch(e){
+    toast('✅ Tersimpan lokal (offline mode)');
+  }
+  closeJemaatPopup(); filterJemaat();
+}
 // ══════════════════════════════════════════════════
 // QUIZ
 // ══════════════════════════════════════════════════
