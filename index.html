@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v8.33 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v5.33 @2026</span></div>
   </div>
 </div>
 
@@ -3010,7 +3010,8 @@ function renderAbsensiSidang() {
     <div id="sidang-summary" style="display:none;margin-bottom:10px;"></div>
 
     <!-- Toolbar -->
-    <div id="sidang-toolbar" style="display:none;margin-bottom:10px;">
+    
+      <div id="sidang-toolbar" style="display:none;margin-bottom:10px;">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
         <button onclick="toggleSidangScanMode(true)" class="btn-action accent" style="font-size:.78rem;">📷 Scan QR</button>
         <button onclick="sidangSemuaHadir()" class="btn-action green" style="font-size:.78rem;">✅ Semua Hadir</button>
@@ -3020,10 +3021,10 @@ function renderAbsensiSidang() {
           💾 Simpan Semua
         </button>
       </div>
-      <!-- View toggle -->
-      <div style="display:flex;gap:5px;margin-bottom:8px;">
+      <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">
         <button onclick="setSidangView('grid')" id="sdg-vbtn-grid" class="view-toggle-btn active">⊞ Kotak</button>
         <button onclick="setSidangView('text')" id="sdg-vbtn-text" class="view-toggle-btn">📝 Teks</button>
+        <button onclick="setSidangView('qrcode')" id="sdg-vbtn-qrcode" class="view-toggle-btn">📷 QRCode Hadir</button>
       </div>
       <input type="text" id="sidang-search" class="k-input"
         placeholder="🔍 Cari nama..."
@@ -3057,13 +3058,13 @@ function renderSidangGugusFilter() {
   if (w) w.style.display = absenSidangState.jenisSidang==='Gugus' ? 'block' : 'none';
 }
 
-function setSidangView(mode) {
-  absenSidangState.viewMode = mode;
-  document.getElementById('sdg-vbtn-grid')?.classList.toggle('active', mode==='grid');
-  document.getElementById('sdg-vbtn-text')?.classList.toggle('active', mode==='text');
+function setSidangView(mode){
+  absenSidangState.viewMode=mode;
+  document.getElementById('sdg-vbtn-grid')?.classList.toggle('active',mode==='grid');
+  document.getElementById('sdg-vbtn-text')?.classList.toggle('active',mode==='text');
+  document.getElementById('sdg-vbtn-qrcode')?.classList.toggle('active',mode==='qrcode');
   renderSidangList();
 }
-
 // ── LOAD DATA SIDANG ────────────────────────────────────────────────────
 async function loadAbsensiSidang(){
   const tglInput = document.getElementById('sidang-tanggal')?.value;
@@ -3240,8 +3241,11 @@ function renderSidangList() {
   const wrap = document.getElementById('sidang-list-wrap');
   if (!wrap || !absenSidangState.sudahLoad) return;
 
-  if (absenSidangState.viewMode==='text') { renderSidangTextView(wrap); return; }
+ // Mode QRCode — tampilkan foto efata jemaat yang sudah hadir
+  if(absenSidangState.viewMode==='qrcode'){renderSidangQRCode(wrap);return;}
 
+  if(absenSidangState.viewMode==='text'){renderSidangTextView(wrap);return;}
+  
   const search = absenSidangState.searchQuery.toLowerCase();
   const list   = absenSidangState.masterList.filter(j =>
     !search || j.nama.toLowerCase().includes(search) || j.no_efataid.toLowerCase().includes(search)
@@ -3341,6 +3345,107 @@ function renderSidangList() {
   wrap.innerHTML = html;
 }
 
+// Render sidang Code
+function renderSidangQRCode(wrap){
+  // Kumpulkan jemaat yang hadir dari masterList
+  const hadirList=absenSidangState.masterList.filter(j=>
+    absenSidangState.absenMap[j.no_efataid]?.hadir==='y'
+  );
+  // Tambah tamu yang hadir
+  const tamuHadir=absenSidangState.tamuList.filter(t=>t.hadir==='y');
+
+  // Ambil foto efata dari db.Jemaat berdasarkan no_efataid
+  const withPhoto=hadirList.map(j=>{
+    const jData=(db.Jemaat||[]).find(x=>
+      (x['No_EfataID']||x['no_EfataID']||x['no_Efataid']||'').trim()===j.no_efataid
+    );
+    const efataUrl=jData
+      ?fmtImg(jData['link_efata']||jData['Link_efata']||jData['Link Efata']||jData['link efata']||'')
+      :'';
+    return{...j,efataUrl,jData};
+  }).filter(x=>x.efataUrl);
+
+  const noPhoto=hadirList.filter(j=>{
+    const jData=(db.Jemaat||[]).find(x=>
+      (x['No_EfataID']||x['no_EfataID']||x['no_Efataid']||'').trim()===j.no_efataid
+    );
+    const efataUrl=jData
+      ?fmtImg(jData['link_efata']||jData['Link_efata']||jData['Link Efata']||jData['link efata']||'')
+      :'';
+    return !efataUrl;
+  });
+
+  const totalHadir=hadirList.length+tamuHadir.length;
+
+  if(!hadirList.length&&!tamuHadir.length){
+    wrap.innerHTML=`<div class="empty-state"><div class="icon">📷</div><p>Belum ada jemaat yang ditandai hadir.</p></div>`;
+    return;
+  }
+
+  const allUrls=withPhoto.map(x=>x.efataUrl);
+  const allNames=withPhoto.map(x=>x.nama);
+
+  wrap.innerHTML=`
+    <div style="padding:4px 0 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--text);">
+          ✅ Hadir: ${totalHadir} orang
+          ${withPhoto.length?` · 📷 ${withPhoto.length} foto Efata`:''}
+          ${tamuHadir.length?` · 👤 ${tamuHadir.length} tamu`:''}
+        </div>
+        ${withPhoto.length?`<button onclick="openImgViewerWithNames(${JSON.stringify(allUrls)},${JSON.stringify(allNames)},0,'QRCode Hadir')" class="btn-action accent" style="font-size:.75rem;padding:6px 12px;">⛶ Fullscreen Semua</button>`:''}
+      </div>
+
+      ${withPhoto.length?`
+      <div style="font-size:.7rem;color:var(--text3);margin-bottom:8px;">Tap foto untuk fullscreen</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px;">
+        ${withPhoto.map((x,vi)=>`
+          <div onclick="openImgViewerWithNames(${JSON.stringify(allUrls)},${JSON.stringify(allNames)},${vi},'QRCode Hadir')"
+            style="background:var(--surface);border:1px solid rgba(16,185,129,.4);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s;"
+            onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
+            <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
+              <img src="${x.efataUrl}" alt="${escHtml(x.nama)}"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;"
+                onerror="this.parentElement.innerHTML='<div style=\'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;\'>❌</div>'">
+            </div>
+            <div style="padding:5px 7px;font-size:.68rem;font-weight:600;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid rgba(16,185,129,.3);">
+              ✅ ${escHtml(x.nama)}
+            </div>
+          </div>`).join('')}
+      </div>`:''}
+
+      ${noPhoto.length?`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">
+          📷 Hadir tanpa foto Efata (${noPhoto.length})
+        </div>
+        ${noPhoto.map((j,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.82rem;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);min-width:20px;">${i+1}</span>
+            <span style="color:var(--green);">✅</span>
+            <span style="flex:1;">${escHtml(j.nama)}</span>
+          </div>`).join('')}
+      </div>`:''}
+
+      ${tamuHadir.length?`
+      <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--yellow);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">
+          👤 Tamu Hadir (${tamuHadir.length})
+        </div>
+        ${tamuHadir.map((t,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.82rem;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--yellow);min-width:20px;">T${i+1}</span>
+            <span style="color:var(--yellow);">👤</span>
+            <span style="flex:1;">${escHtml(t.nama)}</span>
+            ${t.nama_dijenguk?`<span style="font-size:.7rem;color:var(--text3);">→ ${escHtml(t.nama_dijenguk)}</span>`:''}
+          </div>`).join('')}
+      </div>`:''}
+
+      ${!withPhoto.length&&!noPhoto.length&&!tamuHadir.length?
+        `<div class="empty-state"><div class="icon">📷</div><p>Belum ada yang hadir.</p></div>`:''}
+    </div>`;
+}
+   
 // ── TEXT VIEW SIDANG ────────────────────────────────────────────────────
 
 function renderSidangTextView(wrap) {
@@ -4066,12 +4171,9 @@ let laporanAbsenState = { tglAwal:'', tglAkhir:'', data:null, _teksLaporan:'' };
  
 // ── RENDER LAPORAN ABSENSI ─────────────────────────────────────
 
+
 function renderLaporanAbsensi(){
   const content=document.getElementById('app-content');
-  if(!bolehAbsenKTM()&&!bolehAbsenSidang()){
-    content.innerHTML=`<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
-    return;
-  }
   const now=new Date();
   const pad=x=>String(x).padStart(2,'0');
   const tglAkhirDefault=`${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
@@ -4080,11 +4182,13 @@ function renderLaporanAbsensi(){
   if(!laporanAbsenState.tglAwal)laporanAbsenState.tglAwal=tglAwalDefault;
   if(!laporanAbsenState.tglAkhir)laporanAbsenState.tglAkhir=tglAkhirDefault;
 
+  // Tampil form DULU tanpa cek level — cek level hanya saat tombol diklik
   content.innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="font-size:.75rem;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
         📊 Laporan Summary Absensi
       </div>
+      <div id="laporan-level-info" style="margin-bottom:8px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <div>
           <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AWAL</div>
@@ -4106,8 +4210,18 @@ function renderLaporanAbsensi(){
     <div id="laporan-result">
       <div class="empty-state"><div class="icon">📊</div><p>Pilih rentang tanggal lalu klik Tampilkan.</p></div>
     </div>`;
-}
-   
+
+  // Tampilkan info level user secara informatif (bukan block)
+  const infoEl=document.getElementById('laporan-level-info');
+  if(infoEl){
+    const lvl=getLevelCode();
+    const boleh=bolehAbsenKTM()||bolehAbsenSidang();
+    infoEl.innerHTML=boleh
+      ?`<div style="font-size:.72rem;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:7px;padding:6px 10px;">✅ Level: <strong>${escHtml(lvl||currentUser?.tipe||'-')}</strong></div>`
+      :`<div style="font-size:.72rem;color:var(--yellow);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:7px;padding:6px 10px;">⚠️ Level <strong>${escHtml(lvl||currentUser?.tipe||'-')}</strong> — data mungkin terbatas</div>`;
+  }
+}   
+
 async function loadLaporanAbsensi(){
   const tglAwal=document.getElementById('lap-tgl-awal')?.value;
   const tglAkhir=document.getElementById('lap-tgl-akhir')?.value;
@@ -4117,7 +4231,23 @@ async function loadLaporanAbsensi(){
 
   const el=document.getElementById('laporan-result');
   if(!el)return;
-  el.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div><div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat data dari server...</div>`;
+
+  // Cek level — jika tidak boleh, tetap tampilkan pesan tapi tidak block render form
+  const boleh=bolehAbsenKTM()||bolehAbsenSidang();
+  if(!boleh){
+    const lvl=getLevelCode()||currentUser?.tipe||'-';
+    el.innerHTML=`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">🔒</div>
+      <div style="font-size:.88rem;font-weight:600;color:var(--red);margin-bottom:4px;">Akses Terbatas</div>
+      <div style="font-size:.78rem;color:var(--text3);">Level: <strong>${escHtml(lvl)}</strong><br>Diperlukan: Penatua / Gembala Distrik / Administrator</div>
+      <div style="font-size:.68rem;color:var(--text3);margin-top:8px;font-family:'JetBrains Mono',monospace;">username: ${escHtml(currentUser?.username||'-')} · tipe: ${escHtml(currentUser?.tipe||'-')} · level: ${escHtml(currentUser?.level||'-')}</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML=`<div class="loading-shimmer"></div>
+    <div class="loading-shimmer" style="opacity:.6;"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat data dari server...</div>`;
 
   try{
     const url=`${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_laporan_range`
@@ -4125,7 +4255,7 @@ async function loadLaporanAbsensi(){
       +`&tgl_akhir=${encodeURIComponent(laporanAbsenState.tglAkhir)}`;
 
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),15000);
+    const timeout=setTimeout(()=>controller.abort(),20000);
     const resp=await fetch(url,{signal:controller.signal});
     clearTimeout(timeout);
 
@@ -4133,7 +4263,7 @@ async function loadLaporanAbsensi(){
     const text=await resp.text();
     let result;
     try{result=JSON.parse(text);}
-    catch(e){throw new Error('Response bukan JSON: '+text.slice(0,100));}
+    catch(e){throw new Error('Response bukan JSON: '+text.slice(0,200));}
 
     if(result.status!=='ok'){
       el.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>${escHtml(result.message||'Error tidak diketahui')}</p></div>`;
@@ -4141,20 +4271,27 @@ async function loadLaporanAbsensi(){
     }
     if(!result.data||!Object.keys(result.data).length){
       el.innerHTML=`<div class="empty-state"><div class="icon">📭</div>
-        <p>Tidak ada data absensi dalam rentang<br><strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))}</strong> — <strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}</strong></p></div>`;
+        <p>Tidak ada data absensi dalam rentang<br>
+        <strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))}</strong> —
+        <strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}</strong></p></div>`;
       return;
     }
     renderLaporanResult(el,result.data);
   }catch(e){
     if(e.name==='AbortError'){
-      el.innerHTML=`<div class="empty-state"><div class="icon">⏱</div><p>Timeout. Server terlalu lama merespons.<br>Coba persempit rentang tanggal.</p></div>`;
+      el.innerHTML=`<div class="empty-state"><div class="icon">⏱</div>
+        <p>Timeout (20 detik). Server terlalu lama.<br>
+        Coba persempit rentang tanggal, atau periksa Apps Script.</p>
+        <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="margin-top:10px;">🔄 Coba Lagi</button></div>`;
     }else{
-      el.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}<br><small style="color:var(--text3);">Pastikan Apps Script sudah di-deploy ulang (v2).</small></p></div>`;
+      el.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div>
+        <p>Gagal: ${escHtml(e.message)}</p>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:6px;">Pastikan Apps Script sudah di-deploy ulang</div>
+        <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="margin-top:10px;">🔄 Coba Lagi</button></div>`;
     }
     console.error('Laporan error:',e);
   }
 }
-
  
 function renderLaporanResult(el,data){
   let grandHadir=0,grandTotal=0;
