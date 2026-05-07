@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v2.22 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v3.33 @2026</span></div>
   </div>
 </div>
 
@@ -560,7 +560,7 @@ const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHH
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
-const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbzsz0hmGLuU_s0UGuGd5WTIPnFW1eEtDVuesJXyDv74_6F4jRrqKmcidYSjsZJAqZxHlA/exec";
+const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbwIUsyjS4UKq1y1u5o1GjJKaPkvvPM7NpxgbiR1oQ3w_rygoOz-qHAFb5Qos5dp6P_MoQ/exec";
 const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzMciZeJf2XkNcGg3FP_Li-5INAhDJSKtXsuvBR5B8BRxAjQmq9oUmCAc-HhWAJZZHT9g/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
@@ -2243,16 +2243,32 @@ function setKTMView(mode) {
 }
 
 // ── FORMAT TANGGAL ─────────────────────────────────────────────────────
+
+// Frontend → input[type=date] butuh yyyy-mm-dd
 function formatDateForInput(tgl) {
   if (!tgl) return new Date().toISOString().split('T')[0];
-  const p = tgl.split('/');
-  return p.length===3 ? `${p[2]}-${p[1]}-${p[0]}` : tgl;
+  const s = String(tgl).trim();
+  // Sudah format yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Format dd/mm/yyyy → yyyy-mm-dd
+  const p = s.split('/');
+  if (p.length === 3 && p[2].length === 4) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+  return s;
 }
+
+// input[type=date] (yyyy-mm-dd) → simpan sebagai dd/mm/yyyy
 function formatDateFromInput(val) {
   if (!val) return '';
-  const p = val.split('-');
-  return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : val;
-}
+  const s = String(val).trim();
+  // Format yyyy-mm-dd → dd/mm/yyyy
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  // Sudah dd/mm/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  return s;
+}   
 function formatTglDisplay(tgl) {
   if (!tgl) return '-';
   const p = tgl.split('/');
@@ -2262,81 +2278,115 @@ function formatTglDisplay(tgl) {
 
 // ── LOAD DATA KTM ──────────────────────────────────────────────────────
 async function loadAbsensiKTM(){
-  absenKTMState.bulan=document.getElementById('absen-bulan')?.value||absenKTMState.bulan;
-  absenKTMState.tahun=document.getElementById('absen-tahun')?.value||absenKTMState.tahun;
-  absenKTMState.user2=document.getElementById('ktm-user2')?.value?.trim()||absenKTMState.user2;
-  const tglInput=document.getElementById('absen-tanggal')?.value;
-  if(tglInput)absenKTMState.tanggal=formatDateFromInput(tglInput);
+  absenKTMState.bulan   = document.getElementById('absen-bulan')?.value || absenKTMState.bulan;
+  absenKTMState.tahun   = document.getElementById('absen-tahun')?.value || absenKTMState.tahun;
+  absenKTMState.user2   = document.getElementById('ktm-user2')?.value?.trim() || absenKTMState.user2;
+  const tglInput        = document.getElementById('absen-tanggal')?.value;
+  if (tglInput) absenKTMState.tanggal = formatDateFromInput(tglInput);
 
-  if(!absenKTMState.tanggal)return toast('⚠️ Pilih tanggal dulu');
-  if(absenKTMState.jenis==='KTM_Tahir'&&!absenKTMState.user2)
+  if (!absenKTMState.tanggal) return toast('⚠️ Pilih tanggal dulu');
+  if (absenKTMState.jenis === 'KTM_Tahir' && !absenKTMState.user2)
     return toast('⚠️ KTM Tahir wajib 2 user. Isi username user ke-2.');
 
-  const wrap=document.getElementById('absen-list-wrap');
-  if(wrap)wrap.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>
-    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memeriksa data di server...</div>`;
+  const wrap = document.getElementById('absen-list-wrap');
+  if (wrap) wrap.innerHTML = `<div class="loading-shimmer"></div>
+    <div class="loading-shimmer" style="opacity:.6;"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat dari server...</div>`;
 
-  // STEP 1: Load data existing dari server untuk tanggal+bulan+tahun ini
-  let serverData=[];
-  try{
-    const url=`${APPS_SCRIPT_ABSENSI_KTM}?action=get_absen`
-      +`&jenis=${encodeURIComponent(absenKTMState.jenis)}`
-      +`&bulan=${encodeURIComponent(absenKTMState.bulan)}`
-      +`&tahun=${encodeURIComponent(absenKTMState.tahun)}`;
-    const resp=await fetch(url);
-    const result=await resp.json();
-    if(result.status==='ok'&&result.data)serverData=result.data;
-  }catch(e){toast('⚠️ Gagal load server: '+e.message);}
-
-  // STEP 2: Build absenMap dari data server (untuk tanggal ini saja)
-  const tgl=absenKTMState.tanggal;
-  absenKTMState.absenMap={};
-  serverData.forEach(row=>{
-    if(row.tanggal_absen!==tgl)return;
-    const key=row.no_efataid||row.nama;
-    if(key)absenKTMState.absenMap[key]={
-      hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,
-      waktu_catat:row.waktu_catat,user2:row.user2||'',
-    };
-  });
-
-  // Cek apakah ada data existing di tanggal ini
-  const dataExistingTgl=serverData.filter(r=>r.tanggal_absen===tgl);
-  const hasExisting=dataExistingTgl.length>0;
-
-  // STEP 3: Load master Jemaat
-  const fieldKey=absenKTMState.jenis==='KTM_Tahir'?'KTM Tahir':'KTM';
-  if(!db.Jemaat){
-    await new Promise(r=>Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
+  // STEP 1: Load data existing dari server (seluruh bulan+tahun)
+  let serverData = [];
+  try {
+    const url = `${APPS_SCRIPT_ABSENSI_KTM}?action=get_absen`
+      + `&jenis=${encodeURIComponent(absenKTMState.jenis)}`
+      + `&bulan=${encodeURIComponent(absenKTMState.bulan)}`
+      + `&tahun=${encodeURIComponent(absenKTMState.tahun)}`;
+    const resp   = await fetch(url);
+    const result = await resp.json();
+    if (result.status === 'ok' && result.data) serverData = result.data;
+  } catch(e) {
+    toast('⚠️ Gagal load server: ' + e.message);
   }
-  const masterRaw=(db.Jemaat||[]).filter(j=>{
-    const val=(j[fieldKey]||j[fieldKey.toLowerCase()]||'').trim().toLowerCase();
-    return val==='y';
+
+  // STEP 2: Build absenMap dari server — HANYA untuk tanggal yang dipilih
+  const tgl = absenKTMState.tanggal;
+  absenKTMState.absenMap  = {};
+  absenKTMState.tamuList  = absenKTMState.tamuList || [];
+
+  // Filter data server untuk tanggal aktif
+  const dataUntukTgl = serverData.filter(row => {
+    const rowTgl = String(row.tanggal_absen || '').trim();
+    return rowTgl === tgl;
   });
-  absenKTMState.masterList=masterRaw.map(j=>({
-    no_efataid:(j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim(),
-    nama:(j['Nama Lengkap']||j['Nama Panggilan']||'-').trim(),
-    nama_panggilan:(j['Nama Panggilan']||'').trim(),
-    gender:(j['Gender']||'').trim(),
-  })).filter(j=>j.no_efataid);
+  const hasExisting = dataUntukTgl.length > 0;
 
-  absenKTMState.sudahLoad=true;
-  absenKTMState.searchQuery='';
+  // Populate absenMap & tamuList dari server
+  absenKTMState.tamuList = [];
+  dataUntukTgl.forEach(row => {
+    const ef       = (row.no_efataid || '').trim();
+    const nm       = (row.nama || '').trim();
+    const isTamu   = !ef || (row.is_tamu || '').trim() === 'y';
 
-  // Tampilkan notifikasi jika ada data existing
-  const toolbar=document.getElementById('absen-toolbar');
-  if(toolbar)toolbar.style.display='block';
-  const summary=document.getElementById('absen-summary');
-  if(summary)summary.style.display='block';
+    if (isTamu) {
+      // Tamu — tidak punya EfataID
+      const existing = absenKTMState.tamuList.find(t => t.nama === nm);
+      if (!existing) {
+        absenKTMState.tamuList.push({
+          id_tamu      : 'TAMU_' + nm,
+          nama         : nm,
+          hadir        : row.hadir || 'n',
+          dicatat_oleh : row.dicatat_oleh || '',
+          user2        : row.user2 || '',
+        });
+      }
+    } else {
+      // Jemaat regular
+      absenKTMState.absenMap[ef] = {
+        hadir        : row.hadir || 'n',
+        dicatat_oleh : row.dicatat_oleh || '',
+        waktu_catat  : row.waktu_catat || '',
+        user2        : row.user2 || '',
+      };
+    }
+  });
 
-  // Notifikasi update mode
-  if(hasExisting&&wrap){
-    const notif=document.createElement('div');
-    notif.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--yellow);';
-    notif.innerHTML=`⚠️ <strong>Mode Update:</strong> Ditemukan ${dataExistingTgl.length} data di tanggal ${formatTglDisplay(tgl)}. Data lama akan otomatis terhapus & diganti saat klik <strong>Simpan Semua</strong>.`;
-    wrap.parentNode.insertBefore(notif,wrap);
-    // Auto-remove setelah 5 detik
-    setTimeout(()=>{if(notif.parentNode)notif.parentNode.removeChild(notif);},5000);
+  // STEP 3: Load master Jemaat (KTM=y atau KTM_Tahir=y)
+  const fieldKey = absenKTMState.jenis === 'KTM_Tahir' ? 'KTM Tahir' : 'KTM';
+  if (!db.Jemaat) {
+    await new Promise(r => Papa.parse(URLS.Jemaat, {
+      download: true, header: true,
+      complete: res => { db.Jemaat = res.data; r(); }
+    }));
+  }
+  const masterRaw = (db.Jemaat || []).filter(j => {
+    const val = (j[fieldKey] || j[fieldKey.toLowerCase()] || '').trim().toLowerCase();
+    return val === 'y';
+  });
+  absenKTMState.masterList = masterRaw.map(j => ({
+    no_efataid     : (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim(),
+    nama           : (j['Nama Lengkap'] || j['Nama Panggilan'] || '-').trim(),
+    nama_panggilan : (j['Nama Panggilan'] || '').trim(),
+    gender         : (j['Gender'] || '').trim(),
+  })).filter(j => j.no_efataid);
+
+  absenKTMState.sudahLoad   = true;
+  absenKTMState.searchQuery = '';
+
+  // Tampilkan toolbar & summary
+  const toolbar = document.getElementById('absen-toolbar');
+  if (toolbar) toolbar.style.display = 'block';
+  const summary = document.getElementById('absen-summary');
+  if (summary) summary.style.display = 'block';
+
+  // Notifikasi jika ada data existing
+  if (hasExisting && wrap) {
+    const notif = document.createElement('div');
+    notif.style.cssText = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--green);';
+    notif.innerHTML = `✅ <strong>Data Dimuat:</strong> ${dataUntukTgl.length} record`
+      + ` pada tanggal ${formatTglDisplay(tgl)} berhasil dimuat dari server.`
+      + ` ${absenKTMState.tamuList.length > 0 ? `(${absenKTMState.tamuList.length} tamu)` : ''}`;
+    const toolbarEl = document.getElementById('absen-toolbar');
+    if (toolbarEl?.parentNode) toolbarEl.parentNode.insertBefore(notif, toolbarEl);
+    setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 4000);
   }
 
   renderAbsenKTMSummary();
@@ -2348,28 +2398,33 @@ async function loadAbsensiKTM(){
 function renderAbsenKTMSummary() {
   const el  = document.getElementById('absen-summary'); if (!el) return;
   const tgl = absenKTMState.tanggal;
-  let hadir = 0;
-  absenKTMState.masterList.forEach(j => {
-    const d = absenKTMState.absenMap[j.no_efataid]?.[tgl];
-    if (d?.hadir==='y') hadir++;
-  });
-  const total = absenKTMState.masterList.length;
-  const belum = total - hadir;
-  const pct   = total>0 ? Math.round(hadir/total*100) : 0;
-  const bln   = BULAN_NAMA[parseInt(absenKTMState.bulan)-1];
+
+  // Hitung jemaat hadir
+  let hadir = absenKTMState.masterList.filter(j =>
+    absenKTMState.absenMap[j.no_efataid]?.hadir === 'y').length;
+  // Tambah tamu hadir
+  hadir += (absenKTMState.tamuList || []).filter(t => t.hadir === 'y').length;
+
+  const totalJemaat = absenKTMState.masterList.length;
+  const totalTamu   = (absenKTMState.tamuList || []).length;
+  const total       = totalJemaat + totalTamu;
+  const belum       = total - hadir;
+  const pct         = total > 0 ? Math.round(hadir / total * 100) : 0;
+  const bln         = BULAN_NAMA[parseInt(absenKTMState.bulan) - 1];
 
   el.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
       <div style="font-size:.75rem;font-weight:700;color:var(--text3);margin-bottom:8px;">
         📊 ${absenKTMState.jenis.replace('_',' ')} — ${bln} ${absenKTMState.tahun}
         · <span style="color:var(--accent);">${formatTglDisplay(tgl)}</span>
-        ${absenKTMState.jenis==='KTM_Tahir'&&absenKTMState.user2
-          ?`· U2: <strong style="color:var(--yellow);">${escHtml(absenKTMState.user2)}</strong>`:'' }
+        ${absenKTMState.jenis === 'KTM_Tahir' && absenKTMState.user2
+          ? ` · U2: <strong style="color:var(--yellow);">${escHtml(absenKTMState.user2)}</strong>` : ''}
+        ${totalTamu > 0 ? ` · <span style="color:var(--yellow);">${totalTamu} tamu</span>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
         <div style="background:var(--surface2);border-radius:9px;padding:10px;text-align:center;border:1px solid var(--border);">
           <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--accent);">${total}</div>
-          <div style="font-size:.65rem;color:var(--text3);">Total</div>
+          <div style="font-size:.65rem;color:var(--text3);">Total${totalTamu ? ' (+' + totalTamu + ')' : ''}</div>
         </div>
         <div style="background:rgba(16,185,129,.1);border-radius:9px;padding:10px;text-align:center;border:1px solid rgba(16,185,129,.3);">
           <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--green);">${hadir}</div>
@@ -2392,68 +2447,141 @@ function renderAbsenKTMList() {
   const wrap = document.getElementById('absen-list-wrap');
   if (!wrap || !absenKTMState.sudahLoad) return;
 
-  if (absenKTMState.viewMode === 'text') {
-    renderAbsenKTMText(wrap);
-    return;
-  }
+  if (absenKTMState.viewMode === 'text') { renderAbsenKTMText(wrap); return; }
 
   const tgl    = absenKTMState.tanggal;
   const search = absenKTMState.searchQuery.toLowerCase();
-  const list   = absenKTMState.masterList.filter(j =>
+
+  // Filter master list
+  const list = absenKTMState.masterList.filter(j =>
     !search || j.nama.toLowerCase().includes(search) || j.no_efataid.toLowerCase().includes(search)
   );
+  // Filter tamu list
+  const tamuFiltered = (absenKTMState.tamuList || []).filter(t =>
+    !search || t.nama.toLowerCase().includes(search)
+  );
 
-  if (!list.length) {
+  if (!list.length && !tamuFiltered.length) {
     wrap.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Tidak ada nama.</p></div>`;
     return;
   }
 
-  const belumHadir = list.filter(j => absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir !== 'y');
-  const sudahHadir = list.filter(j => absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir === 'y');
+  // Pisahkan hadir/belum untuk jemaat
+  const jemaatBelum = list.filter(j => absenKTMState.absenMap[j.no_efataid]?.hadir !== 'y');
+  const jemaatHadir = list.filter(j => absenKTMState.absenMap[j.no_efataid]?.hadir === 'y');
+  // Pisahkan hadir/belum untuk tamu
+  const tamuBelum = tamuFiltered.filter(t => t.hadir !== 'y');
+  const tamuHadir = tamuFiltered.filter(t => t.hadir === 'y');
 
-  const renderItem = j => {
-    const d       = absenKTMState.absenMap[j.no_efataid]?.[tgl];
-    const isHadir = d?.hadir === 'y';
-    const pencatat= d?.dicatat_oleh||'';
-    const u2      = d?.user2||'';
+  const renderJemaatItem = j => {
+    const d        = absenKTMState.absenMap[j.no_efataid];
+    const isHadir  = d?.hadir === 'y';
+    const pencatat = d?.dicatat_oleh || '';
+    const u2       = d?.user2 || '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
-        background:${isHadir?'rgba(16,185,129,.06)':'var(--surface)'};
-        border:1px solid ${isHadir?'rgba(16,185,129,.4)':'var(--border)'};
+        background:${isHadir ? 'rgba(16,185,129,.06)' : 'var(--surface)'};
+        border:1px solid ${isHadir ? 'rgba(16,185,129,.4)' : 'var(--border)'};
         border-radius:10px;margin-bottom:6px;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:600;font-size:.88rem;">${escHtml(j.nama)}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">${escHtml(j.no_efataid)}</div>
-        ${isHadir&&pencatat?`<div style="font-size:.65rem;color:var(--green);margin-top:2px;">✓ ${escHtml(pencatat)}${u2?' · '+escHtml(u2):''}</div>`:''}
+        ${isHadir && pencatat
+          ? `<div style="font-size:.65rem;color:var(--green);margin-top:2px;">✓ ${escHtml(pencatat)}${u2 ? ' · U2: ' + escHtml(u2) : ''}</div>`
+          : ''}
       </div>
-      <!-- Tombol profil -->
       <button onclick="openJemaatPopupByEfataID('${escHtml(j.no_efataid)}')"
-        title="Lihat Profil" style="width:34px;height:34px;border-radius:8px;
-        border:1px solid var(--border);background:var(--surface2);color:var(--text2);
-        cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;">🔍</button>
-      <!-- Tombol hadir -->
+        title="Profil" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+        background:var(--surface2);color:var(--text2);cursor:pointer;font-size:.85rem;flex-shrink:0;">🔍</button>
       <button onclick="toggleAbsenKTM('${escHtml(j.no_efataid)}','${escHtml(j.nama)}')"
-        style="width:48px;height:48px;border-radius:12px;
-        border:2px solid ${isHadir?'var(--green)':'var(--border)'};
-        background:${isHadir?'rgba(16,185,129,.15)':'var(--surface2)'};
-        color:${isHadir?'var(--green)':'var(--text3)'};font-size:1.4rem;cursor:pointer;flex-shrink:0;
+        style="width:48px;height:48px;border-radius:12px;flex-shrink:0;
+        border:2px solid ${isHadir ? 'var(--green)' : 'var(--border)'};
+        background:${isHadir ? 'rgba(16,185,129,.15)' : 'var(--surface2)'};
+        color:${isHadir ? 'var(--green)' : 'var(--text3)'};font-size:1.4rem;cursor:pointer;
         display:flex;align-items:center;justify-content:center;transition:all .15s;">
-        ${isHadir?'✅':'⬜'}
+        ${isHadir ? '✅' : '⬜'}
+      </button>
+    </div>`;
+  };
+
+  const renderTamuKTMItem = t => {
+    const isHadir = t.hadir === 'y';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+        background:${isHadir ? 'rgba(245,158,11,.06)' : 'var(--surface)'};
+        border:1px solid ${isHadir ? 'rgba(245,158,11,.4)' : 'var(--border)'};
+        border-radius:10px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:.88rem;">${escHtml(t.nama)}</div>
+        <div style="font-size:.65rem;color:var(--yellow);margin-top:1px;">👤 Tamu</div>
+        ${t.dicatat_oleh ? `<div style="font-size:.65rem;color:var(--text3);">oleh ${escHtml(t.dicatat_oleh)}</div>` : ''}
+      </div>
+      <button onclick="toggleTamuKTMHadir('${escHtml(t.id_tamu)}')"
+        style="width:48px;height:48px;border-radius:12px;flex-shrink:0;
+        border:2px solid ${isHadir ? 'var(--yellow)' : 'var(--border)'};
+        background:${isHadir ? 'rgba(245,158,11,.15)' : 'var(--surface2)'};
+        color:${isHadir ? 'var(--yellow)' : 'var(--text3)'};font-size:1.4rem;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;transition:all .15s;">
+        ${isHadir ? '✅' : '⬜'}
       </button>
     </div>`;
   };
 
   let html = '';
-  if (belumHadir.length) {
-    html += `<div style="font-size:.72rem;font-weight:700;color:var(--red);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.8px;">⏳ Belum Hadir (${belumHadir.length})</div>`;
-    html += belumHadir.map(renderItem).join('');
+
+  // Belum hadir
+  if (jemaatBelum.length || tamuBelum.length) {
+    html += `<div style="font-size:.72rem;font-weight:700;color:var(--red);margin:8px 0 6px;
+      text-transform:uppercase;letter-spacing:.8px;">
+      ⏳ Belum Hadir (${jemaatBelum.length + tamuBelum.length})</div>`;
+    html += jemaatBelum.map(renderJemaatItem).join('');
+    html += tamuBelum.map(renderTamuKTMItem).join('');
   }
-  if (sudahHadir.length) {
-    html += `<div style="font-size:.72rem;font-weight:700;color:var(--green);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.8px;">✅ Sudah Hadir (${sudahHadir.length})</div>`;
-    html += sudahHadir.map(renderItem).join('');
+
+  // Sudah hadir
+  if (jemaatHadir.length || tamuHadir.length) {
+    html += `<div style="font-size:.72rem;font-weight:700;color:var(--green);margin:12px 0 6px;
+      text-transform:uppercase;letter-spacing:.8px;">
+      ✅ Sudah Hadir (${jemaatHadir.length + tamuHadir.length})</div>`;
+    html += jemaatHadir.map(renderJemaatItem).join('');
+    html += tamuHadir.map(renderTamuKTMItem).join('');
   }
+
+  // Form tambah tamu KTM
+  html += `<div style="background:var(--surface);border:1px solid var(--yellow);
+      border-radius:var(--radius);padding:12px;margin-top:12px;">
+    <div style="font-size:.75rem;font-weight:700;color:var(--yellow);margin-bottom:8px;">👤 Tambah Tamu KTM</div>
+    <input type="text" id="ktm-tamu-nama" class="k-input" placeholder="Nama tamu..." style="width:100%;margin-bottom:6px;">
+    <button onclick="tambahTamuKTM()" class="btn-action green" style="width:100%;padding:9px;">➕ Tambah Tamu</button>
+  </div>`;
+
   wrap.innerHTML = html;
 }
+// ── TAMU KTM ────────────────────────────────────────────────────
+function tambahTamuKTM() {
+  const nama = document.getElementById('ktm-tamu-nama')?.value.trim();
+  if (!nama) return toast('⚠️ Isi nama tamu');
+  const idTamu = 'TAMU_' + nama;
+  if (!absenKTMState.tamuList) absenKTMState.tamuList = [];
+  if (absenKTMState.tamuList.find(t => t.nama === nama)) return toast('⚠️ Nama tamu sudah ada');
+  absenKTMState.tamuList.push({ id_tamu: idTamu, nama, hadir: 'n',
+    dicatat_oleh: '', user2: '' });
+  if (document.getElementById('ktm-tamu-nama')) document.getElementById('ktm-tamu-nama').value = '';
+  toast(`✅ Tamu "${nama}" ditambahkan`);
+  renderAbsenKTMSummary(); renderAbsenKTMList();
+}
 
+function toggleTamuKTMHadir(idTamu) {
+  if (!absenKTMState.tamuList) return;
+  const t = absenKTMState.tamuList.find(t => t.id_tamu === idTamu);
+  if (!t) return;
+  if (absenKTMState.jenis === 'KTM_Tahir' && !absenKTMState.user2)
+    return toast('⚠️ KTM Tahir wajib 2 user');
+  t.hadir        = t.hadir === 'y' ? 'n' : 'y';
+  t.dicatat_oleh = currentUser?.username || '-';
+  t.user2        = absenKTMState.user2 || '';
+  simpanSatuAbsenKTM('', t.nama, t.hadir, true);
+  renderAbsenKTMSummary(); renderAbsenKTMList();
+}
+   
 // ── TEXT VIEW KTM ──────────────────────────────────────────────────────
 function renderAbsenKTMText(wrap) {
   const tgl    = absenKTMState.tanggal;
@@ -2527,20 +2655,21 @@ function toggleAbsenKTM(no_efataid, nama) {
 }
 
 // ── SIMPAN SATU KTM ────────────────────────────────────────────────────
-async function simpanSatuAbsenKTM(no_efataid, nama, hadir) {
+async function simpanSatuAbsenKTM(no_efataid, nama, hadir, isTamu = false) {
   const params = new URLSearchParams({
     action               : 'simpan_absen',
     jenis                : absenKTMState.jenis,
     bulan                : absenKTMState.bulan,
     tahun                : absenKTMState.tahun,
-    tanggal_absen        : absenKTMState.tanggal,
-    no_efataid,
+    tanggal_absen        : absenKTMState.tanggal,   // selalu dd/mm/yyyy
+    no_efataid           : no_efataid || '',
     nama,
     hadir,
+    is_tamu              : isTamu ? 'y' : 'n',
     dicatat_oleh         : currentUser?.username || '-',
     no_efataid_pencatat  : currentUser?.no_EfataID || currentUser?.no_Efataid || currentUser?.No_EfataID || '',
     user2                : absenKTMState.user2 || '',
-    no_efataid_user2     : '', // bisa diisi jika ada data efataid user2
+    no_efataid_user2     : '',
     level_user           : getLevelCode(),
   });
   try {
@@ -2550,55 +2679,66 @@ async function simpanSatuAbsenKTM(no_efataid, nama, hadir) {
       body    : params.toString()
     });
     const result = await resp.json().catch(() => ({}));
-    toast(hadir==='y' ? `✅ ${nama} — Hadir` : `❌ ${nama} — Tidak Hadir`, 1800);
+    toast(hadir === 'y' ? `✅ ${nama} — Hadir` : `❌ ${nama} — Tidak Hadir`, 1800);
   } catch(e) {
-    toast('⚠️ Gagal simpan: ' + e.message);
+    toast('⚠️ Gagal: ' + e.message);
   }
 }
 
 // ── SIMPAN SEMUA KTM ───────────────────────────────────────────────────
 async function simpanSemuaAbsenKTM(){
-  if(!absenKTMState.masterList.length)return toast('⚠️ Daftar kosong');
-  if(!absenKTMState.tanggal)return toast('⚠️ Pilih tanggal');
-  if(absenKTMState.jenis==='KTM_Tahir'&&!absenKTMState.user2)
+  if (!absenKTMState.masterList.length && !(absenKTMState.tamuList?.length))
+    return toast('⚠️ Daftar kosong');
+  if (!absenKTMState.tanggal) return toast('⚠️ Pilih tanggal');
+  if (absenKTMState.jenis === 'KTM_Tahir' && !absenKTMState.user2)
     return toast('⚠️ KTM Tahir wajib 2 user');
 
   toast('⏳ Menyimpan semua...');
-  const tgl=absenKTMState.tanggal;
-  const items=absenKTMState.masterList.map(j=>({
-    no_efataid:j.no_efataid,
-    nama:j.nama,
-    hadir:absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir||
-          absenKTMState.absenMap[j.no_efataid]?.hadir||'n',
-  }));
+  const tgl = absenKTMState.tanggal;
 
-  const params=new URLSearchParams({
-    action:'simpan_batch',
-    jenis:absenKTMState.jenis,
-    bulan:absenKTMState.bulan,
-    tahun:absenKTMState.tahun,
-    tanggal_absen:tgl,
-    dicatat_oleh:currentUser?.username||'-',
-    no_efataid_pencatat:currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
-    user2:absenKTMState.user2||'',
-    no_efataid_user2:'',
-    level_user:getLevelCode(),
-    replace_tanggal:'y',  // FLAG: hapus data tanggal ini dulu
-    data:JSON.stringify(items),
+  // Gabung jemaat + tamu
+  const items = [
+    ...absenKTMState.masterList.map(j => ({
+      no_efataid : j.no_efataid,
+      nama       : j.nama,
+      hadir      : absenKTMState.absenMap[j.no_efataid]?.hadir || 'n',
+      is_tamu    : 'n',
+    })),
+    ...(absenKTMState.tamuList || []).map(t => ({
+      no_efataid : '',
+      nama       : t.nama,
+      hadir      : t.hadir || 'n',
+      is_tamu    : 'y',
+    })),
+  ];
+
+  const params = new URLSearchParams({
+    action               : 'simpan_batch',
+    jenis                : absenKTMState.jenis,
+    bulan                : absenKTMState.bulan,
+    tahun                : absenKTMState.tahun,
+    tanggal_absen        : tgl,    // dd/mm/yyyy
+    dicatat_oleh         : currentUser?.username || '-',
+    no_efataid_pencatat  : currentUser?.no_EfataID || currentUser?.no_Efataid || currentUser?.No_EfataID || '',
+    user2                : absenKTMState.user2 || '',
+    no_efataid_user2     : '',
+    level_user           : getLevelCode(),
+    replace_tanggal      : 'y',
+    data                 : JSON.stringify(items),
   });
 
-  try{
-    const resp=await fetch(APPS_SCRIPT_ABSENSI_KTM,{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:params.toString()
+  try {
+    const resp   = await fetch(APPS_SCRIPT_ABSENSI_KTM, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body    : params.toString()
     });
-    const result=await resp.json();
-    if(result.status==='ok'){
-      toast(`✅ Tersimpan: ${result.inserted} data (${result.deleted||0} lama dihapus)`);
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      toast(`✅ ${result.inserted} data tersimpan (${result.deleted || 0} lama dihapus)`);
       renderAbsenKTMLog();
-    }else toast('❌ Gagal: '+(result.message||'error'));
-  }catch(e){toast('⚠️ Error: '+e.message);}
+    } else toast('❌ Gagal: ' + (result.message || 'error'));
+  } catch(e) { toast('⚠️ Error: ' + e.message); }
 }
 
 // ── SEMUA HADIR / RESET KTM ────────────────────────────────────────────
@@ -2880,79 +3020,105 @@ function setSidangView(mode) {
 
 // ── LOAD DATA SIDANG ────────────────────────────────────────────────────
 async function loadAbsensiSidang(){
-  const tglInput=document.getElementById('sidang-tanggal')?.value;
-  if(tglInput)absenSidangState.tanggal=formatDateFromInput(tglInput);
-  absenSidangState.jenisSidang=document.getElementById('sidang-jenis')?.value||absenSidangState.jenisSidang;
-  absenSidangState.subGugus=document.getElementById('sidang-gugus')?.value||'';
-  absenSidangState.minggu=document.getElementById('sidang-minggu')?.value||'';
+  const tglInput = document.getElementById('sidang-tanggal')?.value;
+  if (tglInput) absenSidangState.tanggal = formatDateFromInput(tglInput);
+  absenSidangState.jenisSidang = document.getElementById('sidang-jenis')?.value || absenSidangState.jenisSidang;
+  absenSidangState.subGugus    = document.getElementById('sidang-gugus')?.value || '';
+  absenSidangState.minggu      = document.getElementById('sidang-minggu')?.value || '';
 
-  if(!absenSidangState.tanggal)return toast('⚠️ Pilih tanggal');
+  if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
 
-  const wrap=document.getElementById('sidang-list-wrap');
-  if(wrap)wrap.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>
-    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memeriksa data di server...</div>`;
+  const wrap = document.getElementById('sidang-list-wrap');
+  if (wrap) wrap.innerHTML = `<div class="loading-shimmer"></div>
+    <div class="loading-shimmer" style="opacity:.6;"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat dari server...</div>`;
 
-  // STEP 1: Cek data existing dari server untuk tanggal + jenis sidang ini
-  let serverData=[];
-  let hasExisting=false;
-  try{
-    const url=`${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_absen_sidang`
-      +`&jenis_sidang=${encodeURIComponent(absenSidangState.jenisSidang)}`
-      +`&tanggal=${encodeURIComponent(absenSidangState.tanggal)}`;
-    const resp=await fetch(url);
-    const result=await resp.json();
-    if(result.status==='ok'&&result.data&&result.data.length>0){
-      serverData=result.data;
-      hasExisting=true;
+  // STEP 1: Load data existing dari server untuk tanggal+jenis ini
+  let serverData   = [];
+  let hasExisting  = false;
+  try {
+    const url = `${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_absen_sidang`
+      + `&jenis_sidang=${encodeURIComponent(absenSidangState.jenisSidang)}`
+      + `&tanggal=${encodeURIComponent(absenSidangState.tanggal)}`;  // dd/mm/yyyy
+    const resp   = await fetch(url);
+    const result = await resp.json();
+    if (result.status === 'ok' && result.data?.length) {
+      serverData   = result.data;
+      hasExisting  = true;
     }
-  }catch(e){toast('⚠️ Gagal load server: '+e.message);}
+  } catch(e) { toast('⚠️ Gagal load server: ' + e.message); }
 
-  // STEP 2: Build absenMap & tamuMap dari data server
-  absenSidangState.absenMap={};
-  absenSidangState.tamuMap={};
-  absenSidangState.tamuList=[];
+  // STEP 2: Rebuild absenMap & tamuList dari server
+  absenSidangState.absenMap  = {};
+  absenSidangState.tamuMap   = {};
+  absenSidangState.tamuList  = [];
 
-  serverData.forEach(row=>{
-    if(row.is_tamu==='y'){
-      const tamuKey='TAMU_'+row.nama;
-      absenSidangState.tamuMap[tamuKey]={
-        hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,waktu_catat:row.waktu_catat,
-        nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+  serverData.forEach(row => {
+    const ef     = (row.no_efataid || '').trim();
+    const nm     = (row.nama       || '').trim();
+    const isTamu = !ef || (row.is_tamu || '').trim() === 'y';
+
+    if (isTamu) {
+      const tamuKey = 'TAMU_' + nm;
+      absenSidangState.tamuMap[tamuKey] = {
+        hadir         : row.hadir || 'n',
+        dicatat_oleh  : row.dicatat_oleh || '',
+        waktu_catat   : row.waktu_catat || '',
+        nama_dijenguk : row.nama_dijenguk || '',
+        ket_jenguk    : row.ket_jenguk    || '',
       };
-      if(!absenSidangState.tamuList.find(t=>t.nama===row.nama)){
+      if (!absenSidangState.tamuList.find(t => t.nama === nm)) {
         absenSidangState.tamuList.push({
-          id_tamu:tamuKey,nama:row.nama,hadir:row.hadir,
-          nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+          id_tamu       : tamuKey,
+          nama          : nm,
+          hadir         : row.hadir || 'n',
+          nama_dijenguk : row.nama_dijenguk || '',
+          ket_jenguk    : row.ket_jenguk    || '',
         });
       }
-    }else{
-      absenSidangState.absenMap[row.no_efataid]={
-        hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,waktu_catat:row.waktu_catat,
-        nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+    } else {
+      // Jemaat — simpan berdasarkan no_efataid
+      absenSidangState.absenMap[ef] = {
+        hadir         : row.hadir || 'n',
+        dicatat_oleh  : row.dicatat_oleh || '',
+        waktu_catat   : row.waktu_catat || '',
+        nama_dijenguk : row.nama_dijenguk || '',
+        ket_jenguk    : row.ket_jenguk    || '',
       };
     }
   });
 
   // STEP 3: Load master Jemaat
-  if(!db.Jemaat){
-    await new Promise(r=>Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
+  if (!db.Jemaat) {
+    await new Promise(r => Papa.parse(URLS.Jemaat, {
+      download: true, header: true,
+      complete: res => { db.Jemaat = res.data; r(); }
+    }));
   }
-  absenSidangState.masterList=buildSidangMaster(absenSidangState.jenisSidang,absenSidangState.subGugus);
+  absenSidangState.masterList = buildSidangMaster(
+    absenSidangState.jenisSidang, absenSidangState.subGugus
+  );
 
-  absenSidangState.sudahLoad=true;
-  absenSidangState.searchQuery='';
+  absenSidangState.sudahLoad   = true;
+  absenSidangState.searchQuery = '';
 
-  document.getElementById('sidang-toolbar').style.display='block';
-  document.getElementById('sidang-tamu-form').style.display='block';
+  document.getElementById('sidang-toolbar').style.display = 'block';
+  document.getElementById('sidang-tamu-form').style.display = 'block';
 
-  // Notifikasi update mode
-  if(hasExisting&&wrap){
-    const notif=document.createElement('div');
-    notif.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--yellow);';
-    notif.innerHTML=`⚠️ <strong>Mode Update:</strong> Ditemukan ${serverData.length} data di tanggal ${formatTglDisplay(absenSidangState.tanggal)} untuk ${absenSidangState.jenisSidang}. Data lama akan terhapus & diganti saat klik <strong>Simpan Semua</strong>.`;
-    const toolbar=document.getElementById('sidang-toolbar');
-    if(toolbar&&toolbar.parentNode)toolbar.parentNode.insertBefore(notif,toolbar);
-    setTimeout(()=>{if(notif.parentNode)notif.parentNode.removeChild(notif);},5000);
+  // Notifikasi load sukses
+  if (hasExisting && wrap) {
+    const hadirCount = serverData.filter(r => r.hadir === 'y').length;
+    const tamuCount  = absenSidangState.tamuList.length;
+    const notif = document.createElement('div');
+    notif.style.cssText = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--green);';
+    notif.innerHTML = `✅ <strong>Data Dimuat:</strong> ${serverData.length} record`
+      + `, ${hadirCount} hadir`
+      + `${tamuCount > 0 ? `, ${tamuCount} tamu` : ''}`
+      + ` pada ${formatTglDisplay(absenSidangState.tanggal)}.`
+      + ` Klik <strong>Simpan Semua</strong> untuk update.`;
+    const toolbar = document.getElementById('sidang-toolbar');
+    if (toolbar?.parentNode) toolbar.parentNode.insertBefore(notif, toolbar);
+    setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 5000);
   }
 
   renderSidangSummary();
