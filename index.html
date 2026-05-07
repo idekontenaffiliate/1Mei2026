@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v3.33 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.33 @2026</span></div>
   </div>
 </div>
 
@@ -561,7 +561,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbwIUsyjS4UKq1y1u5o1GjJKaPkvvPM7NpxgbiR1oQ3w_rygoOz-qHAFb5Qos5dp6P_MoQ/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzMciZeJf2XkNcGg3FP_Li-5INAhDJSKtXsuvBR5B8BRxAjQmq9oUmCAc-HhWAJZZHT9g/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyMT5fLawx_XjKIWHeCx8fEoURkTdxiwBi7bun8LIfcp-x1SXnv7hoUG11nmZuRQWui5Q/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -2090,15 +2090,25 @@ const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni',
 
 // ── LEVEL ──────────────────────────────────────────────────────────────
 function getLevelCode() {
-  return (currentUser?.level || '').trim();
-}
-function bolehAbsenKTM() {
-  return ['Penatua','Gembala Distrik','Administrator'].includes(getLevelCode());
-}
-function bolehHapusAbsen() {
-  return getLevelCode() === 'Administrator';
+  // level bisa di field 'level' atau 'tipe'
+  const lvl = (currentUser?.level || '').trim();
+  if (lvl) return lvl;
+  // Jika tipe berisi multi-value, cek apakah ada level di dalamnya
+  const tipe = (currentUser?.tipe || '').trim();
+  const knownLevels = ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'];
+  const found = knownLevels.find(l => tipe.includes(l));
+  return found || tipe;
 }
 
+function bolehAbsenKTM() {
+  const l = getLevelCode();
+  return ['Penatua','Gembala Distrik','Administrator'].includes(l);
+}
+
+function bolehAbsenSidang() {
+  const l = getLevelCode();
+  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(l);
+}
 // ── RENDER UTAMA ───────────────────────────────────────────────────────
 function renderAbsensiKTM() {
   const content = document.getElementById('app-content');
@@ -2631,18 +2641,18 @@ function renderAbsenKTMText(wrap) {
 }   
 
 // ── TOGGLE ABSEN KTM ────────────────────────────────────────────────────
+
 function toggleAbsenKTM(no_efataid, nama) {
   const tgl = absenKTMState.tanggal;
   if (!tgl) return toast('⚠️ Pilih tanggal dulu');
-  // Validasi user2 untuk KTM Tahir
   if (absenKTMState.jenis==='KTM_Tahir' && !absenKTMState.user2)
     return toast('⚠️ KTM Tahir wajib 2 user. Isi username user ke-2.');
 
-  if (!absenKTMState.absenMap[no_efataid]) absenKTMState.absenMap[no_efataid] = {};
-  const cur     = absenKTMState.absenMap[no_efataid][tgl];
-  const isHadir = cur?.hadir === 'y';
+  // FLAT structure — tidak nested per tanggal
+  const cur     = absenKTMState.absenMap[no_efataid] || {};
+  const isHadir = cur.hadir === 'y';
 
-  absenKTMState.absenMap[no_efataid][tgl] = {
+  absenKTMState.absenMap[no_efataid] = {
     hadir        : isHadir ? 'n' : 'y',
     dicatat_oleh : currentUser?.username || '-',
     waktu_catat  : new Date().toLocaleString('id-ID'),
@@ -2653,7 +2663,6 @@ function toggleAbsenKTM(no_efataid, nama) {
   renderAbsenKTMSummary();
   renderAbsenKTMList();
 }
-
 // ── SIMPAN SATU KTM ────────────────────────────────────────────────────
 async function simpanSatuAbsenKTM(no_efataid, nama, hadir, isTamu = false) {
   const params = new URLSearchParams({
@@ -2742,13 +2751,12 @@ async function simpanSemuaAbsenKTM(){
 }
 
 // ── SEMUA HADIR / RESET KTM ────────────────────────────────────────────
+
 function absenSemuaHadirKTM() {
-  const tgl = absenKTMState.tanggal;
-  if (!tgl) return toast('⚠️ Pilih tanggal');
+  if (!absenKTMState.tanggal) return toast('⚠️ Pilih tanggal');
   if (!confirm(`Set SEMUA ${absenKTMState.masterList.length} orang HADIR?`)) return;
   absenKTMState.masterList.forEach(j => {
-    if (!absenKTMState.absenMap[j.no_efataid]) absenKTMState.absenMap[j.no_efataid] = {};
-    absenKTMState.absenMap[j.no_efataid][tgl] = {
+    absenKTMState.absenMap[j.no_efataid] = {
       hadir:'y', dicatat_oleh:currentUser?.username||'-',
       waktu_catat:new Date().toLocaleString('id-ID'), user2:absenKTMState.user2||'',
     };
@@ -2756,12 +2764,11 @@ function absenSemuaHadirKTM() {
   renderAbsenKTMSummary(); renderAbsenKTMList();
   toast('✅ Semua hadir — klik Simpan Semua');
 }
+
 function absenSemuaTidakKTM() {
   if (!confirm('Reset semua?')) return;
-  const tgl = absenKTMState.tanggal;
   absenKTMState.masterList.forEach(j => {
-    if (!absenKTMState.absenMap[j.no_efataid]) absenKTMState.absenMap[j.no_efataid] = {};
-    absenKTMState.absenMap[j.no_efataid][tgl] = {
+    absenKTMState.absenMap[j.no_efataid] = {
       hadir:'n', dicatat_oleh:currentUser?.username||'-',
       waktu_catat:new Date().toLocaleString('id-ID'), user2:absenKTMState.user2||'',
     };
@@ -2769,7 +2776,6 @@ function absenSemuaTidakKTM() {
   renderAbsenKTMSummary(); renderAbsenKTMList();
   toast('❌ Semua direset');
 }
-
 // ── SCAN QR KTM ────────────────────────────────────────────────────────
 function toggleKTMScanMode(on) {
   const area = document.getElementById('absen-scan-area');
