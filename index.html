@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v1.99 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v1.11 @2026</span></div>
   </div>
 </div>
 
@@ -560,8 +560,8 @@ const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHH
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
-const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbwcA0PST5GJBuoFveZo99Mdi6DpCPawY94LIH5dFSFtaxyGGyyF3V_LQze_aMNhPEys8w/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbwiGe6PwohhNOlX3CFlLj49RJYXghmRLrYija5yp6kz_XNH-T80DjxZNuVLIOMx05-UqA/exec";
+const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbyzEz_BAxdhM9yIh5-joNqN4CF7T2mjTlu9IPK07uaA6bDXIzCUXQNmn0KERlstRoBbFA/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzMciZeJf2XkNcGg3FP_Li-5INAhDJSKtXsuvBR5B8BRxAjQmq9oUmCAc-HhWAJZZHT9g/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -700,13 +700,35 @@ function attemptLogin(){
 function doLogout(){
   if(!confirm('Yakin ingin keluar?'))return;
   logHistory('logout','keluar aplikasi');
-  currentUser=null;db={};
-  Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
+  currentUser=null;
+  // Reset semua state
+  db={};
+  ptnyAllData=[];ptnyFilteredData=[];hpFilteredData=[];
+  lastFilteredJemaat=[];pertanyaanRatings={};
+  ptnyCurrentPage=1;hpCurrentPage=1;
+  jemaatFilterIbadah=[];jemaatFilterPelayanan=[];
+  jemaatFilterKelas=[];jemaatFilterGugus=[];
+  jemaatFilterKTM=[];jemaatFilterKTMTahir=[];
+  absenKTMState={jenis:'KTM',bulan:'',tahun:'',tanggal:'',masterList:[],absenMap:{},
+    scanMode:false,searchQuery:'',sudahLoad:false,viewMode:'grid',user2:'',user2EfataID:''};
+  absenSidangState={jenisSidang:'SPR Pagi',subGugus:'',tanggal:'',minggu:'',
+    masterList:[],tamuList:[],absenMap:{},tamuMap:{},searchQuery:'',sudahLoad:false,
+    viewMode:'grid',namaTabBaru:''};
+  laporanAbsenState={tglAwal:'',tglAkhir:'',data:null,_teksLaporan:''};
+  // Stop clock interval
+  if(window._dashClockInterval){clearInterval(window._dashClockInterval);window._dashClockInterval=null;}
+  // Reset UI
   document.getElementById('main-app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('main-nav').innerHTML='';
-  document.getElementById('user').value='';document.getElementById('pass').value='';
+  document.getElementById('app-content').innerHTML='';
+  document.getElementById('header-title').textContent='Acara Solo 2026';
+  document.getElementById('header-sub').textContent='loading...';
+  document.getElementById('user').value='';
+  document.getElementById('pass').value='';
   document.getElementById('login-error').style.display='none';
+  // Reload data Awal untuk login berikutnya
+  Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
 }
 function setupNavigation(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
@@ -2239,71 +2261,84 @@ function formatTglDisplay(tgl) {
 }
 
 // ── LOAD DATA KTM ──────────────────────────────────────────────────────
-async function loadAbsensiKTM() {
-  absenKTMState.bulan   = document.getElementById('absen-bulan')?.value  || absenKTMState.bulan;
-  absenKTMState.tahun   = document.getElementById('absen-tahun')?.value  || absenKTMState.tahun;
-  absenKTMState.user2   = document.getElementById('ktm-user2')?.value?.trim() || absenKTMState.user2;
-  const tglInput        = document.getElementById('absen-tanggal')?.value;
-  if (tglInput) absenKTMState.tanggal = formatDateFromInput(tglInput);
+async function loadAbsensiKTM(){
+  absenKTMState.bulan=document.getElementById('absen-bulan')?.value||absenKTMState.bulan;
+  absenKTMState.tahun=document.getElementById('absen-tahun')?.value||absenKTMState.tahun;
+  absenKTMState.user2=document.getElementById('ktm-user2')?.value?.trim()||absenKTMState.user2;
+  const tglInput=document.getElementById('absen-tanggal')?.value;
+  if(tglInput)absenKTMState.tanggal=formatDateFromInput(tglInput);
 
-  const wrap = document.getElementById('absen-list-wrap');
-  if (wrap) wrap.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>';
+  if(!absenKTMState.tanggal)return toast('⚠️ Pilih tanggal dulu');
+  if(absenKTMState.jenis==='KTM_Tahir'&&!absenKTMState.user2)
+    return toast('⚠️ KTM Tahir wajib 2 user. Isi username user ke-2.');
 
-  // Validasi user2 untuk KTM Tahir
-  if (absenKTMState.jenis==='KTM_Tahir' && !absenKTMState.user2) {
-    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
-      <p>KTM Tahir wajib 2 user. Isi username user ke-2 terlebih dahulu.</p></div>`;
-    return;
-  }
+  const wrap=document.getElementById('absen-list-wrap');
+  if(wrap)wrap.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memeriksa data di server...</div>`;
 
-  // Load master Jemaat
-  const fieldKey = absenKTMState.jenis==='KTM_Tahir' ? 'KTM Tahir' : 'KTM';
-  if (!db.Jemaat) {
-    await new Promise(r => Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
-  }
-  const masterRaw = (db.Jemaat||[]).filter(j => {
-    const val = (j[fieldKey]||j[fieldKey.toLowerCase()]||'').trim().toLowerCase();
-    return val === 'y';
+  // STEP 1: Load data existing dari server untuk tanggal+bulan+tahun ini
+  let serverData=[];
+  try{
+    const url=`${APPS_SCRIPT_ABSENSI_KTM}?action=get_absen`
+      +`&jenis=${encodeURIComponent(absenKTMState.jenis)}`
+      +`&bulan=${encodeURIComponent(absenKTMState.bulan)}`
+      +`&tahun=${encodeURIComponent(absenKTMState.tahun)}`;
+    const resp=await fetch(url);
+    const result=await resp.json();
+    if(result.status==='ok'&&result.data)serverData=result.data;
+  }catch(e){toast('⚠️ Gagal load server: '+e.message);}
+
+  // STEP 2: Build absenMap dari data server (untuk tanggal ini saja)
+  const tgl=absenKTMState.tanggal;
+  absenKTMState.absenMap={};
+  serverData.forEach(row=>{
+    if(row.tanggal_absen!==tgl)return;
+    const key=row.no_efataid||row.nama;
+    if(key)absenKTMState.absenMap[key]={
+      hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,
+      waktu_catat:row.waktu_catat,user2:row.user2||'',
+    };
   });
 
-  absenKTMState.masterList = masterRaw.map(j => ({
-    no_efataid    : (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim(),
-    nama          : (j['Nama Lengkap']||j['Nama Panggilan']||'-').trim(),
-    nama_panggilan: (j['Nama Panggilan']||'').trim(),
-    gender        : (j['Gender']||'').trim(),
-  })).filter(j => j.no_efataid);
+  // Cek apakah ada data existing di tanggal ini
+  const dataExistingTgl=serverData.filter(r=>r.tanggal_absen===tgl);
+  const hasExisting=dataExistingTgl.length>0;
 
-  // Load data lama dari server
-  try {
-    const url = `${APPS_SCRIPT_ABSENSI_KTM}?action=get_absen`
-      + `&jenis=${encodeURIComponent(absenKTMState.jenis)}`
-      + `&bulan=${encodeURIComponent(absenKTMState.bulan)}`
-      + `&tahun=${encodeURIComponent(absenKTMState.tahun)}`;
-    const resp   = await fetch(url);
-    const result = await resp.json();
+  // STEP 3: Load master Jemaat
+  const fieldKey=absenKTMState.jenis==='KTM_Tahir'?'KTM Tahir':'KTM';
+  if(!db.Jemaat){
+    await new Promise(r=>Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
+  }
+  const masterRaw=(db.Jemaat||[]).filter(j=>{
+    const val=(j[fieldKey]||j[fieldKey.toLowerCase()]||'').trim().toLowerCase();
+    return val==='y';
+  });
+  absenKTMState.masterList=masterRaw.map(j=>({
+    no_efataid:(j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim(),
+    nama:(j['Nama Lengkap']||j['Nama Panggilan']||'-').trim(),
+    nama_panggilan:(j['Nama Panggilan']||'').trim(),
+    gender:(j['Gender']||'').trim(),
+  })).filter(j=>j.no_efataid);
 
-    absenKTMState.absenMap = {};
-    if (result.status==='ok' && result.data) {
-      result.data.forEach(row => {
-        const key = row.no_efataid || row.nama;
-        if (!absenKTMState.absenMap[key]) absenKTMState.absenMap[key] = {};
-        absenKTMState.absenMap[key][row.tanggal_absen] = {
-          hadir        : row.hadir,
-          dicatat_oleh : row.dicatat_oleh,
-          waktu_catat  : row.waktu_catat,
-          user2        : row.user2 || '',
-        };
-      });
-    }
-  } catch(e) {
-    toast('⚠️ Gagal load data: ' + e.message);
+  absenKTMState.sudahLoad=true;
+  absenKTMState.searchQuery='';
+
+  // Tampilkan notifikasi jika ada data existing
+  const toolbar=document.getElementById('absen-toolbar');
+  if(toolbar)toolbar.style.display='block';
+  const summary=document.getElementById('absen-summary');
+  if(summary)summary.style.display='block';
+
+  // Notifikasi update mode
+  if(hasExisting&&wrap){
+    const notif=document.createElement('div');
+    notif.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--yellow);';
+    notif.innerHTML=`⚠️ <strong>Mode Update:</strong> Ditemukan ${dataExistingTgl.length} data di tanggal ${formatTglDisplay(tgl)}. Data lama akan otomatis terhapus & diganti saat klik <strong>Simpan Semua</strong>.`;
+    wrap.parentNode.insertBefore(notif,wrap);
+    // Auto-remove setelah 5 detik
+    setTimeout(()=>{if(notif.parentNode)notif.parentNode.removeChild(notif);},5000);
   }
 
-  absenKTMState.sudahLoad   = true;
-  absenKTMState.searchQuery = '';
-
-  document.getElementById('absen-toolbar').style.display = 'block';
-  document.getElementById('absen-summary').style.display = 'block';
   renderAbsenKTMSummary();
   renderAbsenKTMList();
   renderAbsenKTMLog();
@@ -2522,48 +2557,48 @@ async function simpanSatuAbsenKTM(no_efataid, nama, hadir) {
 }
 
 // ── SIMPAN SEMUA KTM ───────────────────────────────────────────────────
-async function simpanSemuaAbsenKTM() {
-  if (!absenKTMState.masterList.length) return toast('⚠️ Daftar kosong');
-  if (!absenKTMState.tanggal) return toast('⚠️ Pilih tanggal');
-  if (absenKTMState.jenis==='KTM_Tahir' && !absenKTMState.user2)
+async function simpanSemuaAbsenKTM(){
+  if(!absenKTMState.masterList.length)return toast('⚠️ Daftar kosong');
+  if(!absenKTMState.tanggal)return toast('⚠️ Pilih tanggal');
+  if(absenKTMState.jenis==='KTM_Tahir'&&!absenKTMState.user2)
     return toast('⚠️ KTM Tahir wajib 2 user');
 
   toast('⏳ Menyimpan semua...');
-  const tgl   = absenKTMState.tanggal;
-  const items = absenKTMState.masterList.map(j => ({
-    no_efataid : j.no_efataid,
-    nama       : j.nama,
-    hadir      : absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir || 'n',
+  const tgl=absenKTMState.tanggal;
+  const items=absenKTMState.masterList.map(j=>({
+    no_efataid:j.no_efataid,
+    nama:j.nama,
+    hadir:absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir||
+          absenKTMState.absenMap[j.no_efataid]?.hadir||'n',
   }));
 
-  const params = new URLSearchParams({
-    action               : 'simpan_batch',
-    jenis                : absenKTMState.jenis,
-    bulan                : absenKTMState.bulan,
-    tahun                : absenKTMState.tahun,
-    tanggal_absen        : tgl,
-    dicatat_oleh         : currentUser?.username || '-',
-    no_efataid_pencatat  : currentUser?.no_EfataID || currentUser?.no_Efataid || currentUser?.No_EfataID || '',
-    user2                : absenKTMState.user2 || '',
-    no_efataid_user2     : '',
-    level_user           : getLevelCode(),
-    data                 : JSON.stringify(items),
+  const params=new URLSearchParams({
+    action:'simpan_batch',
+    jenis:absenKTMState.jenis,
+    bulan:absenKTMState.bulan,
+    tahun:absenKTMState.tahun,
+    tanggal_absen:tgl,
+    dicatat_oleh:currentUser?.username||'-',
+    no_efataid_pencatat:currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
+    user2:absenKTMState.user2||'',
+    no_efataid_user2:'',
+    level_user:getLevelCode(),
+    replace_tanggal:'y',  // FLAG: hapus data tanggal ini dulu
+    data:JSON.stringify(items),
   });
 
-  try {
-    const resp   = await fetch(APPS_SCRIPT_ABSENSI_KTM, {
-      method  : 'POST',
-      headers : { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body    : params.toString()
+  try{
+    const resp=await fetch(APPS_SCRIPT_ABSENSI_KTM,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:params.toString()
     });
-    const result = await resp.json();
-    if (result.status==='ok') {
-      toast(`✅ Tersimpan: ${result.inserted} baru, ${result.updated} update`);
+    const result=await resp.json();
+    if(result.status==='ok'){
+      toast(`✅ Tersimpan: ${result.inserted} data (${result.deleted||0} lama dihapus)`);
       renderAbsenKTMLog();
-    } else toast('❌ Gagal: ' + result.message);
-  } catch(e) {
-    toast('⚠️ Error: ' + e.message);
-  }
+    }else toast('❌ Gagal: '+(result.message||'error'));
+  }catch(e){toast('⚠️ Error: '+e.message);}
 }
 
 // ── SEMUA HADIR / RESET KTM ────────────────────────────────────────────
@@ -2844,82 +2879,87 @@ function setSidangView(mode) {
 }
 
 // ── LOAD DATA SIDANG ────────────────────────────────────────────────────
-async function loadAbsensiSidang() {
-  const tglInput = document.getElementById('sidang-tanggal')?.value;
-  if (tglInput) absenSidangState.tanggal = formatDateFromInput(tglInput);
-  absenSidangState.jenisSidang = document.getElementById('sidang-jenis')?.value || absenSidangState.jenisSidang;
-  absenSidangState.subGugus    = document.getElementById('sidang-gugus')?.value  || '';
-  absenSidangState.minggu      = document.getElementById('sidang-minggu')?.value || '';
+async function loadAbsensiSidang(){
+  const tglInput=document.getElementById('sidang-tanggal')?.value;
+  if(tglInput)absenSidangState.tanggal=formatDateFromInput(tglInput);
+  absenSidangState.jenisSidang=document.getElementById('sidang-jenis')?.value||absenSidangState.jenisSidang;
+  absenSidangState.subGugus=document.getElementById('sidang-gugus')?.value||'';
+  absenSidangState.minggu=document.getElementById('sidang-minggu')?.value||'';
 
-  if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
+  if(!absenSidangState.tanggal)return toast('⚠️ Pilih tanggal');
 
-  const wrap = document.getElementById('sidang-list-wrap');
-  if (wrap) wrap.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>';
+  const wrap=document.getElementById('sidang-list-wrap');
+  if(wrap)wrap.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memeriksa data di server...</div>`;
 
-  if (!db.Jemaat) {
-    await new Promise(r => Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
-  }
-
-  absenSidangState.masterList = buildSidangMaster(absenSidangState.jenisSidang, absenSidangState.subGugus);
-
-  // Load data lama dari server
-  try {
-    const url = `${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_absen_sidang`
-      + `&jenis_sidang=${encodeURIComponent(absenSidangState.jenisSidang)}`
-      + `&tanggal=${encodeURIComponent(absenSidangState.tanggal)}`;
-    const resp   = await fetch(url);
-    const result = await resp.json();
-
-    absenSidangState.absenMap = {};
-    absenSidangState.tamuMap  = {};
-    absenSidangState.tamuList = [];
-
-    if (result.status==='ok' && result.data) {
-      result.data.forEach(row => {
-        if (row.is_tamu==='y') {
-          // Tamu dari server
-          const tamuKey = 'TAMU_' + row.nama;
-          absenSidangState.tamuMap[tamuKey] = {
-            hadir        : row.hadir,
-            dicatat_oleh : row.dicatat_oleh,
-            waktu_catat  : row.waktu_catat,
-            nama_dijenguk: row.nama_dijenguk||'',
-            ket_jenguk   : row.ket_jenguk||'',
-          };
-          // Tambahkan ke tamuList jika belum ada
-          if (!absenSidangState.tamuList.find(t => t.nama===row.nama)) {
-            absenSidangState.tamuList.push({
-              id_tamu      : tamuKey,
-              nama         : row.nama,
-              hadir        : row.hadir,
-              nama_dijenguk: row.nama_dijenguk||'',
-              ket_jenguk   : row.ket_jenguk||'',
-            });
-          }
-        } else {
-          absenSidangState.absenMap[row.no_efataid] = {
-            hadir        : row.hadir,
-            dicatat_oleh : row.dicatat_oleh,
-            waktu_catat  : row.waktu_catat,
-            nama_dijenguk: row.nama_dijenguk||'',
-            ket_jenguk   : row.ket_jenguk||'',
-          };
-        }
-      });
+  // STEP 1: Cek data existing dari server untuk tanggal + jenis sidang ini
+  let serverData=[];
+  let hasExisting=false;
+  try{
+    const url=`${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_absen_sidang`
+      +`&jenis_sidang=${encodeURIComponent(absenSidangState.jenisSidang)}`
+      +`&tanggal=${encodeURIComponent(absenSidangState.tanggal)}`;
+    const resp=await fetch(url);
+    const result=await resp.json();
+    if(result.status==='ok'&&result.data&&result.data.length>0){
+      serverData=result.data;
+      hasExisting=true;
     }
-  } catch(e) {
-    toast('⚠️ Gagal load: ' + e.message);
+  }catch(e){toast('⚠️ Gagal load server: '+e.message);}
+
+  // STEP 2: Build absenMap & tamuMap dari data server
+  absenSidangState.absenMap={};
+  absenSidangState.tamuMap={};
+  absenSidangState.tamuList=[];
+
+  serverData.forEach(row=>{
+    if(row.is_tamu==='y'){
+      const tamuKey='TAMU_'+row.nama;
+      absenSidangState.tamuMap[tamuKey]={
+        hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,waktu_catat:row.waktu_catat,
+        nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+      };
+      if(!absenSidangState.tamuList.find(t=>t.nama===row.nama)){
+        absenSidangState.tamuList.push({
+          id_tamu:tamuKey,nama:row.nama,hadir:row.hadir,
+          nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+        });
+      }
+    }else{
+      absenSidangState.absenMap[row.no_efataid]={
+        hadir:row.hadir,dicatat_oleh:row.dicatat_oleh,waktu_catat:row.waktu_catat,
+        nama_dijenguk:row.nama_dijenguk||'',ket_jenguk:row.ket_jenguk||'',
+      };
+    }
+  });
+
+  // STEP 3: Load master Jemaat
+  if(!db.Jemaat){
+    await new Promise(r=>Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
+  }
+  absenSidangState.masterList=buildSidangMaster(absenSidangState.jenisSidang,absenSidangState.subGugus);
+
+  absenSidangState.sudahLoad=true;
+  absenSidangState.searchQuery='';
+
+  document.getElementById('sidang-toolbar').style.display='block';
+  document.getElementById('sidang-tamu-form').style.display='block';
+
+  // Notifikasi update mode
+  if(hasExisting&&wrap){
+    const notif=document.createElement('div');
+    notif.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--yellow);';
+    notif.innerHTML=`⚠️ <strong>Mode Update:</strong> Ditemukan ${serverData.length} data di tanggal ${formatTglDisplay(absenSidangState.tanggal)} untuk ${absenSidangState.jenisSidang}. Data lama akan terhapus & diganti saat klik <strong>Simpan Semua</strong>.`;
+    const toolbar=document.getElementById('sidang-toolbar');
+    if(toolbar&&toolbar.parentNode)toolbar.parentNode.insertBefore(notif,toolbar);
+    setTimeout(()=>{if(notif.parentNode)notif.parentNode.removeChild(notif);},5000);
   }
 
-  absenSidangState.sudahLoad   = true;
-  absenSidangState.searchQuery = '';
-
-  document.getElementById('sidang-toolbar').style.display = 'block';
-  document.getElementById('sidang-tamu-form').style.display = 'block';
   renderSidangSummary();
   renderSidangList();
   renderSidangLog();
 }
+
 
 // ── MASTER LIST SIDANG ──────────────────────────────────────────────────
 function buildSidangMaster(jenisSidang, subGugus) {
@@ -3252,52 +3292,50 @@ async function simpanSatuSidang(no_efataid, nama, hadir, namaDijenguk='', ketJen
 }
 
 // ── SIMPAN SEMUA SIDANG ────────────────────────────────────────────────
-async function simpanSemuaSidang() {
-  if (!absenSidangState.masterList.length && !absenSidangState.tamuList.length)
+async function simpanSemuaSidang(){
+  if(!absenSidangState.masterList.length&&!absenSidangState.tamuList.length)
     return toast('⚠️ Daftar kosong');
-  if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
+  if(!absenSidangState.tanggal)return toast('⚠️ Pilih tanggal');
   toast('⏳ Menyimpan semua...');
 
-  const items = [
-    ...absenSidangState.masterList.map(j => ({
-      no_efataid    : j.no_efataid,
-      nama          : j.nama,
-      hadir         : absenSidangState.absenMap[j.no_efataid]?.hadir || 'n',
-      nama_dijenguk : absenSidangState.absenMap[j.no_efataid]?.nama_dijenguk || '',
-      ket_jenguk    : absenSidangState.absenMap[j.no_efataid]?.ket_jenguk    || '',
+  const items=[
+    ...absenSidangState.masterList.map(j=>({
+      no_efataid:j.no_efataid,nama:j.nama,
+      hadir:absenSidangState.absenMap[j.no_efataid]?.hadir||'n',
+      nama_dijenguk:absenSidangState.absenMap[j.no_efataid]?.nama_dijenguk||'',
+      ket_jenguk:absenSidangState.absenMap[j.no_efataid]?.ket_jenguk||'',
     })),
-    ...absenSidangState.tamuList.map(t => ({
-      no_efataid    : '',
-      nama          : t.nama,
-      hadir         : t.hadir,
-      nama_dijenguk : t.nama_dijenguk||'',
-      ket_jenguk    : t.ket_jenguk||'',
+    ...absenSidangState.tamuList.map(t=>({
+      no_efataid:'',nama:t.nama,hadir:t.hadir,
+      nama_dijenguk:t.nama_dijenguk||'',ket_jenguk:t.ket_jenguk||'',
     })),
   ];
 
-  const params = new URLSearchParams({
-    action               : 'simpan_batch_sidang',
-    jenis_sidang         : absenSidangState.jenisSidang,
-    sub_gugus            : absenSidangState.subGugus,
-    tanggal_absen        : absenSidangState.tanggal,
-    minggu               : absenSidangState.minggu,
-    dicatat_oleh         : currentUser?.username||'-',
-    no_efataid_pencatat  : currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
-    level_user           : getLevelCode(),
-    data                 : JSON.stringify(items),
+  const params=new URLSearchParams({
+    action:'simpan_batch_sidang',
+    jenis_sidang:absenSidangState.jenisSidang,
+    sub_gugus:absenSidangState.subGugus,
+    tanggal_absen:absenSidangState.tanggal,
+    minggu:absenSidangState.minggu,
+    dicatat_oleh:currentUser?.username||'-',
+    no_efataid_pencatat:currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
+    level_user:getLevelCode(),
+    replace_tanggal:'y',  // FLAG: hapus data tanggal+jenis ini dulu
+    data:JSON.stringify(items),
   });
 
-  try {
-    const resp   = await fetch(APPS_SCRIPT_ABSENSI_SIDANG, {
-      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:params.toString()
+  try{
+    const resp=await fetch(APPS_SCRIPT_ABSENSI_SIDANG,{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()
     });
-    const result = await resp.json();
-    if (result.status==='ok') {
-      toast(`✅ ${result.inserted} baru, ${result.updated} update`);
+    const result=await resp.json();
+    if(result.status==='ok'){
+      toast(`✅ ${result.inserted} data tersimpan (${result.deleted||0} lama dihapus)`);
       renderSidangLog();
-    } else toast('❌ ' + result.message);
-  } catch(e) { toast('⚠️ ' + e.message); }
+    }else toast('❌ '+result.message);
+  }catch(e){toast('⚠️ '+e.message);}
 }
+
 
 // ── SEMUA HADIR / RESET SIDANG ──────────────────────────────────────────
 function sidangSemuaHadir() {
@@ -3812,48 +3850,40 @@ ${item.keputusan?`\n🏷 Keputusan: ${escHtml(item.keputusan)}`:''}
 // ╚══════════════════════════════════════════════════════════════╝
  
 // ── STATE LAPORAN ──────────────────────────────────────────────
-let laporanAbsenState = {
-  tglAwal : '',
-  tglAkhir: '',
-  data    : null,
-};
+let laporanAbsenState = { tglAwal:'', tglAkhir:'', data:null, _teksLaporan:'' };   
  
 // ── RENDER LAPORAN ABSENSI ─────────────────────────────────────
-function renderLaporanAbsensi() {
-  const content = document.getElementById('app-content');
-  if (!bolehAbsenKTM() && !bolehAbsenSidang()) {
-    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
+
+function renderLaporanAbsensi(){
+  const content=document.getElementById('app-content');
+  if(!bolehAbsenKTM()&&!bolehAbsenSidang()){
+    content.innerHTML=`<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
     return;
   }
- 
-  const now = new Date();
-  const pad = x => String(x).padStart(2,'0');
-  // Default: 1 bulan terakhir
-  const tglAkhirDefault = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
-  const satu = new Date(now); satu.setDate(satu.getDate() - 30);
-  const tglAwalDefault  = `${pad(satu.getDate())}/${pad(satu.getMonth()+1)}/${satu.getFullYear()}`;
- 
-  if (!laporanAbsenState.tglAwal)  laporanAbsenState.tglAwal  = tglAwalDefault;
-  if (!laporanAbsenState.tglAkhir) laporanAbsenState.tglAkhir = tglAkhirDefault;
- 
-  content.innerHTML = `
+  const now=new Date();
+  const pad=x=>String(x).padStart(2,'0');
+  const tglAkhirDefault=`${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  const satu=new Date(now);satu.setDate(satu.getDate()-30);
+  const tglAwalDefault=`${pad(satu.getDate())}/${pad(satu.getMonth()+1)}/${satu.getFullYear()}`;
+  if(!laporanAbsenState.tglAwal)laporanAbsenState.tglAwal=tglAwalDefault;
+  if(!laporanAbsenState.tglAkhir)laporanAbsenState.tglAkhir=tglAkhirDefault;
+
+  content.innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="font-size:.75rem;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
         📊 Laporan Summary Absensi
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <div>
           <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AWAL</div>
           <input type="date" id="lap-tgl-awal" class="k-input"
             value="${formatDateForInput(laporanAbsenState.tglAwal)}"
-            onchange="laporanAbsenState.tglAwal=formatDateFromInput(this.value)"
             style="width:100%;">
         </div>
         <div>
           <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AKHIR</div>
           <input type="date" id="lap-tgl-akhir" class="k-input"
             value="${formatDateForInput(laporanAbsenState.tglAkhir)}"
-            onchange="laporanAbsenState.tglAkhir=formatDateFromInput(this.value)"
             style="width:100%;">
         </div>
       </div>
@@ -3861,63 +3891,80 @@ function renderLaporanAbsensi() {
         🔄 Tampilkan Laporan
       </button>
     </div>
-    <div id="laporan-result"></div>`;
+    <div id="laporan-result">
+      <div class="empty-state"><div class="icon">📊</div><p>Pilih rentang tanggal lalu klik Tampilkan.</p></div>
+    </div>`;
 }
- 
-async function loadLaporanAbsensi() {
-  const tglAwal  = document.getElementById('lap-tgl-awal')?.value;
-  const tglAkhir = document.getElementById('lap-tgl-akhir')?.value;
-  if (tglAwal)  laporanAbsenState.tglAwal  = formatDateFromInput(tglAwal);
-  if (tglAkhir) laporanAbsenState.tglAkhir = formatDateFromInput(tglAkhir);
- 
-  const el = document.getElementById('laporan-result');
-  if (!el) return;
-  el.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>';
- 
-  try {
-    const url = `${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_laporan_range`
-      + `&tgl_awal=${encodeURIComponent(laporanAbsenState.tglAwal)}`
-      + `&tgl_akhir=${encodeURIComponent(laporanAbsenState.tglAkhir)}`;
-    const resp   = await fetch(url);
-    const result = await resp.json();
- 
-    if (result.status !== 'ok') {
-      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${escHtml(result.message||'Error')}</p></div>`;
+   
+async function loadLaporanAbsensi(){
+  const tglAwal=document.getElementById('lap-tgl-awal')?.value;
+  const tglAkhir=document.getElementById('lap-tgl-akhir')?.value;
+  if(!tglAwal||!tglAkhir)return toast('⚠️ Pilih tanggal awal dan akhir');
+  laporanAbsenState.tglAwal=formatDateFromInput(tglAwal);
+  laporanAbsenState.tglAkhir=formatDateFromInput(tglAkhir);
+
+  const el=document.getElementById('laporan-result');
+  if(!el)return;
+  el.innerHTML=`<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div><div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat data dari server...</div>`;
+
+  try{
+    const url=`${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_laporan_range`
+      +`&tgl_awal=${encodeURIComponent(laporanAbsenState.tglAwal)}`
+      +`&tgl_akhir=${encodeURIComponent(laporanAbsenState.tglAkhir)}`;
+
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),15000);
+    const resp=await fetch(url,{signal:controller.signal});
+    clearTimeout(timeout);
+
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const text=await resp.text();
+    let result;
+    try{result=JSON.parse(text);}
+    catch(e){throw new Error('Response bukan JSON: '+text.slice(0,100));}
+
+    if(result.status!=='ok'){
+      el.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>${escHtml(result.message||'Error tidak diketahui')}</p></div>`;
       return;
     }
- 
-    renderLaporanResult(el, result.data);
-  } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}</p></div>`;
+    if(!result.data||!Object.keys(result.data).length){
+      el.innerHTML=`<div class="empty-state"><div class="icon">📭</div>
+        <p>Tidak ada data absensi dalam rentang<br><strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))}</strong> — <strong>${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}</strong></p></div>`;
+      return;
+    }
+    renderLaporanResult(el,result.data);
+  }catch(e){
+    if(e.name==='AbortError'){
+      el.innerHTML=`<div class="empty-state"><div class="icon">⏱</div><p>Timeout. Server terlalu lama merespons.<br>Coba persempit rentang tanggal.</p></div>`;
+    }else{
+      el.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}<br><small style="color:var(--text3);">Pastikan Apps Script sudah di-deploy ulang (v2).</small></p></div>`;
+    }
+    console.error('Laporan error:',e);
   }
 }
+
  
-function renderLaporanResult(el, data) {
-  if (!data || !Object.keys(data).length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Tidak ada data dalam rentang tanggal ini.</p></div>`;
-    return;
-  }
- 
-  // Hitung grand total
-  let grandHadir = 0, grandTotal = 0;
-  Object.values(data).forEach(byTgl => {
-    Object.values(byTgl).forEach(s => { grandHadir += s.hadir; grandTotal += s.total; });
+function renderLaporanResult(el,data){
+  let grandHadir=0,grandTotal=0;
+  Object.values(data).forEach(byTgl=>{
+    Object.values(byTgl).forEach(s=>{grandHadir+=s.hadir;grandTotal+=s.total;});
   });
- 
-  // Build teks summary untuk copy
-  const teksLines = [
+  const teksLines=[
     `LAPORAN ABSENSI`,
     `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    `Dicetak: ${new Date().toLocaleString('id-ID')}`,
+    `Dicetak oleh: ${currentUser?.username||'-'}`,
     '',
   ];
- 
-  let html = `
+  let html=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <div style="font-weight:700;">📊 Periode: ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} — ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}</div>
-        <button onclick="copyLaporanText()" class="btn-action green" style="padding:7px 14px;font-size:.78rem;">📋 Copy Semua</button>
+        <div style="font-weight:700;font-size:.88rem;">
+          📊 ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} — ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}
+        </div>
+        <button onclick="copyLaporanText()" class="btn-action green" style="padding:7px 14px;font-size:.78rem;">📋 Copy</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div style="background:var(--surface2);border-radius:9px;padding:10px;text-align:center;border:1px solid var(--border);">
           <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--accent);">${grandTotal}</div>
           <div style="font-size:.65rem;color:var(--text3);">Total Presensi</div>
@@ -3932,82 +3979,66 @@ function renderLaporanResult(el, data) {
         </div>
       </div>
     </div>`;
- 
-  // Per jenis sidang
-  Object.entries(data).sort().forEach(([jenis, byTgl]) => {
-    let jenisHadir = 0, jenisTotal = 0;
-    Object.values(byTgl).forEach(s => { jenisHadir += s.hadir; jenisTotal += s.total; });
- 
+
+  Object.entries(data).sort().forEach(([jenis,byTgl])=>{
+    let jenisHadir=0,jenisTotal=0;
+    Object.values(byTgl).forEach(s=>{jenisHadir+=s.hadir;jenisTotal+=s.total;});
     teksLines.push(`▸ ${jenis}`);
-    const sortedTgl = Object.keys(byTgl).sort((a,b) => {
-      const pa=a.split('/'); const pb=b.split('/');
-      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+    const sortedTgl=Object.keys(byTgl).sort((a,b)=>{
+      const pa=a.split('/');const pb=b.split('/');
+      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`)-new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
     });
- 
-    html += `
+    html+=`
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div style="font-weight:700;font-size:.92rem;">📋 ${escHtml(jenis)}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green);">${jenisHadir}/${jenisTotal} hadir</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green);">${jenisHadir}/${jenisTotal}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
-          <thead>
-            <tr style="background:var(--surface2);">
-              <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);text-transform:uppercase;">Tanggal</th>
-              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Hadir</th>
-              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Tidak</th>
-              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Total</th>
-              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">%</th>
-            </tr>
-          </thead>
-          <tbody>`;
- 
-    sortedTgl.forEach(tgl => {
-      const s   = byTgl[tgl];
-      const pct = s.total > 0 ? Math.round(s.hadir/s.total*100) : 0;
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Tanggal</th>
+            <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Hadir</th>
+            <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Tidak</th>
+            <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Total</th>
+            <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">%</th>
+          </tr></thead><tbody>`;
+    sortedTgl.forEach(tgl=>{
+      const s=byTgl[tgl];
+      const pct=s.total>0?Math.round(s.hadir/s.total*100):0;
       teksLines.push(`  ${formatTglDisplay(tgl)}: Hadir ${s.hadir}/${s.total} (${pct}%)`);
-      html += `
-            <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:6px 8px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
-              <td style="padding:6px 8px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${s.hadir}</td>
-              <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${s.tidak}</td>
-              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${s.total}</td>
-              <td style="padding:6px 8px;text-align:center;">
-                <div style="display:flex;align-items:center;gap:4px;">
-                  <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
-                    <div style="height:100%;width:${pct}%;background:var(--green);border-radius:2px;"></div>
-                  </div>
-                  <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);min-width:28px;">${pct}%</span>
-                </div>
-              </td>
-            </tr>`;
+      html+=`<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:6px 8px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
+        <td style="padding:6px 8px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${s.hadir}</td>
+        <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${s.tidak}</td>
+        <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${s.total}</td>
+        <td style="padding:6px 8px;text-align:center;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:var(--green);border-radius:2px;"></div>
+            </div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);min-width:28px;">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
     });
- 
-    teksLines.push(`  TOTAL ${jenis}: ${jenisHadir}/${jenisTotal}`);
+    teksLines.push(`  TOTAL ${jenis}: ${jenisHadir}/${jenisTotal} (${jenisTotal>0?Math.round(jenisHadir/jenisTotal*100):0}%)`);
     teksLines.push('');
- 
-    html += `
-            <tr style="background:var(--surface2);font-weight:700;">
-              <td style="padding:6px 8px;">TOTAL</td>
-              <td style="padding:6px 8px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisHadir}</td>
-              <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${jenisTotal-jenisHadir}</td>
-              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${jenisTotal}</td>
-              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);">${jenisTotal>0?Math.round(jenisHadir/jenisTotal*100):0}%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>`;
+    html+=`<tr style="background:var(--surface2);font-weight:700;">
+      <td style="padding:6px 8px;">TOTAL</td>
+      <td style="padding:6px 8px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisHadir}</td>
+      <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${jenisTotal-jenisHadir}</td>
+      <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${jenisTotal}</td>
+      <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--accent);">${jenisTotal>0?Math.round(jenisHadir/jenisTotal*100):0}%</td>
+    </tr></tbody></table></div>`;
   });
- 
-  // Simpan teks untuk copy
-  laporanAbsenState._teksLaporan = teksLines.join('\n');
-  el.innerHTML = html;
+  laporanAbsenState._teksLaporan=teksLines.join('\n');
+  el.innerHTML=html;
 }
  
-function copyLaporanText() {
-  const teks = laporanAbsenState._teksLaporan || '';
-  if (!teks) return toast('⚠️ Tidak ada data');
-  navigator.clipboard.writeText(teks).then(() => toast('✅ Laporan disalin!'));
+function copyLaporanText(){
+  const teks=laporanAbsenState._teksLaporan||'';
+  if(!teks)return toast('⚠️ Tidak ada data');
+  navigator.clipboard.writeText(teks).then(()=>toast('✅ Laporan disalin!'));
 }
     
 // ══════════════════════════════════════════════════
