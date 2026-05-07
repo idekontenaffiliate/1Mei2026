@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.33 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v8.33 @2026</span></div>
   </div>
 </div>
 
@@ -560,8 +560,8 @@ const APPS_SCRIPT_PERTANYAAN="https://script.google.com/macros/s/AKfycbwu44NIFHH
 const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7VgzIUMAM-IaUDI1fIfbdTkyzyUl1zH-jFD7aAlKEVxpy1Eq3vCxQ/exec";
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
-const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbwIUsyjS4UKq1y1u5o1GjJKaPkvvPM7NpxgbiR1oQ3w_rygoOz-qHAFb5Qos5dp6P_MoQ/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyMT5fLawx_XjKIWHeCx8fEoURkTdxiwBi7bun8LIfcp-x1SXnv7hoUG11nmZuRQWui5Q/exec";
+const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbw_hxwHN-9R7cErR4SbdYihoo01MgMJoMz3FvJrENTQuZgIDqtHEnerUjMS_bk4DIBIzA/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -699,25 +699,41 @@ function attemptLogin(){
 }
 function doLogout(){
   if(!confirm('Yakin ingin keluar?'))return;
-  logHistory('logout','keluar aplikasi');
+  // Wrap dalam try-catch agar error state reset tidak hentikan proses logout
+  try{logHistory('logout','keluar aplikasi');}catch(e){}
   currentUser=null;
-  // Reset semua state
-  db={};
-  ptnyAllData=[];ptnyFilteredData=[];hpFilteredData=[];
-  lastFilteredJemaat=[];pertanyaanRatings={};
-  ptnyCurrentPage=1;hpCurrentPage=1;
-  jemaatFilterIbadah=[];jemaatFilterPelayanan=[];
-  jemaatFilterKelas=[];jemaatFilterGugus=[];
-  jemaatFilterKTM=[];jemaatFilterKTMTahir=[];
-  absenKTMState={jenis:'KTM',bulan:'',tahun:'',tanggal:'',masterList:[],absenMap:{},
-    scanMode:false,searchQuery:'',sudahLoad:false,viewMode:'grid',user2:'',user2EfataID:''};
-  absenSidangState={jenisSidang:'SPR Pagi',subGugus:'',tanggal:'',minggu:'',
-    masterList:[],tamuList:[],absenMap:{},tamuMap:{},searchQuery:'',sudahLoad:false,
-    viewMode:'grid',namaTabBaru:''};
-  laporanAbsenState={tglAwal:'',tglAkhir:'',data:null,_teksLaporan:''};
-  // Stop clock interval
-  if(window._dashClockInterval){clearInterval(window._dashClockInterval);window._dashClockInterval=null;}
-  // Reset UI
+  try{
+    db={};
+    ptnyAllData=[];ptnyFilteredData=[];hpFilteredData=[];
+    lastFilteredJemaat=[];pertanyaanRatings={};
+    ptnyCurrentPage=1;hpCurrentPage=1;
+    jemaatFilterIbadah=[];jemaatFilterPelayanan=[];
+    if(typeof jemaatFilterKelas!=='undefined')jemaatFilterKelas=[];
+    if(typeof jemaatFilterGugus!=='undefined')jemaatFilterGugus=[];
+    jemaatFilterIbadahMode='OR';jemaatFilterPelayananMode='OR';
+    if(typeof jemaatFilterKelasMode!=='undefined')jemaatFilterKelasMode='OR';
+    if(typeof jemaatFilterGugusMode!=='undefined')jemaatFilterGugusMode='OR';
+    if(typeof jemaatFilterKTM!=='undefined')jemaatFilterKTM=[];
+    if(typeof jemaatFilterKTMTahir!=='undefined')jemaatFilterKTMTahir=[];
+    totalVisible=false;jemaatTotalActual=0;
+    dashLaporanOpen=false;
+    if(typeof absenKTMState!=='undefined')absenKTMState={
+      jenis:'KTM',bulan:'',tahun:'',tanggal:'',
+      masterList:[],absenMap:{},scanMode:false,
+      searchQuery:'',sudahLoad:false,viewMode:'grid',user2:'',user2EfataID:''
+    };
+    if(typeof absenSidangState!=='undefined')absenSidangState={
+      jenisSidang:'SPR Pagi',subGugus:'',tanggal:'',minggu:'',
+      masterList:[],tamuList:[],absenMap:{},tamuMap:{},
+      searchQuery:'',sudahLoad:false,viewMode:'grid',namaTabBaru:''
+    };
+    if(typeof laporanAbsenState!=='undefined')laporanAbsenState={
+      tglAwal:'',tglAkhir:'',data:null,_teksLaporan:''
+    };
+  }catch(e){console.warn('State reset error:',e);}
+  // Hentikan clock interval
+  try{if(window._dashClockInterval){clearInterval(window._dashClockInterval);window._dashClockInterval=null;}}catch(e){}
+  // Reset UI — ini HARUS selalu jalan
   document.getElementById('main-app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('main-nav').innerHTML='';
@@ -727,9 +743,20 @@ function doLogout(){
   document.getElementById('user').value='';
   document.getElementById('pass').value='';
   document.getElementById('login-error').style.display='none';
+  // Tutup semua overlay yang mungkin terbuka
+  try{
+    document.getElementById('itemModal').style.display='none';
+    document.getElementById('img-viewer').style.display='none';
+    document.getElementById('pdf-fullscreen').style.display='none';
+    document.getElementById('jemaat-popup-overlay').classList.remove('open');
+    document.getElementById('info-modal-overlay').classList.remove('open');
+    document.getElementById('pw-modal-overlay').classList.remove('open');
+    const fs=document.getElementById('fullscreen-lyric');if(fs)fs.remove();
+    const ptfs=document.getElementById('ptny-fullscreen');if(ptfs)ptfs.remove();
+  }catch(e){}
   // Reload data Awal untuk login berikutnya
   Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
-}
+}   
 function setupNavigation(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
   const menus=(currentUser?.tipe||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -2089,26 +2116,38 @@ const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni',
                     'Juli','Agustus','September','Oktober','November','Desember'];
 
 // ── LEVEL ──────────────────────────────────────────────────────────────
-function getLevelCode() {
-  // level bisa di field 'level' atau 'tipe'
-  const lvl = (currentUser?.level || '').trim();
-  if (lvl) return lvl;
-  // Jika tipe berisi multi-value, cek apakah ada level di dalamnya
-  const tipe = (currentUser?.tipe || '').trim();
-  const knownLevels = ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'];
-  const found = knownLevels.find(l => tipe.includes(l));
-  return found || tipe;
+
+function getLevelCode(){
+  // Coba field 'level' dulu
+  const lvl=(currentUser?.level||'').trim();
+  if(lvl)return lvl;
+  // Fallback ke field 'tipe' — mungkin berisi multi-value seperti "Dashboard,Jemaat,Administrator"
+  const tipe=(currentUser?.tipe||'').trim();
+  // Cek apakah tipe mengandung salah satu level yang dikenal
+  const knownLevels=['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'];
+  const found=knownLevels.find(l=>tipe.split(',').map(s=>s.trim()).includes(l));
+  return found||tipe;
 }
 
-function bolehAbsenKTM() {
-  const l = getLevelCode();
-  return ['Penatua','Gembala Distrik','Administrator'].includes(l);
+function bolehAbsenKTM(){
+  const l=getLevelCode();
+  const u=(currentUser?.username||'').toLowerCase();
+  if(u==='admin')return true;
+  // Cek level langsung
+  if(['Penatua','Gembala Distrik','Administrator'].includes(l))return true;
+  // Cek juga di field tipe (kalau level tidak terpisah)
+  const tipe=(currentUser?.tipe||'');
+  return ['Penatua','Gembala Distrik','Administrator'].some(lv=>tipe.includes(lv));
 }
 
-function bolehAbsenSidang() {
-  const l = getLevelCode();
-  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(l);
-}
+function bolehAbsenSidang(){
+  const l=getLevelCode();
+  const u=(currentUser?.username||'').toLowerCase();
+  if(u==='admin')return true;
+  if(['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(l))return true;
+  const tipe=(currentUser?.tipe||'');
+  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].some(lv=>tipe.includes(lv));
+}   
 // ── RENDER UTAMA ───────────────────────────────────────────────────────
 function renderAbsensiKTM() {
   const content = document.getElementById('app-content');
@@ -2664,36 +2703,37 @@ function toggleAbsenKTM(no_efataid, nama) {
   renderAbsenKTMList();
 }
 // ── SIMPAN SATU KTM ────────────────────────────────────────────────────
-async function simpanSatuAbsenKTM(no_efataid, nama, hadir, isTamu = false) {
-  const params = new URLSearchParams({
-    action               : 'simpan_absen',
-    jenis                : absenKTMState.jenis,
-    bulan                : absenKTMState.bulan,
-    tahun                : absenKTMState.tahun,
-    tanggal_absen        : absenKTMState.tanggal,   // selalu dd/mm/yyyy
-    no_efataid           : no_efataid || '',
+
+async function simpanSatuAbsenKTM(no_efataid, nama, hadir, isTamu=false){
+  const params=new URLSearchParams({
+    action        :'simpan_absen',
+    jenis         :absenKTMState.jenis,
+    bulan         :absenKTMState.bulan,
+    tahun         :absenKTMState.tahun,
+    tanggal_absen :absenKTMState.tanggal,
+    no_efataid    :no_efataid||'',
     nama,
     hadir,
-    is_tamu              : isTamu ? 'y' : 'n',
-    dicatat_oleh         : currentUser?.username || '-',
-    no_efataid_pencatat  : currentUser?.no_EfataID || currentUser?.no_Efataid || currentUser?.No_EfataID || '',
-    user2                : absenKTMState.user2 || '',
-    no_efataid_user2     : '',
-    level_user           : getLevelCode(),
+    is_tamu       :isTamu?'y':'n',
+    dicatat_oleh  :currentUser?.username||'-',
+    no_efataid_pencatat:currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
+    user2         :absenKTMState.user2||'',
+    no_efataid_user2:'',
+    level_user    :getLevelCode(),
   });
-  try {
-    const resp   = await fetch(APPS_SCRIPT_ABSENSI_KTM, {
-      method  : 'POST',
-      headers : { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body    : params.toString()
-    });
-    const result = await resp.json().catch(() => ({}));
-    toast(hadir === 'y' ? `✅ ${nama} — Hadir` : `❌ ${nama} — Tidak Hadir`, 1800);
-  } catch(e) {
-    toast('⚠️ Gagal: ' + e.message);
+  try{
+    // Gunakan GET agar bisa baca response (tidak perlu no-cors)
+    const resp=await fetch(APPS_SCRIPT_ABSENSI_KTM+'?'+params.toString());
+    const result=await resp.json().catch(()=>({}));
+    if(result.status==='ok'){
+      toast(hadir==='y'?`✅ ${nama} — Hadir`:`❌ ${nama} — Tidak Hadir`,1800);
+    }else{
+      toast('⚠️ Server: '+(result.message||'gagal'),2500);
+    }
+  }catch(e){
+    toast('⚠️ Gagal koneksi: '+e.message);
   }
 }
-
 // ── SIMPAN SEMUA KTM ───────────────────────────────────────────────────
 async function simpanSemuaAbsenKTM(){
   if (!absenKTMState.masterList.length && !(absenKTMState.tamuList?.length))
@@ -3436,33 +3476,33 @@ function setTamuJengukField(idTamu, field, val) {
 }
 
 // ── SIMPAN SATU SIDANG ──────────────────────────────────────────────────
-async function simpanSatuSidang(no_efataid, nama, hadir, namaDijenguk='', ketJenguk='') {
-  const d = no_efataid ? absenSidangState.absenMap[no_efataid] : null;
-  const params = new URLSearchParams({
-    action               : 'simpan_absen_sidang',
-    jenis_sidang         : absenSidangState.jenisSidang,
-    sub_gugus            : absenSidangState.subGugus,
-    tanggal_absen        : absenSidangState.tanggal,
-    minggu               : absenSidangState.minggu,
-    no_efataid           : no_efataid || '',
+async function simpanSatuSidang(no_efataid,nama,hadir,namaDijenguk='',ketJenguk=''){
+  const d=no_efataid?absenSidangState.absenMap[no_efataid]:null;
+  const params=new URLSearchParams({
+    action               :'simpan_absen_sidang',
+    jenis_sidang         :absenSidangState.jenisSidang,
+    sub_gugus            :absenSidangState.subGugus,
+    tanggal_absen        :absenSidangState.tanggal,
+    minggu               :absenSidangState.minggu,
+    no_efataid           :no_efataid||'',
     nama,
     hadir,
-    nama_dijenguk        : namaDijenguk || d?.nama_dijenguk || '',
-    ket_jenguk           : ketJenguk   || d?.ket_jenguk    || '',
-    dicatat_oleh         : currentUser?.username||'-',
-    no_efataid_pencatat  : currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
-    level_user           : getLevelCode(),
+    nama_dijenguk        :namaDijenguk||d?.nama_dijenguk||'',
+    ket_jenguk           :ketJenguk||d?.ket_jenguk||'',
+    dicatat_oleh         :currentUser?.username||'-',
+    no_efataid_pencatat  :currentUser?.no_EfataID||currentUser?.no_Efataid||currentUser?.No_EfataID||'',
+    level_user           :getLevelCode(),
   });
-  try {
-    await fetch(APPS_SCRIPT_ABSENSI_SIDANG, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:params.toString()
-    });
-    toast(hadir==='y'?`✅ ${nama} — Hadir`:`❌ ${nama} — Tidak Hadir`, 1800);
-  } catch(e) { toast('⚠️ Gagal: '+e.message); }
+  try{
+    const resp=await fetch(APPS_SCRIPT_ABSENSI_SIDANG+'?'+params.toString());
+    const result=await resp.json().catch(()=>({}));
+    if(result.status==='ok'){
+      toast(hadir==='y'?`✅ ${nama} — Hadir`:`❌ ${nama} — Tidak Hadir`,1800);
+    }else{
+      toast('⚠️ '+( result.message||'gagal'),2500);
+    }
+  }catch(e){toast('⚠️ Gagal: '+e.message);}
 }
-
 // ── SIMPAN SEMUA SIDANG ────────────────────────────────────────────────
 async function simpanSemuaSidang(){
   if(!absenSidangState.masterList.length&&!absenSidangState.tamuList.length)
