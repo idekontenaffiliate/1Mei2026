@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v1.90 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v1.99 @2026</span></div>
   </div>
 </div>
 
@@ -561,7 +561,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbwcA0PST5GJBuoFveZo99Mdi6DpCPawY94LIH5dFSFtaxyGGyyF3V_LQze_aMNhPEys8w/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzFtC2WvZBjfx7szs4w4edfSdff3V5VYRmVDRRcw-7yfl-e6Aramb8zMd0gxPlDwEjSgw/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbwiGe6PwohhNOlX3CFlLj49RJYXghmRLrYija5yp6kz_XNH-T80DjxZNuVLIOMx05-UqA/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -712,7 +712,7 @@ function setupNavigation(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
   const menus=(currentUser?.tipe||'').split(',').map(s=>s.trim()).filter(Boolean);
   // Hilangkan menu Quiz dan Link
-  const filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link');
+  const filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link'); 
   const allMenus=['Dashboard',...filteredMenus.filter(m=>m!=='Dashboard')];
   allMenus.forEach((menu,idx)=>{
     const btn=document.createElement('button');
@@ -723,7 +723,7 @@ function setupNavigation(){
   });
 }
 function menuLabel(n){
-  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Absensi KTM':'📋','Absensi Sidang':'📋','Hasil Pertanyaan':'📋',Admin:'🔑'};
+  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Absensi KTM':'📋','Absensi Sidang':'📋','Laporan Absensi':'📈','Hasil Pertanyaan':'📋',Admin:'🔑'};
   return(icons[n.trim()]||'•')+' '+n.trim();
 }
 function loadModule(name,el){
@@ -754,6 +754,7 @@ function dispatchRender(name){
   else if(n==='admin')renderAdmin();
   else if(n==='absensi ktm') renderAbsensiKTM();   
   else if(n==='absensi sidang') renderAbsensiSidang();   
+  else if(n==='laporan absensi') renderLaporanAbsensi();   
   else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
 }
 
@@ -2422,25 +2423,49 @@ function renderAbsenKTMList() {
 function renderAbsenKTMText(wrap) {
   const tgl    = absenKTMState.tanggal;
   const bln    = BULAN_NAMA[parseInt(absenKTMState.bulan)-1];
-  const hadirList = absenKTMState.masterList
-    .filter(j => absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir === 'y');
-
-  const header = `${absenKTMState.jenis.replace('_',' ')} — ${bln} ${absenKTMState.tahun}\nTanggal: ${formatTglDisplay(tgl)}`;
-  const u1u2   = `User 1: ${currentUser?.username||'-'}${absenKTMState.user2?'\nUser 2: '+absenKTMState.user2:''}`;
-  const namaList= hadirList.map((j,i) => `${i+1}. ${j.nama}`).join('\n');
-  const fullText = `${header}\n${u1u2}\n\nYang Hadir (${hadirList.length}):\n${namaList||'(belum ada)'}`;
-
+  const jenis  = absenKTMState.jenis.replace('_',' ');
+  const header = `${jenis} — ${bln} ${absenKTMState.tahun}\nTanggal: ${formatTglDisplay(tgl)}`
+    + (absenKTMState.user2 ? `\nUser 1: ${currentUser?.username||'-'} | User 2: ${absenKTMState.user2}` : `\nDicatat: ${currentUser?.username||'-'}`);
+ 
+  const hadirList = absenKTMState.masterList.filter(j =>
+    absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir === 'y');
+  const tidakList = absenKTMState.masterList.filter(j =>
+    absenKTMState.absenMap[j.no_efataid]?.[tgl]?.hadir !== 'y');
+ 
+  const textHadir = `${header}\n\n✅ YANG HADIR (${hadirList.length} orang):\n`
+    + (hadirList.length ? hadirList.map((j,i) => `${i+1}. ${j.nama}`).join('\n') : '(belum ada)');
+ 
+  const textTidak = `${header}\n\n❌ YANG TIDAK HADIR (${tidakList.length} orang):\n`
+    + (tidakList.length ? tidakList.map((j,i) => `${i+1}. ${j.nama}`).join('\n') : '(semua hadir)');
+ 
+  const textSemua = `${header}\n\n✅ HADIR (${hadirList.length}):\n`
+    + (hadirList.length ? hadirList.map((j,i) => `${i+1}. ${j.nama}`).join('\n') : '(belum ada)')
+    + `\n\n❌ TIDAK HADIR (${tidakList.length}):\n`
+    + (tidakList.length ? tidakList.map((j,i) => `${i+1}. ${j.nama}`).join('\n') : '(semua hadir)');
+ 
   wrap.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-weight:700;font-size:.9rem;">📝 Tampilan Teks</div>
-        <button onclick="navigator.clipboard.writeText(document.getElementById('ktm-text-content').innerText).then(()=>toast('✅ Disalin!'))"
-          class="btn-action green" style="padding:6px 12px;font-size:.78rem;">📋 Copy</button>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <button onclick="navigator.clipboard.writeText(document.getElementById('ktm-text-hadir').innerText).then(()=>toast('✅ Disalin: '+${hadirList.length}+' orang hadir'))"
+        class="btn-action green" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Hadir (${hadirList.length})</button>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('ktm-text-tidak').innerText).then(()=>toast('✅ Disalin: '+${tidakList.length}+' orang tidak hadir'))"
+        class="btn-action red" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Tidak (${tidakList.length})</button>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('ktm-text-semua').innerText).then(()=>toast('✅ Disalin semua!'))"
+        class="btn-action" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Semua</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <div style="font-size:.7rem;font-weight:700;color:var(--green);margin-bottom:4px;text-transform:uppercase;">✅ Hadir (${hadirList.length})</div>
+        <div id="ktm-text-hadir" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.3);border-radius:9px;
+          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:pre-wrap;line-height:1.7;max-height:50vh;overflow-y:auto;">${escHtml(textHadir)}</div>
       </div>
-      <div id="ktm-text-content" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-        padding:12px;font-family:'JetBrains Mono',monospace;font-size:.78rem;white-space:pre-wrap;line-height:1.7;color:var(--text);">${escHtml(fullText)}</div>
-    </div>`;
-}
+      <div>
+        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px;text-transform:uppercase;">❌ Tidak Hadir (${tidakList.length})</div>
+        <div id="ktm-text-tidak" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.3);border-radius:9px;
+          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:pre-wrap;line-height:1.7;max-height:50vh;overflow-y:auto;">${escHtml(textTidak)}</div>
+      </div>
+    </div>
+    <div id="ktm-text-semua" style="display:none;">${escHtml(textSemua)}</div>`;
+}   
 
 // ── TOGGLE ABSEN KTM ────────────────────────────────────────────────────
 function toggleAbsenKTM(no_efataid, nama) {
@@ -3065,55 +3090,84 @@ function renderSidangList() {
 }
 
 // ── TEXT VIEW SIDANG ────────────────────────────────────────────────────
+
 function renderSidangTextView(wrap) {
   const jenis  = absenSidangState.jenisSidang;
   const tgl    = formatTglDisplay(absenSidangState.tanggal);
-  const ket    = absenSidangState.minggu||'-';
-
-  const hadirJemaat = absenSidangState.masterList.filter(j => absenSidangState.absenMap[j.no_efataid]?.hadir==='y');
-  const hadirTamu   = absenSidangState.tamuList.filter(t => t.hadir==='y');
-
-  const lines = [];
-  lines.push(`ABSENSI SIDANG: ${jenis}`);
-  lines.push(`Tanggal : ${tgl}`);
-  lines.push(`Keterangan: ${ket}`);
-  lines.push(`Total Hadir: ${hadirJemaat.length+hadirTamu.length} (Jemaat: ${hadirJemaat.length}, Tamu: ${hadirTamu.length})`);
-  lines.push('');
-  lines.push('── NAMA YANG HADIR ──');
+  const ket    = absenSidangState.minggu ? ` · ${absenSidangState.minggu}` : '';
+  const header = `ABSENSI SIDANG: ${jenis}\nTanggal: ${tgl}${ket}\nDicatat: ${currentUser?.username||'-'}`;
+ 
+  const hadirJemaat = absenSidangState.masterList.filter(j =>
+    absenSidangState.absenMap[j.no_efataid]?.hadir === 'y');
+  const hadirTamu   = absenSidangState.tamuList.filter(t => t.hadir === 'y');
+  const tidakJemaat = absenSidangState.masterList.filter(j =>
+    absenSidangState.absenMap[j.no_efataid]?.hadir !== 'y');
+  const tidakTamu   = absenSidangState.tamuList.filter(t => t.hadir !== 'y');
+ 
+  const totalHadir = hadirJemaat.length + hadirTamu.length;
+  const totalTidak = tidakJemaat.length + tidakTamu.length;
+ 
+  // Build text hadir
+  let linesHadir = [`${header}\n\n✅ YANG HADIR (${totalHadir} orang):`];
   hadirJemaat.forEach((j,i) => {
     let line = `${i+1}. ${j.nama}`;
     if (isPenjengukan()) {
       const nd = absenSidangState.absenMap[j.no_efataid]?.nama_dijenguk||'';
+      if (nd) line += ` → ${nd}`;
       const kj = absenSidangState.absenMap[j.no_efataid]?.ket_jenguk||'';
-      if (nd) line += ` → ${nd}${kj?' ('+kj+')':''}`;
+      if (kj) line += ` (${kj})`;
     }
-    lines.push(line);
+    linesHadir.push(line);
   });
   if (hadirTamu.length) {
-    lines.push('');
-    lines.push('── TAMU ──');
+    linesHadir.push('');
+    linesHadir.push('── Tamu ──');
     hadirTamu.forEach((t,i) => {
       let line = `T${i+1}. ${t.nama} (Tamu)`;
-      if (isPenjengukan()) {
-        if (t.nama_dijenguk) line += ` → ${t.nama_dijenguk}${t.ket_jenguk?' ('+t.ket_jenguk+')':''}`;
-      }
-      lines.push(line);
+      if (isPenjengukan() && t.nama_dijenguk) line += ` → ${t.nama_dijenguk}`;
+      linesHadir.push(line);
     });
   }
-
-  const fullText = lines.join('\n');
+  const textHadir = linesHadir.join('\n');
+ 
+  // Build text tidak hadir
+  let linesTidak = [`${header}\n\n❌ YANG TIDAK HADIR (${totalTidak} orang):`];
+  tidakJemaat.forEach((j,i) => linesTidak.push(`${i+1}. ${j.nama}`));
+  if (tidakTamu.length) {
+    linesTidak.push('');
+    linesTidak.push('── Tamu ──');
+    tidakTamu.forEach((t,i) => linesTidak.push(`T${i+1}. ${t.nama} (Tamu)`));
+  }
+  const textTidak = linesTidak.join('\n');
+ 
+  // Build text semua (untuk copy semua)
+  const textSemua = textHadir + '\n\n' + textTidak.split('\n').slice(3).join('\n')
+    .replace(/^❌/, '\n❌');
+ 
   wrap.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-weight:700;font-size:.9rem;">📝 Tampilan Teks</div>
-        <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-text-content').innerText).then(()=>toast('✅ Disalin!'))"
-          class="btn-action green" style="padding:6px 12px;font-size:.78rem;">📋 Copy</button>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-text-hadir').innerText).then(()=>toast('✅ Disalin: ${totalHadir} orang hadir'))"
+        class="btn-action green" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Hadir (${totalHadir})</button>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-text-tidak').innerText).then(()=>toast('✅ Disalin: ${totalTidak} orang tidak hadir'))"
+        class="btn-action red" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Tidak (${totalTidak})</button>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-text-semua').innerText).then(()=>toast('✅ Disalin semua!'))"
+        class="btn-action" style="flex:1;padding:9px;font-size:.78rem;">📋 Copy Semua</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <div style="font-size:.7rem;font-weight:700;color:var(--green);margin-bottom:4px;text-transform:uppercase;">✅ Hadir (${totalHadir})</div>
+        <div id="sdg-text-hadir" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.3);border-radius:9px;
+          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:pre-wrap;line-height:1.7;max-height:50vh;overflow-y:auto;">${escHtml(textHadir)}</div>
       </div>
-      <div id="sdg-text-content" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-        padding:12px;font-family:'JetBrains Mono',monospace;font-size:.78rem;white-space:pre-wrap;line-height:1.7;color:var(--text);">${escHtml(fullText)}</div>
-    </div>`;
+      <div>
+        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px;text-transform:uppercase;">❌ Tidak Hadir (${totalTidak})</div>
+        <div id="sdg-text-tidak" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.3);border-radius:9px;
+          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:pre-wrap;line-height:1.7;max-height:50vh;overflow-y:auto;">${escHtml(textTidak)}</div>
+      </div>
+    </div>
+    <div id="sdg-text-semua" style="display:none;">${escHtml(textSemua)}</div>`;
 }
-
+   
 // ── TOGGLE ABSEN SIDANG ────────────────────────────────────────────────
 function toggleSidangAbsen(no_efataid, nama) {
   const cur     = absenSidangState.absenMap[no_efataid];
@@ -3752,6 +3806,210 @@ ${item.keputusan?`\n🏷 Keputusan: ${escHtml(item.keputusan)}`:''}
   const fsc=div.querySelector('#fs-content-inner');if(fsc){fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}
 }
 
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH 3 — Laporan Summary Semua Absensi (fungsi baru)      ║
+// ║  Tambahkan di bagian bawah <script> sebelum </script>       ║
+// ╚══════════════════════════════════════════════════════════════╝
+ 
+// ── STATE LAPORAN ──────────────────────────────────────────────
+let laporanAbsenState = {
+  tglAwal : '',
+  tglAkhir: '',
+  data    : null,
+};
+ 
+// ── RENDER LAPORAN ABSENSI ─────────────────────────────────────
+function renderLaporanAbsensi() {
+  const content = document.getElementById('app-content');
+  if (!bolehAbsenKTM() && !bolehAbsenSidang()) {
+    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
+    return;
+  }
+ 
+  const now = new Date();
+  const pad = x => String(x).padStart(2,'0');
+  // Default: 1 bulan terakhir
+  const tglAkhirDefault = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  const satu = new Date(now); satu.setDate(satu.getDate() - 30);
+  const tglAwalDefault  = `${pad(satu.getDate())}/${pad(satu.getMonth()+1)}/${satu.getFullYear()}`;
+ 
+  if (!laporanAbsenState.tglAwal)  laporanAbsenState.tglAwal  = tglAwalDefault;
+  if (!laporanAbsenState.tglAkhir) laporanAbsenState.tglAkhir = tglAkhirDefault;
+ 
+  content.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.75rem;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
+        📊 Laporan Summary Absensi
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AWAL</div>
+          <input type="date" id="lap-tgl-awal" class="k-input"
+            value="${formatDateForInput(laporanAbsenState.tglAwal)}"
+            onchange="laporanAbsenState.tglAwal=formatDateFromInput(this.value)"
+            style="width:100%;">
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AKHIR</div>
+          <input type="date" id="lap-tgl-akhir" class="k-input"
+            value="${formatDateForInput(laporanAbsenState.tglAkhir)}"
+            onchange="laporanAbsenState.tglAkhir=formatDateFromInput(this.value)"
+            style="width:100%;">
+        </div>
+      </div>
+      <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+        🔄 Tampilkan Laporan
+      </button>
+    </div>
+    <div id="laporan-result"></div>`;
+}
+ 
+async function loadLaporanAbsensi() {
+  const tglAwal  = document.getElementById('lap-tgl-awal')?.value;
+  const tglAkhir = document.getElementById('lap-tgl-akhir')?.value;
+  if (tglAwal)  laporanAbsenState.tglAwal  = formatDateFromInput(tglAwal);
+  if (tglAkhir) laporanAbsenState.tglAkhir = formatDateFromInput(tglAkhir);
+ 
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+  el.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>';
+ 
+  try {
+    const url = `${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_laporan_range`
+      + `&tgl_awal=${encodeURIComponent(laporanAbsenState.tglAwal)}`
+      + `&tgl_akhir=${encodeURIComponent(laporanAbsenState.tglAkhir)}`;
+    const resp   = await fetch(url);
+    const result = await resp.json();
+ 
+    if (result.status !== 'ok') {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${escHtml(result.message||'Error')}</p></div>`;
+      return;
+    }
+ 
+    renderLaporanResult(el, result.data);
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}</p></div>`;
+  }
+}
+ 
+function renderLaporanResult(el, data) {
+  if (!data || !Object.keys(data).length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Tidak ada data dalam rentang tanggal ini.</p></div>`;
+    return;
+  }
+ 
+  // Hitung grand total
+  let grandHadir = 0, grandTotal = 0;
+  Object.values(data).forEach(byTgl => {
+    Object.values(byTgl).forEach(s => { grandHadir += s.hadir; grandTotal += s.total; });
+  });
+ 
+  // Build teks summary untuk copy
+  const teksLines = [
+    `LAPORAN ABSENSI`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    '',
+  ];
+ 
+  let html = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-weight:700;">📊 Periode: ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} — ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}</div>
+        <button onclick="copyLaporanText()" class="btn-action green" style="padding:7px 14px;font-size:.78rem;">📋 Copy Semua</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:var(--surface2);border-radius:9px;padding:10px;text-align:center;border:1px solid var(--border);">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--accent);">${grandTotal}</div>
+          <div style="font-size:.65rem;color:var(--text3);">Total Presensi</div>
+        </div>
+        <div style="background:rgba(16,185,129,.1);border-radius:9px;padding:10px;text-align:center;border:1px solid rgba(16,185,129,.3);">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--green);">${grandHadir}</div>
+          <div style="font-size:.65rem;color:var(--green);">Total Hadir</div>
+        </div>
+        <div style="background:rgba(239,68,68,.1);border-radius:9px;padding:10px;text-align:center;border:1px solid rgba(239,68,68,.3);">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--red);">${grandTotal-grandHadir}</div>
+          <div style="font-size:.65rem;color:var(--red);">Total Tidak</div>
+        </div>
+      </div>
+    </div>`;
+ 
+  // Per jenis sidang
+  Object.entries(data).sort().forEach(([jenis, byTgl]) => {
+    let jenisHadir = 0, jenisTotal = 0;
+    Object.values(byTgl).forEach(s => { jenisHadir += s.hadir; jenisTotal += s.total; });
+ 
+    teksLines.push(`▸ ${jenis}`);
+    const sortedTgl = Object.keys(byTgl).sort((a,b) => {
+      const pa=a.split('/'); const pb=b.split('/');
+      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+    });
+ 
+    html += `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-weight:700;font-size:.92rem;">📋 ${escHtml(jenis)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green);">${jenisHadir}/${jenisTotal} hadir</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+          <thead>
+            <tr style="background:var(--surface2);">
+              <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);text-transform:uppercase;">Tanggal</th>
+              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Hadir</th>
+              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Tidak</th>
+              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">Total</th>
+              <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;color:var(--text3);">%</th>
+            </tr>
+          </thead>
+          <tbody>`;
+ 
+    sortedTgl.forEach(tgl => {
+      const s   = byTgl[tgl];
+      const pct = s.total > 0 ? Math.round(s.hadir/s.total*100) : 0;
+      teksLines.push(`  ${formatTglDisplay(tgl)}: Hadir ${s.hadir}/${s.total} (${pct}%)`);
+      html += `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 8px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
+              <td style="padding:6px 8px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${s.hadir}</td>
+              <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${s.tidak}</td>
+              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${s.total}</td>
+              <td style="padding:6px 8px;text-align:center;">
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:var(--green);border-radius:2px;"></div>
+                  </div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);min-width:28px;">${pct}%</span>
+                </div>
+              </td>
+            </tr>`;
+    });
+ 
+    teksLines.push(`  TOTAL ${jenis}: ${jenisHadir}/${jenisTotal}`);
+    teksLines.push('');
+ 
+    html += `
+            <tr style="background:var(--surface2);font-weight:700;">
+              <td style="padding:6px 8px;">TOTAL</td>
+              <td style="padding:6px 8px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisHadir}</td>
+              <td style="padding:6px 8px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${jenisTotal-jenisHadir}</td>
+              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;">${jenisTotal}</td>
+              <td style="padding:6px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);">${jenisTotal>0?Math.round(jenisHadir/jenisTotal*100):0}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+  });
+ 
+  // Simpan teks untuk copy
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+  el.innerHTML = html;
+}
+ 
+function copyLaporanText() {
+  const teks = laporanAbsenState._teksLaporan || '';
+  if (!teks) return toast('⚠️ Tidak ada data');
+  navigator.clipboard.writeText(teks).then(() => toast('✅ Laporan disalin!'));
+}
+    
 // ══════════════════════════════════════════════════
 // ADMIN
 // ══════════════════════════════════════════════════
