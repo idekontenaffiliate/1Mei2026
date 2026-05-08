@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.33 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v12.33 @2026</span></div>
   </div>
 </div>
 
@@ -3009,6 +3009,16 @@ function renderAbsensiSidang() {
       <div id="sidang-scan-result" style="font-size:.82rem;color:var(--green);min-height:24px;"></div>
       <button onclick="toggleSidangScanMode(false)" class="btn-action red" style="width:100%;margin-top:8px;">✕ Tutup</button>
     </div>
+    <!-- tambah tamu -->
+    <div id="sidang-tamu-area" style="display:none;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;margin-bottom:8px;">👤 tambah Tamu</div>
+      <input type="text" id="sidang-tamu-input" class="k-input"
+        placeholder="Nama Tamu lalu Enter..."
+        onkeydown="if(event.key==='Enter')prosesSidangQRScan(this.value)"
+        style="width:100%;margin-bottom:8px;">
+      <div id="sidang-scan-result" style="font-size:.82rem;color:var(--green);min-height:24px;"></div>
+      <button onclick="toggleSidangScanMode(false)" class="btn-action red" style="width:100%;margin-top:8px;">✕ Tutup</button>
+    </div>
 
     <!-- Summary -->
     <div id="sidang-summary" style="display:none;margin-bottom:10px;"></div>
@@ -3017,6 +3027,7 @@ function renderAbsensiSidang() {
     
       <div id="sidang-toolbar" style="display:none;margin-bottom:10px;">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <button onclick="toggleTamuAbsenMode(true)" class="btn-action accent" style="font-size:.78rem;">👤 Tamu</button>
         <button onclick="toggleSidangScanMode(true)" class="btn-action accent" style="font-size:.78rem;">📷 Scan QR</button>
         <button onclick="sidangSemuaHadir()" class="btn-action green" style="font-size:.78rem;">✅ Semua Hadir</button>
         <button onclick="sidangSemuaTidak()" class="btn-action red" style="font-size:.78rem;">❌ Reset</button>
@@ -3703,6 +3714,11 @@ function toggleSidangScanMode(on) {
   const area = document.getElementById('sidang-scan-area'); if (!area) return;
   area.style.display = on ? 'block' : 'none';
   if (on) document.getElementById('sidang-scan-input')?.focus();
+}
+function toggleTamuAbsenMode(on) {
+  const area = document.getElementById('sidang-scan-area'); if (!area) return;
+  area.style.display = on ? 'block' : 'none';
+  if (on) document.getElementById('sidang-tamu-input')?.focus();
 }
 function prosesSidangQRScan(value) {
   const efataid  = value.trim();
