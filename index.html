@@ -2,7 +2,8 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+   
 <title>Statistik Pemulihan 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -452,6 +453,49 @@ nav button:hover:not(.active){color:var(--text2);}
   box-sizing: border-box;
   max-width: 100%;
 }   
+html {
+  min-width: 320px !important;
+  overflow-x: hidden !important;
+}
+body {
+  min-width: 320px !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+/* ── Semua wrapper utama tidak boleh menyempit ── */
+#login-screen,
+#main-app,
+#app-content-wrapper,
+.content-area,
+#app-content {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ── Fix: flex container di absensi sidang sort row ──
+   overflow-x:hidden pada flex bisa collapse body width  */
+#app-content [style*="overflow-x:hidden"],
+#app-content [style*="overflow-x: hidden"] {
+  overflow-x: clip !important; /* clip tidak mempengaruhi scroll width, hidden bisa */
+}
+
+/* ── Fix: sdg-scalable item di renderSidangList ── */
+.sdg-scalable {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* ── Fix: semua inline style max-width:100% di dalam content ── */
+#sidang-list-wrap > div,
+#absen-list-wrap > div {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}   
 </style>
 </head>
 <body data-theme="dark-black">
@@ -487,7 +531,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.05 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.15 @2026</span></div>
   </div>
 </div>
 
@@ -792,14 +836,23 @@ function doLogout(){
       masterList:[],absenMap:{},scanMode:false,
       searchQuery:'',sudahLoad:false,viewMode:'grid',user2:'',user2EfataID:''
     };
-    if(typeof absenSidangState!=='undefined')absenSidangState={
-      jenisSidang:'SPR Pagi',subGugus:'',tanggal:'',minggu:'',
-      masterList:[],tamuList:[],absenMap:{},tamuMap:{},
-      searchQuery:'',sudahLoad:false,viewMode:'grid',namaTabBaru:''
-    };
-    if(typeof laporanAbsenState!=='undefined')laporanAbsenState={
-      tglAwal:'',tglAkhir:'',data:null,_teksLaporan:''
-    };
+    if(typeof absenSidangState!=='undefined') absenSidangState = {
+  jenisSidang : 'SPR Pagi',
+  subGugus    : '',
+  tanggal     : '',
+  minggu      : '',
+  mode        : 'master',
+  daftarAbsen : [],
+  sudahLoad   : false,
+  searchQuery : '',
+  viewMode    : 'grid',
+  sortMode    : 'none',
+  fontSize    : 13,
+}; 
+  if(typeof laporanAbsenState!=='undefined') laporanAbsenState = {
+  tglAwal:'', tglAkhir:'', data:null, _teksLaporan:''
+};
+   
   }catch(e){console.warn('State reset error:',e);}
   // Hentikan clock interval
   try{if(window._dashClockInterval){clearInterval(window._dashClockInterval);window._dashClockInterval=null;}}catch(e){}
@@ -3145,7 +3198,7 @@ function renderAbsensiSidang() {
         </div>
 
       <!-- Sort — 4 tombol -->
-    <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;max-width:100%;overflow-x:hidden;">
+    <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;max-width:100%;overflow:clip;">
         <span style="font-size:.65rem;color:var(--text3);align-self:center;flex-shrink:0;">Urut:</span>
         <button onclick="setSidangSort('az')" id="sdg-sort-az"
           class="btn-action${absenSidangState.sortMode==='az'?' accent':''}"
@@ -3607,7 +3660,7 @@ function renderSidangList() {
     const fs       = absenSidangState.fontSize||13;
      
     return `<div class="sdg-scalable" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;
-        max-width:100%;overflow:hidden;box-sizing:border-box;
+        max-width:100%;overflow:clip;box-sizing:border-box;    
         background:${isHadir?'rgba(16,185,129,.06)':'var(--surface)'};
         border:1px solid ${isHadir?'rgba(16,185,129,.4)':'var(--border)'};
         border-radius:10px;margin-bottom:6px;font-size:${fs}px;">
@@ -4723,6 +4776,25 @@ async function logHistory(menu,action){
   const ex=JSON.parse(localStorage.getItem('activity_log')||'[]');ex.push(entry);if(ex.length>500)ex.splice(0,ex.length-500);localStorage.setItem('activity_log',JSON.stringify(ex));
   if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
 }
+// Watchdog: pantau jika body width turun di bawah threshold   
+function() {
+  let _prevWidth = window.innerWidth;
+  const checkWidth = () => {
+    const cw = document.body.offsetWidth;
+    const vw = window.innerWidth;
+    // Jika body jauh lebih sempit dari viewport, force fix
+    if (cw > 0 && cw < vw * 0.8) {
+      document.body.style.width = '100%';
+      document.body.style.minWidth = '0';
+      document.documentElement.style.width = '100%';
+    }
+  };
+  // Jalankan setiap kali ada perubahan layout signifikan
+  if (window.ResizeObserver) {
+    new ResizeObserver(checkWidth).observe(document.body);
+  }
+  window.addEventListener('resize', checkWidth);
+})();   
 </script>
 </body>
 </html>
