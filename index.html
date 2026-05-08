@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v13.15 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v13.25 @2026</span></div>
   </div>
 </div>
 
@@ -2896,6 +2896,9 @@ function renderAbsenKTMLog() {
 // ABSENSI SIDANG  — v2
 // Ganti SELURUH blok "MODUL ABSENSI SIDANG" di index.html
 // ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// STATE ABSENSI SIDANG v4
+// ══════════════════════════════════════════════════════════
 
 const SIDANG_OPTIONS = [
   'SPR Pagi','SPR Siang','Gugus','Pemuda',
@@ -2915,6 +2918,7 @@ const SIDANG_PELAYANAN_MAP = {
   'CGM'        :['CGM'],
   'BIS - SPR'  :['SPR','SPR Pagi','SPR Siang'],
 };
+
 // Hitung kelompok dari nilai kategori asli sheet Jemaat
 function getKelompok(kategori, noEfataID) {
   const k = (kategori||'').trim().toLowerCase();
@@ -2934,8 +2938,9 @@ let absenSidangState = {
   daftarAbsen : [],
   sudahLoad   : false,
   searchQuery : '',
-  viewMode    : 'grid',// 'grid' | 'text'
+  viewMode    : 'grid',
 };
+
 function isPenjengukan(){ return absenSidangState.jenisSidang==='Penjengukan'; }
 
 function hitungSidang(){
@@ -2948,11 +2953,7 @@ function hitungSidang(){
   };
 }
 
-function bolehAbsenSidang() {
-  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(getLevelCode());
-}
-
-// ── RENDER UTAMA SIDANG ────────────────────────────────────────────────
+// ── RENDER UTAMA ──────────────────────────────────────────────
 function renderAbsensiSidang() {
   const content = document.getElementById('app-content');
   if (!bolehAbsenSidang()) {
@@ -3100,13 +3101,6 @@ function renderAbsensiSidang() {
   `;
 }
 
-
-  // Set state dari field
-  document.getElementById('sidang-jenis').onchange = function(){
-    absenSidangState.jenisSidang = this.value;
-    renderSidangGugusFilter();
-  };
-}
 // ── SET MODE & VIEW ───────────────────────────────────────────
 function setSidangMode(mode) {
   absenSidangState.mode = mode;
@@ -3132,14 +3126,14 @@ function toggleSidangScanMode(on) {
   a.style.display = on ? 'block' : 'none';
   if (on) document.getElementById('sidang-scan-input')?.focus();
 }
+
 function toggleTamuAbsenMode(on) {
   const a = document.getElementById('sidang-tamu-area'); if(!a) return;
   a.style.display = on ? 'block' : 'none';
   if (on) document.getElementById('tamu-nama-input')?.focus();
 }
-   
 
-// ── LOAD DATA SIDANG ──────────────────────────────────────────────
+// ── LOAD DATA ────────────────────────────────────────────────
 async function loadAbsensiSidang() {
   const tglInput = document.getElementById('sidang-tanggal')?.value;
   if (tglInput) absenSidangState.tanggal = formatDateFromInput(tglInput);
@@ -3221,11 +3215,9 @@ async function loadAbsensiSidang() {
 
   renderSidangSummary();
   renderSidangList();
-  renderSidangLog();
- 
 }
 
-// ── BUILD MASTER ──────────────────────────────────────────────────
+// ── BUILD MASTER ──────────────────────────────────────────────
 function buildSidangMaster(jenisSidang, subGugus) {
   const keywords = SIDANG_PELAYANAN_MAP[jenisSidang] || [jenisSidang];
   return (db.Jemaat||[]).filter(j => {
@@ -3246,7 +3238,7 @@ function buildSidangMaster(jenisSidang, subGugus) {
   }));
 }
 
-// ── SUMMARY ───────────────────────────────────────────────────────
+// ── SUMMARY ────────────────────────────────────────────────────
 function renderSidangSummary() {
   const el = document.getElementById('sidang-summary'); if(!el) return;
   const s = hitungSidang();
@@ -3295,7 +3287,7 @@ function renderSidangSummary() {
     </div>`;
 }
 
-// ── RENDER LIST ───────────────────────────────────────────────────
+// ── RENDER LIST GRID ──────────────────────────────────────────
 function renderSidangList() {
   const wrap = document.getElementById('sidang-list-wrap');
   if (!wrap || !absenSidangState.sudahLoad) return;
@@ -3403,6 +3395,7 @@ function renderSidangList() {
   if (!html) html = `<div class="empty-state"><div class="icon">👥</div><p>Tidak ada jemaat terdaftar.</p></div>`;
   wrap.innerHTML = html;
 }
+
 // ── TOGGLE HADIR ──────────────────────────────────────────────
 function toggleHadirSidang(id) {
   const item = absenSidangState.daftarAbsen.find(x => x.id === id); if(!item) return;
@@ -3434,7 +3427,6 @@ function hapusDariDaftar(id) {
   renderSidangSummary();
   renderSidangList();
 }
-
 
 // ── TAMBAH DARI LUAR MASTER ────────────────────────────────────
 function tambahDariLuar() {
@@ -3533,72 +3525,7 @@ function sdgSemuaTidak() {
   toast('❌ Semua direset');
 }
 
-// ── SCAN QR ───────────────────────────────────────────────────
-function prosesSidangQRScan(value) {
-  const efataid = value.trim();
-  if (!efataid) return;
-  document.getElementById('sidang-scan-input').value = '';
-  const resultEl = document.getElementById('sidang-scan-result');
-
-  // Cek sudah ada di daftar & hadir
-  const existing = absenSidangState.daftarAbsen.find(x =>
-    x.no_efataid.toLowerCase()===efataid.toLowerCase());
-  if (existing) {
-    if (existing.hadir==='y') {
-      if(resultEl) resultEl.innerHTML=`<span style="color:var(--yellow);">⚠️ ${escHtml(existing.nama_panggilan||existing.nama)} sudah hadir</span>`;
-      return;
-    }
-    // Ubah jadi hadir
-    existing.hadir='y';
-    existing.dicatat_oleh=currentUser?.username||'-';
-    simpanSatuSidang(existing);
-    if(resultEl) resultEl.innerHTML=`<span style="color:var(--green);font-weight:700;">✅ ${escHtml(existing.nama_panggilan||existing.nama)} — Hadir</span>`;
-    renderSidangSummary(); renderSidangList();
-    return;
-  }
-
-  // Cari di db.Jemaat
-  const jd = (db.Jemaat||[]).find(j =>
-    (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim().toLowerCase()===efataid.toLowerCase()
-  );
-
-  if (!jd) {
-    if(resultEl) resultEl.innerHTML=`<span style="color:var(--red);">❌ EfataID "${escHtml(efataid)}" tidak ditemukan</span>`;
-    return;
-  }
-
-  const item = {
-    id: 'S_'+Date.now(),
-    no_efataid   : efataid,
-    nama         : (jd['Nama Lengkap']||jd['Nama Panggilan']||efataid).trim(),
-    nama_panggilan: (jd['Nama Panggilan']||'').trim(),
-    kategori     : (jd['Kategori']||jd['kategori']||'').trim(),
-    gugus        : (jd['Gugus']||jd['gugus']||'').trim(),
-    hadir:'y', nama_dijenguk:'', ket_jenguk:'',
-    dicatat_oleh: currentUser?.username||'-', dari:'luar',
-  };
-  absenSidangState.daftarAbsen.push(item);
-  simpanSatuSidang(item);
-  if(resultEl) resultEl.innerHTML=`<span style="color:var(--green);font-weight:700;">✅ ${escHtml(item.nama_panggilan||item.nama)} — Hadir</span>`;
-  renderSidangSummary(); renderSidangList();
-}
-// ── SEMUA HADIR / RESET ───────────────────────────────────────
-function sdgSemuaHadir() {
-  if (!confirm(`Set SEMUA ${absenSidangState.daftarAbsen.length} orang HADIR?`)) return;
-  absenSidangState.daftarAbsen.forEach(x => {
-    x.hadir='y'; x.dicatat_oleh=currentUser?.username||'-';
-  });
-  renderSidangSummary(); renderSidangList();
-  toast('✅ Semua hadir — klik Simpan Semua');
-}
-function sdgSemuaTidak() {
-  if (!confirm('Reset semua ke tidak hadir?')) return;
-  absenSidangState.daftarAbsen.forEach(x => { x.hadir='n'; });
-  renderSidangSummary(); renderSidangList();
-  toast('❌ Semua direset');
-}
-
-// ── SIMPAN SATU SIDANG ────────────────────────────────────────────
+// ── SIMPAN SATU ───────────────────────────────────────────────
 async function simpanSatuSidang(item) {
   const params = new URLSearchParams({
     action         : 'simpan_absen_sidang',
@@ -3623,8 +3550,7 @@ async function simpanSatuSidang(item) {
   } catch(e) { console.warn('Simpan satu error:', e.message); }
 }
 
-
-// ── SIMPAN SEMUA ──────────────────────────────────────────────────
+// ── SIMPAN SEMUA ──────────────────────────────────────────────
 async function simpanSemuaSidang() {
   if (!absenSidangState.daftarAbsen.length) return toast('⚠️ Daftar kosong');
   if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
@@ -3716,58 +3642,7 @@ function renderSidangTextView(wrap) {
     <div id="sdg-t-semua" style="display:none;">${escHtml(textSemua)}</div>`;
 }
 
-
-// ── TEXT VIEW ────────────────────────────────────────────────────
-function renderSidangTextView(wrap) {
-  const s = hitungSidang();
-  const tgl = formatTglDisplay(absenSidangState.tanggal);
-  const ket = absenSidangState.minggu ? ` · ${absenSidangState.minggu}` : '';
-
-  const hadirList  = absenSidangState.daftarAbsen.filter(x=>x.hadir==='y');
-  const belumList  = absenSidangState.daftarAbsen.filter(x=>x.hadir!=='y');
-
-  const fmtItem = (x,i) => {
-    const panggilan = x.nama_panggilan && x.nama_panggilan!==x.nama
-      ? `${x.nama_panggilan} (${x.nama})` : (x.nama_panggilan||x.nama);
-    let l = `${i+1}. ${panggilan}`;
-    if (x.kategori) l += ` [${x.kategori}]`;
-    if (isPenjengukan() && x.nama_dijenguk) l += ` → ${x.nama_dijenguk}`;
-    return l;
-  };
-
-  const header = `ABSENSI SIDANG: ${absenSidangState.jenisSidang}${absenSidangState.subGugus?' · '+absenSidangState.subGugus:''}`
-    +`\nTanggal: ${tgl}${ket}\nDicatat: ${currentUser?.username||'-'}`
-    +`\n\nRINGKASAN: Hadir ${s.total} (EfataID ${s.efata}, Anak ${s.anak}, Tamu ${s.tamu})`;
-
-  const textHadir  = header+`\n\n✅ YANG HADIR (${hadirList.length}):\n`+(hadirList.length?hadirList.map(fmtItem).join('\n'):'(belum ada)');
-  const textBelum  = header+`\n\n❌ YANG TIDAK HADIR (${belumList.length}):\n`+(belumList.length?belumList.map(fmtItem).join('\n'):'(semua hadir)');
-  const textSemua  = textHadir+'\n\n'+textBelum.split('\n').slice(5).join('\n');
-
-  wrap.innerHTML = `
-    <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">
-      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-hadir').innerText).then(()=>toast('✅ Disalin!'))"
-        class="btn-action green" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Hadir (${hadirList.length})</button>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-belum').innerText).then(()=>toast('✅ Disalin!'))"
-        class="btn-action red" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Tidak (${belumList.length})</button>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-semua').innerText).then(()=>toast('✅ Disalin!'))"
-        class="btn-action" style="flex:1;padding:8px;font-size:.75rem;">📋 Semua</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div>
-        <div style="font-size:.7rem;font-weight:700;color:var(--green);margin-bottom:4px;">✅ HADIR (${hadirList.length})</div>
-        <div id="sdg-t-hadir" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.3);border-radius:9px;
-          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.7rem;white-space:pre-wrap;line-height:1.7;max-height:55vh;overflow-y:auto;">${escHtml(textHadir)}</div>
-      </div>
-      <div>
-        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px;">❌ TIDAK HADIR (${belumList.length})</div>
-        <div id="sdg-t-belum" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.3);border-radius:9px;
-          padding:10px;font-family:'JetBrains Mono',monospace;font-size:.7rem;white-space:pre-wrap;line-height:1.7;max-height:55vh;overflow-y:auto;">${escHtml(textBelum)}</div>
-      </div>
-    </div>
-    <div id="sdg-t-semua" style="display:none;">${escHtml(textSemua)}</div>`;
-}
-
-// ── QR CODE VIEW ─────────────────────────────────────────────────
+// ── QR CODE VIEW ──────────────────────────────────────────────
 function renderSidangQRCode(wrap) {
   const hadirEfata = absenSidangState.daftarAbsen.filter(x=>x.hadir==='y'&&x.no_efataid);
   sidangQRImages=[]; sidangQRNames=[];
@@ -3804,7 +3679,6 @@ function renderSidangQRCode(wrap) {
         :`<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata.</p></div>`}
     </div>`;
 }
-// Fungsi helper untuk buka viewer dari sidang QR — pakai variabel global
 
 function openSidangQR(i){
   if(!sidangQRImages.length)return;
