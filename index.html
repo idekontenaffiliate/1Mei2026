@@ -532,7 +532,7 @@ body {
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.25 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.35 @2026</span></div>
   </div>
 </div>
 
@@ -3199,7 +3199,7 @@ function renderAbsensiSidang() {
         </div>
 
       <!-- Sort — 4 tombol -->
-    <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;max-width:100%;overflow:clip;">
+    <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;max-width:100%;">
         <span style="font-size:.65rem;color:var(--text3);align-self:center;flex-shrink:0;">Urut:</span>
         <button onclick="setSidangSort('az')" id="sdg-sort-az"
           class="btn-action${absenSidangState.sortMode==='az'?' accent':''}"
@@ -3661,7 +3661,7 @@ function renderSidangList() {
     const fs       = absenSidangState.fontSize||13;
      
     return `<div class="sdg-scalable" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;
-        max-width:100%;overflow:clip;box-sizing:border-box;    
+        max-width:100%;box-sizing:border-box;    
         background:${isHadir?'rgba(16,185,129,.06)':'var(--surface)'};
         border:1px solid ${isHadir?'rgba(16,185,129,.4)':'var(--border)'};
         border-radius:10px;margin-bottom:6px;font-size:${fs}px;">
