@@ -23,9 +23,31 @@
 [data-theme="dark-gold"]{--bg:#0c0900;--surface:#1a1400;--surface2:#2a2100;--border:#4a3800;--accent:#fcd34d;--accent2:#fbbf24;--accent3:#f59e0b;--green:#34d399;--yellow:#f59e0b;--red:#f87171;--text:#fefce8;--text2:#fde68a;--text3:#fbbf24;--glow:rgba(252,211,77,.15);--header-bg:#1a1400;--radius:13px;--fs-bg:#0c0900;--fs-text:#fefce8;}
 :root{--bg:#0a0e17;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;--accent:#3b82f6;--accent2:#06b6d4;--accent3:#8b5cf6;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--glow:rgba(59,130,246,.15);--header-bg:#111827;--radius:13px;--fs-bg:#0a0e17;--fs-text:#e2e8f0;}
 
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased;}
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  min-width: 0;              /* <-- PALING PENTING: fix flex/grid overflow */
+}
+
+/* ── GANTI bagian ini di CSS (cari "html,body{") ── */
+
+html, body {
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;          /* tetap hidden di level html/body */
+  -webkit-font-smoothing: antialiased;
+  /* TAMBAHKAN: */
+  max-width: 100vw;          /* <-- kunci utama */
+  overflow-x: hidden;        /* <-- kunci utama */
+}   
 body{min-height:100vh;min-height:-webkit-fill-available;}
+/* Cegah input dan select overflow */
+input, select, textarea {
+  max-width: 100%;
+}
 
 /* ── LOGIN ─────────────────────────────────────────────── */
 #login-screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;overflow:hidden;background:linear-gradient(135deg,#f8f5ee 0%,#fffdf7 40%,#f0f4ff 100%);}
@@ -99,8 +121,19 @@ nav button{padding:8px 12px;border:none;background:none;cursor:pointer;white-spa
 nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
 nav button:hover:not(.active){color:var(--text2);}
 
-#app-content-wrapper{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.content-area{padding:12px 12px 80px 12px;}
+#app-content-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;        /* <-- tambahkan ini */
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}   
+.content-area {
+  padding: 12px 12px 80px 12px;
+  overflow-x: hidden;        /* <-- tambahkan ini */
+  max-width: 100%;
+}   
 
 /* ── FULLSCREEN LYRIC ─────────────────────────────────── */
 #fullscreen-lyric{position:fixed;inset:0;background:var(--fs-bg,var(--bg));color:var(--fs-text,var(--text));z-index:9999;display:flex;flex-direction:column;}
@@ -170,6 +203,12 @@ nav button:hover:not(.active){color:var(--text2);}
 .andor-toggle{font-size:.68rem;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text3);cursor:pointer;}
 .andor-toggle.active{background:var(--yellow);border-color:var(--yellow);color:#000;}
 
+   /* Fix untuk filter-group dan action-row */
+.filter-group, .action-row, .tab-group {
+  max-width: 100%;
+  overflow-x: hidden;        /* atau auto jika ingin scroll */
+}
+
 /* ── TABS ─────────────────────────────────────────────── */
 .tab-group{display:flex;gap:5px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;}
 .tab-group::-webkit-scrollbar{display:none;}
@@ -185,7 +224,11 @@ nav button:hover:not(.active){color:var(--text2);}
 .btn-action.accent{background:var(--accent);color:#fff;border-color:var(--accent);}
 .btn-action.green{background:var(--green);color:#fff;border-color:var(--green);}
 .btn-action.red{background:var(--red);color:#fff;border-color:var(--red);}
-
+.btn-action {
+  /* tambahkan: */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 /* ── LYRIC BOX ────────────────────────────────────────── */
 .lyric-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;max-height:55vh;overflow-y:auto;}
 .scalable-text{white-space:pre-wrap;line-height:1.75;transition:font-size .2s;word-wrap:break-word;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);}
@@ -419,7 +462,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.01 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.02 @2026</span></div>
   </div>
 </div>
 
