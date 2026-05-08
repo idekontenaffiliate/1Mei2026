@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════
-   THEME SYSTEM
+   THEME SYSTEM versi 17.23
 ═══════════════════════════════════════════════════ */
 [data-theme="light-white"]{--bg:#f8f9fa;--surface:#ffffff;--surface2:#f0f2f5;--border:#dee2e6;--accent:#1a56db;--accent2:#0891b2;--accent3:#7c3aed;--green:#16a34a;--yellow:#ca8a04;--red:#dc2626;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--glow:rgba(26,86,219,.1);--header-bg:#ffffff;--radius:13px;--fs-bg:#f8f9fa;--fs-text:#1e293b;}
 [data-theme="light-cream"]{--bg:#fdf8f0;--surface:#fffef9;--surface2:#f5ede0;--border:#e8d5b7;--accent:#92400e;--accent2:#0891b2;--accent3:#7c3aed;--green:#166534;--yellow:#92400e;--red:#dc2626;--text:#1c1008;--text2:#44301a;--text3:#a16207;--glow:rgba(146,64,14,.1);--header-bg:#fffef9;--radius:13px;--fs-bg:#fdf8f0;--fs-text:#1c1008;}
@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.01 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v17.23 @2026</span></div>
   </div>
 </div>
 
@@ -561,7 +561,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycby3_Y4rarAU2xP4V1S64BCG5yDgjUfUTK-vAdp3tNvGizh6qA6ONd6X7J9TP97Y4t7P2A/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbxwF-CeFViyOs5HuQYODLVScxRAitNafkdJfvXjTJLCVfXbP62udgcBJSfbywYkkGyaZg/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -2892,20 +2892,15 @@ function renderAbsenKTMLog() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ABSENSI SIDANG  — v6 (patch lengkap)
+// ABSENSI SIDANG  — v5 (patch lengkap)
 // ══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// PATCH ABSENSI SIDANG — Ganti seluruh blok dari
-// "const SIDANG_OPTIONS = [" sampai "function renderSidangLog()"
-// di index.html dengan kode ini.
-// ═══════════════════════════════════════════════════════════════
 
 const SIDANG_OPTIONS = [
   'SPR Pagi','SPR Siang','Gugus','Pemuda',
   'Remaja','Anak-anak','Doa','Tutur Sabda','Penjengukan','CGM','BIS - SPR','PP'
 ];
 
-// Keyword field "ibadah yang diikuti" → jenis sidang
+// Keyword matching field "ibadah yang diikuti"
 const SIDANG_PELAYANAN_MAP = {
   'SPR Pagi'    :['SPR','SPR Pagi'],
   'SPR Siang'   :['SPR','SPR Siang'],
@@ -2921,7 +2916,7 @@ const SIDANG_PELAYANAN_MAP = {
   'PP'          :['PP'],
 };
 
-// Jenis sidang yang punya sub-filter kelas/gugus
+// Jenis sidang yang punya sub-filter: key = kolom di master jemaat
 const SIDANG_SUBKEY = {
   'Gugus'    : 'gugus',
   'Anak-anak': 'kelas',
@@ -2930,15 +2925,15 @@ const SIDANG_SUBKEY = {
   'CGM'      : 'gugus',
 };
 
-// Kelompok
+// Kelompok jemaat
 function getKelompok(kategori, no_efataid) {
   const k = (kategori||'').trim().toLowerCase();
   if (k === 'anak') return 'anak';
-  if (k === 'tamu' || k === 'tamu luar' || (!no_efataid && k !== 'anak')) return 'tamu';
+  if (k === 'tamu' || k === 'tamu luar' || !no_efataid) return 'tamu';
   return 'efata';
 }
 
-// Statistik hadir
+// Hitung hadir per kelompok
 function hitungSidang() {
   const hadir = absenSidangState.daftarAbsen.filter(x=>x.hadir==='y');
   return {
@@ -2956,12 +2951,15 @@ let absenSidangState = {
   subGugus    : '',
   tanggal     : '',
   minggu      : '',
-  mode        : 'master',
+  mode        : 'master',    // 'master' | 'hadir_only'
   daftarAbsen : [],
+  // [{id,no_efataid,nama,nama_panggilan,kategori,gugus,kelas,
+  //   ayah,ibu,hadir,nama_dijenguk,ket_jenguk,ayah_hadir,ibu_hadir,
+  //   dicatat_oleh,dari:'master'|'db'|'luar'}]
   sudahLoad   : false,
   searchQuery : '',
-  viewMode    : 'grid',
-  sortMode    : 'none',
+  viewMode    : 'grid',      // 'grid' | 'text' | 'qrcode'
+  sortMode    : 'none',      // 'az'|'za'|'umur_asc'|'umur_desc'|'none'
   fontSize    : 13,
 };
 
@@ -2984,7 +2982,8 @@ function renderAbsensiSidang() {
   const subKeyCol  = SIDANG_SUBKEY[absenSidangState.jenisSidang] || '';
   const subOpList  = _getSubOpList(absenSidangState.jenisSidang);
   const subLabel   = subKeyCol==='kelas' ? 'FILTER KELAS' : 'FILTER GUGUS';
-  const showSubFilter = !!subKeyCol;
+  const subPlaceholder = subKeyCol==='kelas' ? 'Pilih Kelas...' : 'Pilih Gugus...';
+  const showSubFilter  = !!subKeyCol;
 
   content.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
@@ -3013,12 +3012,10 @@ function renderAbsensiSidang() {
         </select>
       </div>
 
-      <!-- Sub Filter -->
+      <!-- Sub Filter (Gugus/Kelas) -->
       ${showSubFilter ? `
       <div style="margin-bottom:8px;">
-        <div style="font-size:.68rem;color:var(--text3);margin-bottom:3px;font-weight:600;">${subLabel}
-          <span style="color:var(--yellow);font-size:.6rem;">⚠️ Tanggal sama, gugus/kelas beda = data berbeda</span>
-        </div>
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:3px;font-weight:600;">${subLabel} <span style="color:var(--yellow);font-size:.6rem;">⚠️ Tanggal sama, gugus/kelas beda = data berbeda</span></div>
         <select id="sidang-sub" class="k-input" style="width:100%;"
           onchange="absenSidangState.subGugus=this.value;">
           <option value="">-- Semua / Tanpa Filter --</option>
@@ -3053,6 +3050,7 @@ function renderAbsensiSidang() {
 
     <!-- Toolbar -->
     <div id="sidang-toolbar" style="display:none;margin-bottom:10px;">
+      <!-- Baris tombol aksi -->
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
         <button onclick="toggleSidangScanMode(true)" class="btn-action accent" style="font-size:.78rem;">📷 Scan QR</button>
         <button onclick="toggleTamuAbsenMode(true)" class="btn-action" style="font-size:.78rem;border-color:var(--yellow);color:var(--yellow);">➕ Tamu/Anak</button>
@@ -3074,11 +3072,17 @@ function renderAbsensiSidang() {
           class="view-toggle-btn${absenSidangState.viewMode==='text'?' active':''}">📝 Teks</button>
         <button onclick="setSidangView('qrcode')" id="sdg-vbtn-qrcode"
           class="view-toggle-btn${absenSidangState.viewMode==='qrcode'?' active':''}">📷 QR</button>
+        <div style="display:flex;gap:3px;margin-left:auto;">
+          <button onclick="sdgFontMinus()" class="btn-action" style="padding:5px 8px;font-size:.75rem;">A−</button>
+          <button onclick="sdgFontPlus()" class="btn-action" style="padding:5px 8px;font-size:.75rem;">A+</button>
+          <button onclick="sdgFullscreen()" class="btn-action" style="padding:5px 8px;font-size:.75rem;" title="Fullscreen">⛶</button>
+          <button onclick="sdgExportPDF()" class="btn-action" style="padding:5px 8px;font-size:.75rem;" title="Export PDF">📄 PDF</button>
         </div>
+      </div>
 
-      <!-- Sort — 4 tombol -->
-      <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:.65rem;color:var(--text3);align-self:center;">Urut:</span>
+      <!-- Sort -->
+      <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;">
+        <span style="font-size:.65rem;color:var(--text3);align-self:center;margin-right:2px;">Urut:</span>
         ${[
           ['az','A→Z'],['za','Z→A'],
           ['umur_asc','Muda→Tua'],['umur_desc','Tua→Muda'],['none','Default']
@@ -3116,10 +3120,12 @@ function renderAbsensiSidang() {
         <option value="Pemuda">Pemuda</option>
         <option value="Remaja">Remaja</option>
       </select>
+      <!-- Extra untuk Penjengukan -->
       <div id="jenguk-extra-luar" style="${absenSidangState.jenisSidang==='Penjengukan'?'':'display:none;'}">
         <input type="text" id="tamu-dijenguk-input" class="k-input" placeholder="Nama yang dijenguk..." style="width:100%;margin-bottom:6px;">
         <input type="text" id="tamu-ket-input" class="k-input" placeholder="Keterangan penjengukan..." style="width:100%;margin-bottom:6px;">
       </div>
+      <!-- Extra untuk CGM -->
       <div id="cgm-extra-luar" style="${absenSidangState.jenisSidang==='CGM'?'':'display:none;'}">
         <input type="text" id="tamu-ayah-input" class="k-input" placeholder="Nama Ayah (jika hadir)..." style="width:100%;margin-bottom:6px;">
         <input type="text" id="tamu-ibu-input" class="k-input" placeholder="Nama Ibu (jika hadir)..." style="width:100%;margin-bottom:6px;">
@@ -3148,9 +3154,10 @@ function renderAbsensiSidang() {
   `;
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
+// ── HELPERS SORT ──────────────────────────────────────────────
 function setSidangSort(mode) {
   absenSidangState.sortMode = mode;
+  SIDANG_OPTIONS.forEach((_, i) => {});
   document.querySelectorAll('[id^="sdg-sort-"]').forEach(b => b.classList.remove('accent'));
   const btn = document.getElementById('sdg-sort-' + mode);
   if (btn) btn.classList.add('accent');
@@ -3160,29 +3167,27 @@ function setSidangSort(mode) {
 function applySidangSort(arr) {
   const sorted = [...arr];
   const mode = absenSidangState.sortMode;
-  if (mode === 'az')
-    sorted.sort((a,b)=>(a.nama_panggilan||a.nama).localeCompare(b.nama_panggilan||b.nama));
-  else if (mode === 'za')
-    sorted.sort((a,b)=>(b.nama_panggilan||b.nama).localeCompare(a.nama_panggilan||a.nama));
-  else if (mode === 'umur_asc')
-    sorted.sort((a,b)=>(parseInt(a.usia)||999)-(parseInt(b.usia)||999));
-  else if (mode === 'umur_desc')
-    sorted.sort((a,b)=>(parseInt(b.usia)||0)-(parseInt(a.usia)||0));
+  if (mode === 'az') sorted.sort((a,b)=>(a.nama_panggilan||a.nama).localeCompare(b.nama_panggilan||b.nama));
+  else if (mode === 'za') sorted.sort((a,b)=>(b.nama_panggilan||b.nama).localeCompare(a.nama_panggilan||a.nama));
+  else if (mode === 'umur_asc') sorted.sort((a,b)=>(parseInt(a.usia)||999)-(parseInt(b.usia)||999));
+  else if (mode === 'umur_desc') sorted.sort((a,b)=>(parseInt(b.usia)||0)-(parseInt(a.usia)||0));
   return sorted;
 }
 
+// ── SUB-OP LIST dari master jemaat ────────────────────────────
 function _getSubOpList(jenisSidang) {
   const subKeyCol = SIDANG_SUBKEY[jenisSidang];
   if (!subKeyCol) return [];
   const set = new Set();
   (db.Jemaat||[]).forEach(j => {
-    const val = (j[subKeyCol] || j[subKeyCol.toLowerCase()] ||
-      j['Gugus'] || j['gugus'] || j['kelas'] || j['Kelas'] || '').trim();
-    if (val) val.split(/[,;\/]/).map(x=>x.trim()).filter(Boolean).forEach(g => set.add(g));
+    const val = j[subKeyCol] || j[subKeyCol.toLowerCase()] ||
+      j['Gugus'] || j['gugus'] || j['kelas'] || j['Kelas'] || '';
+    val.split(/[,;\/]/).map(x=>x.trim()).filter(Boolean).forEach(g => set.add(g));
   });
   return [...set].sort();
 }
 
+// ── SET MODE & VIEW ───────────────────────────────────────────
 function setSidangMode(mode) {
   absenSidangState.mode = mode;
   absenSidangState.sudahLoad = false;
@@ -3219,21 +3224,18 @@ function cariDariMasterModal() {
   }
 }
 
-// ── CARI DARI MASTER — tampilkan yg belum ada di daftar ───────
+// Filter pencarian dari master jemaat (belum ada di daftar)
 function filterCariMaster(query) {
   const el = document.getElementById('cari-master-result'); if (!el) return;
   const q  = query.trim().toLowerCase();
-  // Key unik dari daftar yang sudah ada
-  const existingKeys = new Set(
-    absenSidangState.daftarAbsen.map(x => _itemKey(x.no_efataid, x.nama))
-  );
-
+  const existing = new Set(absenSidangState.daftarAbsen.map(x=>x.no_efataid).filter(Boolean));
   const results = (db.Jemaat||[]).filter(j => {
     const ef   = (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim();
+    // Anak tanpa EfataID juga bisa ditampilkan - cek nama
     const nama = (j['Nama Lengkap']||j['Nama Panggilan']||'').toLowerCase();
     const pan  = (j['Nama Panggilan']||'').toLowerCase();
-    const key  = _itemKey(ef, (j['Nama Lengkap']||j['Nama Panggilan']||'').trim());
-    if (existingKeys.has(key)) return false;
+    // Jika punya efataid dan sudah ada, skip
+    if (ef && existing.has(ef)) return false;
     return !q || nama.includes(q) || pan.includes(q) || ef.toLowerCase().includes(q);
   }).slice(0, 50);
 
@@ -3241,6 +3243,7 @@ function filterCariMaster(query) {
     el.innerHTML = `<div style="font-size:.78rem;color:var(--text3);padding:8px;">Tidak ada hasil.</div>`;
     return;
   }
+
   el.innerHTML = results.map(j => {
     const ef   = (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim();
     const nama = (j['Nama Lengkap']||'-').trim();
@@ -3260,18 +3263,9 @@ function filterCariMaster(query) {
   }).join('');
 }
 
-// Key unik: EfataID jika ada, else "__"+nama
-function _itemKey(efataid, nama) {
-  const ef = (efataid||'').trim();
-  if (ef) return 'EF:' + ef.toLowerCase();
-  return 'NM:' + (nama||'').trim().toLowerCase();
-}
-
 function tambahDariMasterSearch(ef, nama, pan, kat, gugus, kelas, usia) {
-  const key = _itemKey(ef, nama);
-  if (absenSidangState.daftarAbsen.find(x => _itemKey(x.no_efataid, x.nama) === key)) {
-    toast('⚠️ Sudah ada di daftar'); return;
-  }
+  const existingEf = ef && absenSidangState.daftarAbsen.find(x=>x.no_efataid===ef);
+  if (existingEf) { toast('⚠️ Sudah ada di daftar'); return; }
   const item = {
     id: 'M_ADD_'+Date.now(),
     no_efataid: ef, nama, nama_panggilan: pan||nama, kategori: kat,
@@ -3300,6 +3294,7 @@ async function loadAbsensiSidang() {
   if (wrap) wrap.innerHTML = `<div class="loading-shimmer"></div>
     <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat...</div>`;
 
+  // Load master jemaat
   if (!db.Jemaat) {
     await new Promise(r => Papa.parse(URLS.Jemaat,{download:true,header:true,complete:res=>{db.Jemaat=res.data;r();}}));
   }
@@ -3318,89 +3313,105 @@ async function loadAbsensiSidang() {
     if (result.status === 'ok') dbData = result.data || [];
   } catch(e) { toast('⚠️ Gagal ambil DB: ' + e.message); }
 
-  // Build master dari sheet Jemaat
+  const dbAda = dbData.length > 0;
+
+  // Build master dari sheet Jemaat sesuai jenis sidang + sub_gugus
   const masterAll = buildSidangMaster(absenSidangState.jenisSidang, subKey);
 
-  // Map DB berdasarkan key unik
-  const dbMap = {};
-  dbData.forEach(row => {
-    const ef  = (row.no_efataid||'').trim();
-    const nm  = (row.nama||'').trim();
-    const key = _itemKey(ef, nm);
-    dbMap[key] = row;
-  });
-
-  if (absenSidangState.mode === 'master') {
-    // Mode master: tampilkan semua dari master, overlay status dari DB
-    absenSidangState.daftarAbsen = masterAll.map(j => {
-      const key   = _itemKey(j.no_efataid, j.nama);
-      const dbRow = dbMap[key];
-      return {
-        id:             'M_'+key,
-        no_efataid:     j.no_efataid,
-        nama:           j.nama,
-        nama_panggilan: j.nama_panggilan,
-        kategori:       j.kategori,
-        gugus:          j.gugus,
-        kelas:          j.kelas,
-        usia:           j.usia,
-        ayah:           j.ayah,
-        ibu:            j.ibu,
-        hadir:          dbRow ? (dbRow.hadir||'n') : 'n',
-        nama_dijenguk:  dbRow ? (dbRow.nama_dijenguk||'') : '',
-        ket_jenguk:     dbRow ? (dbRow.ket_jenguk||'') : '',
-        ayah_hadir:     dbRow ? (dbRow.ayah_hadir||'') : '',
-        ibu_hadir:      dbRow ? (dbRow.ibu_hadir||'') : '',
-        dicatat_oleh:   dbRow ? (dbRow.dicatat_oleh||'') : '',
-        dari:           'master',
-      };
-    });
-
-    // Tambah yang ada di DB tapi TIDAK di master
-    // (tamu / tambahan manual) — cek dengan key unik, hindari duplikat
-    const masterKeys = new Set(masterAll.map(j => _itemKey(j.no_efataid, j.nama)));
+  if (dbAda) {
+    // Map DB berdasarkan EfataID atau nama tamu
+    const dbMap = {};
     dbData.forEach(row => {
       const ef  = (row.no_efataid||'').trim();
-      const nm  = (row.nama||'').trim();
-      const key = _itemKey(ef, nm);
-      if (!masterKeys.has(key)) {
-        absenSidangState.daftarAbsen.push({
-          id:'DB_'+key, no_efataid:ef,
-          nama:nm, nama_panggilan:nm,
-          kategori:row.kategori||'', gugus:'', kelas:'', usia:'', ayah:'', ibu:'',
-          hadir:row.hadir||'n',
+      const key = ef || ('__'+row.nama);
+      dbMap[key] = row;
+    });
+
+    if (absenSidangState.mode === 'master') {
+      // Mode master: tampilkan semua dari master, overlay status dari DB
+      absenSidangState.daftarAbsen = masterAll.map(j => {
+        const key  = j.no_efataid || ('__'+j.nama);
+        const dbRow = dbMap[key];
+        return {
+          id:             'M_'+j.no_efataid+'_'+j.nama,
+          no_efataid:     j.no_efataid,
+          nama:           j.nama,
+          nama_panggilan: j.nama_panggilan,
+          kategori:       j.kategori,
+          gugus:          j.gugus,
+          kelas:          j.kelas,
+          usia:           j.usia,
+          ayah:           j.ayah,
+          ibu:            j.ibu,
+          hadir:          dbRow ? (dbRow.hadir||'n') : 'n',
+          nama_dijenguk:  dbRow ? (dbRow.nama_dijenguk||'') : '',
+          ket_jenguk:     dbRow ? (dbRow.ket_jenguk||'') : '',
+          ayah_hadir:     dbRow ? (dbRow.ayah_hadir||'') : '',
+          ibu_hadir:      dbRow ? (dbRow.ibu_hadir||'') : '',
+          dicatat_oleh:   dbRow ? (dbRow.dicatat_oleh||'') : '',
+          dari:           'master',
+        };
+      });
+      // Tambah yang ada di DB tapi tidak di master (tamu / dari luar)
+      dbData.forEach(row => {
+        const ef  = (row.no_efataid||'').trim();
+        const key = ef || ('__'+row.nama);
+        const inMaster = masterAll.some(j => j.no_efataid===ef && ef);
+        if (!inMaster) {
+          absenSidangState.daftarAbsen.push({
+            id:'DB_'+key, no_efataid:ef,
+            nama:row.nama||'', nama_panggilan:row.nama||'',
+            kategori:row.kategori||'', gugus:'', kelas:'', usia:'', ayah:'', ibu:'',
+            hadir:row.hadir||'n',
+            nama_dijenguk:row.nama_dijenguk||'', ket_jenguk:row.ket_jenguk||'',
+            ayah_hadir:row.ayah_hadir||'', ibu_hadir:row.ibu_hadir||'',
+            dicatat_oleh:row.dicatat_oleh||'', dari:'db',
+          });
+        }
+      });
+      toast(`✅ Master: ${masterAll.length} jemaat (DB: ${dbData.length} record)`);
+    } else {
+      // Mode hadir only: hanya dari DB
+      absenSidangState.daftarAbsen = dbData.map(row => {
+        const ef = (row.no_efataid||'').trim();
+        const jd = ef ? (db.Jemaat||[]).find(j =>
+          (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim()===ef) : null;
+        return {
+          id: row.id_absen||('DB_'+Date.now()+Math.random()),
+          no_efataid: ef,
+          nama: jd?(jd['Nama Lengkap']||jd['Nama Panggilan']||row.nama||''):(row.nama||''),
+          nama_panggilan: jd?(jd['Nama Panggilan']||''):'',
+          kategori: row.kategori||(jd?(jd['Kategori']||jd['kategori']||''):''),
+          gugus: jd?(jd['Gugus']||jd['gugus']||''):'',
+          kelas: jd?(jd['kelas']||jd['Kelas']||''):'',
+          usia: jd?(jd['Usia']||''):'',
+          ayah: jd?(jd['Ayah']||jd['ayah']||jd['Nama Ayah']||''):'',
+          ibu:  jd?(jd['Ibu']||jd['ibu']||jd['Nama Ibu']||''):'',
+          hadir: row.hadir||'n',
           nama_dijenguk:row.nama_dijenguk||'', ket_jenguk:row.ket_jenguk||'',
           ayah_hadir:row.ayah_hadir||'', ibu_hadir:row.ibu_hadir||'',
           dicatat_oleh:row.dicatat_oleh||'', dari:'db',
-        });
-      }
-    });
-    toast(`✅ Master: ${masterAll.length} | DB: ${dbData.length} record`);
-
+        };
+      });
+      toast(`✅ ${dbData.length} record dimuat dari DB`);
+    }
   } else {
-    // Mode hadir only: hanya dari DB
-    absenSidangState.daftarAbsen = dbData.map(row => {
-      const ef = (row.no_efataid||'').trim();
-      const jd = ef ? (db.Jemaat||[]).find(j =>
-        (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim()===ef) : null;
-      return {
-        id: row.id_absen||('DB_'+Date.now()+Math.random()),
-        no_efataid: ef,
-        nama: jd?(jd['Nama Lengkap']||row.nama||''):(row.nama||''),
-        nama_panggilan: jd?(jd['Nama Panggilan']||''):'',
-        kategori: row.kategori||(jd?(jd['Kategori']||jd['kategori']||''):''),
-        gugus: jd?(jd['Gugus']||jd['gugus']||''):'',
-        kelas: jd?(jd['kelas']||jd['Kelas']||''):'',
-        usia: jd?(jd['Usia']||''):'',
-        ayah: jd?(jd['Ayah']||jd['ayah']||jd['Nama Ayah']||''):'',
-        ibu:  jd?(jd['Ibu']||jd['ibu']||jd['Nama Ibu']||''):'',
-        hadir: row.hadir||'n',
-        nama_dijenguk:row.nama_dijenguk||'', ket_jenguk:row.ket_jenguk||'',
-        ayah_hadir:row.ayah_hadir||'', ibu_hadir:row.ibu_hadir||'',
-        dicatat_oleh:row.dicatat_oleh||'', dari:'db',
-      };
-    });
-    toast(`✅ ${dbData.length} record dimuat (Mode Hadir Only)`);
+    // Belum ada di DB
+    if (absenSidangState.mode === 'master') {
+      absenSidangState.daftarAbsen = masterAll.map(j => ({
+        id:'M_'+j.no_efataid+'_'+j.nama,
+        no_efataid:j.no_efataid, nama:j.nama,
+        nama_panggilan:j.nama_panggilan, kategori:j.kategori,
+        gugus:j.gugus, kelas:j.kelas, usia:j.usia, ayah:j.ayah, ibu:j.ibu,
+        hadir:'n', nama_dijenguk:'', ket_jenguk:'',
+        ayah_hadir:'', ibu_hadir:'',
+        dicatat_oleh:'', dari:'master',
+      }));
+      toast(`📋 ${masterAll.length} jemaat dari master`);
+    } else {
+      absenSidangState.daftarAbsen = [];
+      toast('📋 Mode Hadir Only — belum ada data');
+    }
   }
 
   absenSidangState.sudahLoad   = true;
@@ -3413,48 +3424,36 @@ async function loadAbsensiSidang() {
 }
 
 // ── BUILD MASTER ──────────────────────────────────────────────
-// KEY FIX: Anak tanpa EfataID tetap dikenali via _itemKey(ef, nama)
-// Tidak ada duplikat karena key berbasis nama jika EfataID kosong
+// KEY: field "ibadah yang diikuti" + filter sub_gugus/kelas
 function buildSidangMaster(jenisSidang, subGugus) {
   const keywords = SIDANG_PELAYANAN_MAP[jenisSidang] || [jenisSidang];
   const subKeyCol = SIDANG_SUBKEY[jenisSidang] || '';
 
-  const seen = new Set(); // deduplication
-  const result = [];
-
-  (db.Jemaat||[]).forEach(j => {
+  return (db.Jemaat||[]).filter(j => {
+    // Cek field ibadah yang diikuti
     const ibadahList = (j['ibadah yang diikuti']||'').split(/[,;\/]/)
-      .map(x=>x.trim().toLowerCase()).filter(Boolean);
+      .map(x=>x.trim().toLowerCase());
     const cocok = ibadahList.some(ib => keywords.some(kw => ib.includes(kw.toLowerCase())));
-    if (!cocok) return;
-
+    if (!cocok) return false;
+    // Filter sub-gugus/kelas jika dipilih
     if (subKeyCol && subGugus) {
       const fieldVal = (j[subKeyCol]||j[subKeyCol.toLowerCase()]||
         j['Gugus']||j['gugus']||j['kelas']||j['Kelas']||'')
         .split(/[,;\/]/).map(x=>x.trim().toLowerCase());
-      if (!fieldVal.includes(subGugus.toLowerCase())) return;
+      if (!fieldVal.includes(subGugus.toLowerCase())) return false;
     }
-
-    const ef   = (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim();
-    const nama = (j['Nama Lengkap']||j['Nama Panggilan']||'-').trim();
-    const key  = _itemKey(ef, nama); // key unik
-
-    if (seen.has(key)) return; // skip duplikat
-    seen.add(key);
-
-    result.push({
-      no_efataid    : ef,
-      nama,
-      nama_panggilan: (j['Nama Panggilan']||'').trim(),
-      kategori      : (j['Kategori']||j['kategori']||'').trim(),
-      gugus         : (j['Gugus']||j['gugus']||'').trim(),
-      kelas         : (j['kelas']||j['Kelas']||'').trim(),
-      usia          : (j['Usia']||'').trim(),
-      ayah          : (j['Ayah']||j['ayah']||j['Nama Ayah']||'').trim(),
-      ibu           : (j['Ibu']||j['ibu']||j['Nama Ibu']||'').trim(),
-    });
-  });
-  return result;
+    return true;
+  }).map(j => ({
+    no_efataid    : (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim(),
+    nama          : (j['Nama Lengkap']||j['Nama Panggilan']||'-').trim(),
+    nama_panggilan: (j['Nama Panggilan']||'').trim(),
+    kategori      : (j['Kategori']||j['kategori']||'').trim(),
+    gugus         : (j['Gugus']||j['gugus']||'').trim(),
+    kelas         : (j['kelas']||j['Kelas']||'').trim(),
+    usia          : (j['Usia']||'').trim(),
+    ayah          : (j['Ayah']||j['ayah']||j['Nama Ayah']||'').trim(),
+    ibu           : (j['Ibu']||j['ibu']||j['Nama Ibu']||'').trim(),
+  }));
 }
 
 // ── SUMMARY ───────────────────────────────────────────────────
@@ -3462,8 +3461,9 @@ function renderSidangSummary() {
   const el = document.getElementById('sidang-summary'); if(!el) return;
   const s = hitungSidang();
   const totalMaster = absenSidangState.daftarAbsen.length;
-  const pct = totalMaster > 0 ? Math.round(s.total/totalMaster*100) : 0;
+  const belum = totalMaster - s.total;
   const sub = absenSidangState.subGugus ? ` · ${absenSidangState.subGugus}` : '';
+  const pct = totalMaster > 0 ? Math.round(s.total/totalMaster*100) : 0;
 
   el.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;">
@@ -3493,7 +3493,8 @@ function renderSidangSummary() {
       <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
         <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--green),#86efac);border-radius:2px;transition:width .4s;"></div>
       </div>
-      <div style="text-align:right;font-size:.65rem;color:var(--text3);margin-top:2px;">${pct}%</div>`:''}
+      <div style="text-align:right;font-size:.65rem;color:var(--text3);margin-top:2px;">${pct}%</div>
+      `:''}
     </div>`;
 }
 
@@ -3529,15 +3530,15 @@ function renderSidangList() {
     const subInfo  = x.gugus?`🏠 ${x.gugus}`:(x.kelas?`🏫 ${x.kelas}`:'');
     const fs       = absenSidangState.fontSize||13;
 
-    return `<div class="sdg-scalable" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;
         background:${isHadir?'rgba(16,185,129,.06)':'var(--surface)'};
         border:1px solid ${isHadir?'rgba(16,185,129,.4)':'var(--border)'};
-        border-radius:10px;margin-bottom:6px;font-size:${fs}px;">
-      <div style="flex:1;min-width:0;">
+        border-radius:10px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;font-size:${fs}px;">
         <div style="font-weight:700;">${escHtml(x.nama_panggilan||x.nama||'-')}</div>
         ${x.nama_panggilan&&x.nama_panggilan!==x.nama?`<div style="font-size:.88em;color:var(--text3);">${escHtml(x.nama)}</div>`:''}
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">
-          ${x.no_efataid?`<span style="font-family:'JetBrains Mono',monospace;font-size:.75em;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px;">${escHtml(x.no_efataid)}</span>`:'<span style="font-size:.65em;color:var(--text3);font-style:italic;">no efata</span>'}
+          ${x.no_efataid?`<span style="font-family:'JetBrains Mono',monospace;font-size:.75em;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px;">${escHtml(x.no_efataid)}</span>`:''}
           <span style="font-size:.75em;background:${klpColor}18;color:${klpColor};padding:1px 5px;border-radius:3px;font-weight:700;">${escHtml(x.kategori||klp)}</span>
           ${subInfo?`<span style="font-size:.72em;color:var(--text3);">${subInfo}</span>`:''}
           ${x.usia?`<span style="font-size:.68em;color:var(--text3);">${x.usia} th</span>`:''}
@@ -3582,6 +3583,7 @@ function renderSidangList() {
   };
 
   let html = '';
+
   if (absenSidangState.mode==='master') {
     if (belumList.length) {
       html += `<div style="font-size:.7rem;font-weight:700;color:var(--red);margin:6px 0 5px;text-transform:uppercase;letter-spacing:.8px;">⏳ Belum Hadir (${belumList.length})</div>`;
@@ -3596,9 +3598,11 @@ function renderSidangList() {
       html += `<div style="font-size:.7rem;font-weight:700;color:var(--green);margin:6px 0 5px;text-transform:uppercase;letter-spacing:.8px;">✅ Hadir (${hadirList.length})</div>`;
       html += hadirList.map(renderItem).join('');
     }
-    if (!hadirList.length)
+    if (!hadirList.length) {
       html = `<div class="empty-state"><div class="icon">✏️</div><p>Belum ada yang dicatat.<br>Scan QR atau tambah manual.</p></div>`;
+    }
   }
+
   if (!html) html = `<div class="empty-state"><div class="icon">👥</div><p>Tidak ada jemaat terdaftar.</p></div>`;
   wrap.innerHTML = html;
 }
@@ -3609,9 +3613,10 @@ function hapusDariDaftarSidang(id) {
   const item = absenSidangState.daftarAbsen[idx];
   if (!confirm(`Hapus "${item.nama_panggilan||item.nama}" dari daftar?`)) return;
   absenSidangState.daftarAbsen.splice(idx,1);
-  // Jika sudah disimpan di DB, kirim hadir=n
-  if (item.dari==='db') { item.hadir='n'; simpanSatuSidang(item); }
-  toast(`🗑 Dihapus dari daftar`);
+  if (item.hadir==='y' && item.dari==='db') {
+    item.hadir='n'; simpanSatuSidang(item);
+  }
+  toast(`🗑 ${item.nama_panggilan||item.nama} dihapus dari daftar`);
   renderSidangSummary(); renderSidangList();
 }
 
@@ -3634,14 +3639,12 @@ function tambahDariLuar() {
   const nama = document.getElementById('tamu-nama-input')?.value.trim();
   if (!nama) return toast('⚠️ Isi nama');
   const kategori = document.getElementById('tamu-kat-input')?.value || 'Tamu Luar';
-  const nd  = document.getElementById('tamu-dijenguk-input')?.value?.trim()||'';
-  const kj  = document.getElementById('tamu-ket-input')?.value?.trim()||'';
-  const ayah = document.getElementById('tamu-ayah-input')?.value?.trim()||'';
-  const ibu  = document.getElementById('tamu-ibu-input')?.value?.trim()||'';
+  const nd  = document.getElementById('tamu-dijenguk-input')?.value.trim()||'';
+  const kj  = document.getElementById('tamu-ket-input')?.value.trim()||'';
+  const ayah = document.getElementById('tamu-ayah-input')?.value.trim()||'';
+  const ibu  = document.getElementById('tamu-ibu-input')?.value.trim()||'';
 
-  // Cek duplikat dengan key unik
-  const key = _itemKey('', nama);
-  if (absenSidangState.daftarAbsen.find(x => _itemKey(x.no_efataid, x.nama)===key))
+  if (absenSidangState.daftarAbsen.find(x=>x.nama===nama&&!x.no_efataid))
     return toast('⚠️ Nama sudah ada dalam daftar');
 
   const id = 'LUAR_'+Date.now();
@@ -3655,8 +3658,9 @@ function tambahDariLuar() {
   absenSidangState.daftarAbsen.push(item);
   simpanSatuSidang(item);
 
+  // Reset form
   ['tamu-nama-input','tamu-dijenguk-input','tamu-ket-input','tamu-ayah-input','tamu-ibu-input']
-    .forEach(eid => { const el=document.getElementById(eid); if(el) el.value=''; });
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 
   toast(`✅ ${nama} ditambahkan & hadir`);
   renderSidangSummary(); renderSidangList();
@@ -3682,12 +3686,14 @@ function prosesSidangQRScan(value) {
     renderSidangSummary(); renderSidangList(); return;
   }
 
+  // Cari di db.Jemaat
   const jd = (db.Jemaat||[]).find(j =>
     (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim().toLowerCase()===efataid.toLowerCase());
   if (!jd) {
-    if(resultEl) resultEl.innerHTML=`<span style="color:var(--red);">❌ EfataID tidak ditemukan</span>`;
+    if(resultEl) resultEl.innerHTML=`<span style="color:var(--red);">❌ EfataID "${escHtml(efataid)}" tidak ditemukan</span>`;
     return;
   }
+
   const item = {
     id:'S_'+Date.now(), no_efataid:efataid,
     nama:(jd['Nama Lengkap']||jd['Nama Panggilan']||efataid).trim(),
@@ -3778,7 +3784,7 @@ async function simpanSemuaSidang() {
     });
     const r = await resp.json();
     if (r.status==='ok') {
-      toast(`✅ ${r.inserted} data tersimpan (${r.deleted||0} lama dihapus)`);
+      toast(`✅ ${r.inserted} data tersimpan`);
       absenSidangState.daftarAbsen.forEach(x => x.dari='db');
     } else toast('❌ '+(r.message||'error'));
   } catch(e) { toast('⚠️ '+e.message); }
@@ -3787,29 +3793,26 @@ async function simpanSemuaSidang() {
 // ── TEXT VIEW — 3 tombol copy ─────────────────────────────────
 function renderSidangTextView(wrap) {
   const s    = hitungSidang();
-  const sub  = absenSidangState.subGugus ? ` · ${absenSidangState.subGugus}` : '';
+  const sub  = absenSidangState.subGugus ? ` (${absenSidangState.subGugus})` : '';
   const ket  = absenSidangState.minggu ? ` · ${absenSidangState.minggu}` : '';
   const tgl  = formatTglDisplay(absenSidangState.tanggal);
   const isPenj = absenSidangState.jenisSidang==='Penjengukan';
 
+  // Hari nama
   const days  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
   const tglP  = absenSidangState.tanggal.split('/');
   const dtObj = tglP.length===3 ? new Date(tglP[2],tglP[1]-1,tglP[0]) : new Date();
   const hari  = days[dtObj.getDay()];
 
+  const header = [
+    `ABSENSI SIDANG: ${absenSidangState.jenisSidang}${sub}`,
+    `Hari/Tanggal  : ${hari}, ${tgl}${ket}`,
+    `Dicatat oleh  : ${currentUser?.username||'-'}`,
+    `Total Hadir   : ${s.total} (EfataID: ${s.efata}, Anak: ${s.anak}, Tamu: ${s.tamu})`,
+  ].join('\n');
+
   const hadirList = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir==='y');
   const belumList = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir!=='y');
-
-  // Format header laporan
-  const mkHeader = (judul) => [
-    `Nama Sidang  : ${absenSidangState.jenisSidang}${sub}`,
-    `Hari/Tanggal : ${hari}, ${tgl}${ket}`,
-    `Pengabsen    : ${currentUser?.username||'-'}`,
-    `Total        : ${s.total} hadir dari ${absenSidangState.daftarAbsen.length}`,
-    `             EfataID: ${s.efata} | Anak: ${s.anak} | Tamu: ${s.tamu}`,
-    ``,
-    judul,
-  ].join('\n');
 
   const fmtLine = (x,i,showExtra) => {
     let l = `${i+1}. ${x.nama_panggilan||x.nama}`;
@@ -3819,19 +3822,21 @@ function renderSidangTextView(wrap) {
     return l;
   };
 
-  const textHadir = mkHeader(`✅ YANG HADIR (${hadirList.length} orang):`)
-    + '\n' + (hadirList.length ? hadirList.map((x,i)=>fmtLine(x,i,true)).join('\n') : '(belum ada)');
+  const textHadir = header
+    + `\n\n✅ YANG HADIR (${hadirList.length} orang):\n`
+    + (hadirList.length ? hadirList.map((x,i)=>fmtLine(x,i,true)).join('\n') : '(belum ada)');
 
-  const textBelum = mkHeader(`❌ YANG TIDAK HADIR (${belumList.length} orang):`)
-    + '\n' + (belumList.length ? belumList.map((x,i)=>fmtLine(x,i,false)).join('\n') : '(semua hadir)');
+  const textBelum = header
+    + `\n\n❌ YANG TIDAK HADIR (${belumList.length} orang):\n`
+    + (belumList.length ? belumList.map((x,i)=>fmtLine(x,i,false)).join('\n') : '(semua hadir)');
 
-  const textAll = mkHeader(`✅ HADIR (${hadirList.length}):`)
-    + '\n' + (hadirList.length ? hadirList.map((x,i)=>fmtLine(x,i,true)).join('\n') : '(belum ada)')
-    + '\n\n' + `❌ TIDAK HADIR (${belumList.length}):\n`
+  const textAll = textHadir
+    + '\n\n❌ YANG TIDAK HADIR (' + belumList.length + ' orang):\n'
     + (belumList.length ? belumList.map((x,i)=>fmtLine(x,i,false)).join('\n') : '(semua hadir)');
 
   const fs = absenSidangState.fontSize||13;
 
+  // Mode hadir only: hanya 1 tombol copy
   if (absenSidangState.mode==='hadir_only') {
     wrap.innerHTML = `
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-hadir-only').innerText).then(()=>toast('✅ Disalin! Hadir: ${hadirList.length}'))"
@@ -3867,7 +3872,8 @@ function renderSidangTextView(wrap) {
 
 // ── QR CODE VIEW ──────────────────────────────────────────────
 function renderSidangQRCode(wrap) {
-  const hadirEfata = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir==='y');
+  const hadirEfata = applySidangSort(absenSidangState.daftarAbsen)
+    .filter(x => x.hadir==='y');
   sidangQRImages=[]; sidangQRNames=[];
 
   const withPhoto = hadirEfata.map(x => {
@@ -3893,9 +3899,10 @@ function renderSidangQRCode(wrap) {
       ${withPhoto.length
         ?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">
           ${withPhoto.map((x,i)=>`
-            <div onclick="openSidangQR(${i})" style="background:var(--surface);border:1px solid rgba(16,185,129,.4);border-radius:10px;overflow:hidden;cursor:pointer;">
+            <div onclick="openSidangQR(${i})" style="background:var(--surface);border:1px solid rgba(16,185,129,.4);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
               <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
-                <img src="${x.url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;" loading="lazy">
+                <img src="${x.url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;" loading="lazy"
+                  onerror="this.parentElement.innerHTML='<div style=&quot;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;&quot;>❌</div>'">
               </div>
               <div style="padding:4px 6px;font-size:.65rem;font-weight:600;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid rgba(16,185,129,.3);">
                 ${escHtml(x.nama_panggilan||x.nama)}
@@ -4383,22 +4390,112 @@ ${item.keputusan?`\n🏷 Keputusan: ${escHtml(item.keputusan)}`:''}
 // ╚══════════════════════════════════════════════════════════════╝
  
  
+// ── FONT SIZE & FULLSCREEN ────────────────────────────────────
+function sdgFontMinus() {
+  absenSidangState.fontSize = Math.max(9, (absenSidangState.fontSize||13)-2);
+  document.querySelectorAll('.sdg-scalable,[id^="sdg-t-"]').forEach(el=>el.style.fontSize=absenSidangState.fontSize+'px');
+}
+function sdgFontPlus() {
+  absenSidangState.fontSize = Math.min(30, (absenSidangState.fontSize||13)+2);
+  document.querySelectorAll('.sdg-scalable,[id^="sdg-t-"]').forEach(el=>el.style.fontSize=absenSidangState.fontSize+'px');
+}
+function sdgFullscreen() {
+  const wrap = document.getElementById('sidang-list-wrap'); if(!wrap) return;
+  const old  = document.getElementById('sdg-fullscreen-overlay'); if(old) old.remove();
+  const div  = document.createElement('div');
+  div.id = 'sdg-fullscreen-overlay';
+  div.style.cssText = 'position:fixed;inset:0;background:var(--fs-bg,var(--bg));z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
+  div.innerHTML = `
+    <div style="position:fixed;top:10px;left:10px;z-index:10;">
+      <button class="fs-back" onclick="this.closest('#sdg-fullscreen-overlay').remove()">← Kembali</button>
+    </div>
+    <div style="position:fixed;top:10px;right:10px;z-index:10;display:flex;gap:5px;">
+      <button class="fs-ctrl-btn" onclick="sdgFontMinus()">A−</button>
+      <button class="fs-ctrl-btn" onclick="sdgFontPlus()">A+</button>
+      <button class="fs-ctrl-btn" onclick="sdgExportPDF()">📄 PDF</button>
+      <button class="fs-ctrl-btn" onclick="this.closest('#sdg-fullscreen-overlay').remove()">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:60px 20px 40px;" id="sdg-fs-content">
+      ${wrap.innerHTML}
+    </div>`;
+  document.body.appendChild(div);
+}
 
-// ── FONT & FULLSCREEN & PDF ───────────────────────────────────
+function sdgExportPDF() {
+  const s    = hitungSidang();
+  const sub  = absenSidangState.subGugus ? ` · ${absenSidangState.subGugus}` : '';
+  const ket  = absenSidangState.minggu ? ` · ${absenSidangState.minggu}` : '';
+  const tgl  = formatTglDisplay(absenSidangState.tanggal);
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const tglP = absenSidangState.tanggal.split('/');
+  const dt   = tglP.length===3 ? new Date(tglP[2],tglP[1]-1,tglP[0]) : new Date();
+  const hari = days[dt.getDay()];
+  const isPenj = absenSidangState.jenisSidang==='Penjengukan';
+  const isCGM  = absenSidangState.jenisSidang==='CGM';
 
+  const hadirList = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir==='y');
+  const belumList = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir!=='y');
 
+  const buildRows = (list, showExtra) => list.map((x,i) => {
+    const klp  = getKelompok(x.kategori, x.no_efataid);
+    const extra = showExtra && isPenj && x.nama_dijenguk
+      ? `<td>${escHtml(x.nama_dijenguk)} ${x.ket_jenguk?'('+escHtml(x.ket_jenguk)+')':''}</td>` : '';
+    const cgmExtra = showExtra && isCGM
+      ? `<td>${x.ayah_hadir?'✓ '+escHtml(x.ayah):''}</td><td>${x.ibu_hadir?'✓ '+escHtml(x.ibu):''}</td>` : '';
+    return `<tr><td>${i+1}</td><td><b>${escHtml(x.nama_panggilan||x.nama)}</b></td><td>${escHtml(x.nama)}</td>
+      <td>${escHtml(x.no_efataid||'-')}</td><td>${escHtml(x.kategori||klp)}</td>
+      <td>${escHtml(x.gugus||x.kelas||'-')}</td>${extra}${cgmExtra}</tr>`;
+  }).join('');
 
-// ── LAPORAN ABSENSI ───────────────────────────────────────────
-let laporanAbsenState = { tglAwal:'', tglAkhir:'', data:null, _teksLaporan:'' };
-let laporanFontSize   = 12;
+  const extraHeader = isPenj ? '<th>Nama Dijenguk</th>' : (isCGM ? '<th>Ayah</th><th>Ibu</th>' : '');
 
+  const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Absensi ${absenSidangState.jenisSidang}${sub} ${tgl}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#111;}
+      h2{font-size:13px;margin-bottom:4px;} h3{font-size:11px;margin:12px 0 4px;}
+      table{width:100%;border-collapse:collapse;} td,th{border:1px solid #ccc;padding:3px 6px;}
+      th{background:#e8eaf6;font-weight:bold;text-align:left;}
+      .info{background:#f5f5f5;padding:8px;border-radius:4px;margin-bottom:12px;font-size:11px;line-height:1.8;}
+    </style></head><body>
+    <h2>ABSENSI SIDANG: ${escHtml(absenSidangState.jenisSidang)}${escHtml(sub)}</h2>
+    <div class="info">
+      Hari/Tanggal: <b>${hari}, ${tgl}${escHtml(ket)}</b><br>
+      Dicatat oleh: <b>${escHtml(currentUser?.username||'-')}</b><br>
+      Total Hadir: <b>${s.total}</b> orang (EfataID: ${s.efata}, Anak: ${s.anak}, Tamu: ${s.tamu})
+    </div>
+    <h3>Yang Hadir (${hadirList.length})</h3>
+    <table><tr><th>No</th><th>Nama Panggilan</th><th>Nama Lengkap</th><th>EfataID</th><th>Kategori</th><th>Gugus/Kelas</th>${extraHeader}</tr>
+    ${buildRows(hadirList, true)}
+    </table>
+    <h3 style="margin-top:16px;">Yang Tidak Hadir (${belumList.length})</h3>
+    <table><tr><th>No</th><th>Nama Panggilan</th><th>Nama Lengkap</th><th>EfataID</th><th>Kategori</th><th>Gugus/Kelas</th></tr>
+    ${buildRows(belumList, false)}
+    </table>
+  </body></html>`;
+
+  // Buat Blob dan trigger download PDF via print dialog
+  const win = window.open('','_blank');
+  if (!win) { toast('⚠️ Pop-up diblokir browser. Izinkan pop-up dulu.'); return; }
+  win.document.write(htmlContent);
+  win.document.close();
+  // Nama file default
+  const fname = `Absensi_${absenSidangState.jenisSidang.replace(/\s/g,'_')}${absenSidangState.subGugus?'_'+absenSidangState.subGugus:''}_${absenSidangState.tanggal.replace(/\//g,'-')}.pdf`;
+  win.document.title = fname;
+  setTimeout(() => win.print(), 600);
+}
 function renderLaporanAbsensi() {
-  const content = document.getElementById('app-content'); if (!content) return;
+  const content = document.getElementById('app-content');
+  if (!content) return;
+
   const now   = new Date();
   const pad   = x => String(x).padStart(2,'0');
   const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const awal30= new Date(now); awal30.setDate(awal30.getDate()-30);
   const awal  = `${awal30.getFullYear()}-${pad(awal30.getMonth()+1)}-${pad(awal30.getDate())}`;
+
+  if (!laporanAbsenState.tglAwal)  laporanAbsenState.tglAwal  = formatDateFromInput(awal);
+  if (!laporanAbsenState.tglAkhir) laporanAbsenState.tglAkhir = formatDateFromInput(today);
 
   content.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
@@ -4419,10 +4516,10 @@ function renderLaporanAbsensi() {
         <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="flex:1;padding:11px;font-weight:700;">
           🔄 Tampilkan Laporan
         </button>
-        <button onclick="lapFontMinus()" class="btn-action" style="padding:11px;" title="Perkecil">A−</button>
-        <button onclick="lapFontPlus()" class="btn-action" style="padding:11px;" title="Perbesar">A+</button>
-        <button onclick="lapFullscreen()" class="btn-action" style="padding:11px;" title="Fullscreen">⛶</button>
-        <button onclick="lapExportPDF()" class="btn-action" style="padding:11px;" title="Export PDF">📄 PDF</button>
+        <button onclick="lapFontMinus()" class="btn-action" style="padding:11px;font-size:.85rem;" title="Perkecil">A−</button>
+        <button onclick="lapFontPlus()" class="btn-action" style="padding:11px;font-size:.85rem;" title="Perbesar">A+</button>
+        <button onclick="lapFullscreen()" class="btn-action" style="padding:11px;font-size:.85rem;" title="Fullscreen">⛶</button>
+        <button onclick="lapExportPDF()" class="btn-action" style="padding:11px;font-size:.85rem;" title="Export PDF">📄 PDF</button>
       </div>
     </div>
     <div id="laporan-result">
@@ -4430,12 +4527,14 @@ function renderLaporanAbsensi() {
     </div>`;
 }
 
+let laporanFontSize = 12;
+
 function lapFontMinus() {
-  laporanFontSize = Math.max(8, laporanFontSize-1);
+  laporanFontSize = Math.max(8, laporanFontSize - 1);
   document.querySelectorAll('.lap-scalable').forEach(el => el.style.fontSize = laporanFontSize+'px');
 }
 function lapFontPlus() {
-  laporanFontSize = Math.min(20, laporanFontSize+1);
+  laporanFontSize = Math.min(20, laporanFontSize + 1);
   document.querySelectorAll('.lap-scalable').forEach(el => el.style.fontSize = laporanFontSize+'px');
 }
 function lapFullscreen() {
@@ -4454,153 +4553,43 @@ function lapFullscreen() {
       <button class="fs-ctrl-btn" onclick="lapExportPDF()">📄 PDF</button>
       <button class="fs-ctrl-btn" onclick="this.closest('#lap-fs').remove()">✕</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:60px 16px 40px;">${el.innerHTML}</div>`;
+    <div style="flex:1;overflow-y:auto;padding:60px 16px 40px;">
+      ${el.innerHTML}
+    </div>`;
   document.body.appendChild(div);
 }
 
-async function loadLaporanAbsensi() {
-  const tglAwal  = document.getElementById('lap-tgl-awal')?.value;
-  const tglAkhir = document.getElementById('lap-tgl-akhir')?.value;
-  if (!tglAwal || !tglAkhir) return toast('⚠️ Pilih rentang tanggal');
-
-  laporanAbsenState.tglAwal  = formatDateFromInput(tglAwal);
-  laporanAbsenState.tglAkhir = formatDateFromInput(tglAkhir);
-
-  const el = document.getElementById('laporan-result');
-  el.innerHTML = `<div class="loading-shimmer"></div><div class="loading-shimmer" style="opacity:.6;"></div>
-    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat laporan dari server...</div>`;
-
-  try {
-    const url = `${APPS_SCRIPT_ABSENSI_SIDANG}?action=get_laporan_range`
-      + `&tgl_awal=${encodeURIComponent(laporanAbsenState.tglAwal)}`
-      + `&tgl_akhir=${encodeURIComponent(laporanAbsenState.tglAkhir)}`;
-    const resp   = await fetch(url);
-    const result = await resp.json();
-    if (result.status !== 'ok') { el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${result.message||'Gagal'}</p></div>`; return; }
-    renderLaporanResult(result.data || {});
-  } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
-  }
-}
-
-function renderLaporanResult(data) {
-  const el = document.getElementById('laporan-result'); if (!el) return;
-  const periode = `${formatTglDisplay(laporanAbsenState.tglAwal)} – ${formatTglDisplay(laporanAbsenState.tglAkhir)}`;
-
-  if (!Object.keys(data).length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Tidak ada data di rentang ini.</p></div>`;
-    laporanAbsenState._teksLaporan = 'Tidak ada data.';
-    return;
-  }
-
-  // Bangun teks laporan
-  let teks = `LAPORAN ABSENSI SIDANG\nPeriode: ${periode}\nDicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username||'-'}\n\n`;
-  let html = `
-    <div style="font-size:.78rem;color:var(--text3);margin-bottom:10px;">
-      📅 Periode: <strong style="color:var(--text);">${escHtml(periode)}</strong>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('lap-teks-copy').innerText).then(()=>toast('✅ Laporan disalin!'))"
-        class="btn-action accent" style="font-size:.72rem;padding:4px 10px;margin-left:6px;">📋 Copy Semua</button>
-    </div>`;
-
-  const SIDANG_ORDER = ['SPR Pagi','SPR Siang','Gugus','Pemuda','Remaja','Anak-anak','Doa','Tutur Sabda','Penjengukan','CGM','BIS - SPR','PP'];
-
-  // Sort keys: SIDANG_ORDER dulu, sisa alphabetical
-  const keys = Object.keys(data).sort((a,b) => {
-    const ai = SIDANG_ORDER.findIndex(s => a.startsWith(s));
-    const bi = SIDANG_ORDER.findIndex(s => b.startsWith(s));
-    if (ai !== bi) return (ai===-1?999:ai) - (bi===-1?999:bi);
-    return a.localeCompare(b);
-  });
-
-  keys.forEach(jenisKey => {
-    const tglMap = data[jenisKey];
-    const tglList = Object.keys(tglMap).sort((a,b) => {
-      const pa=a.split('/'),pb=b.split('/');
-      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
-    });
-
-    // Hitung total keseluruhan
-    let totHadir=0,totEfata=0,totAnak=0,totTamu=0;
-    tglList.forEach(tgl => {
-      const d = tglMap[tgl];
-      totHadir += d.total_hadir||0;
-      totEfata += d.efata||0;
-      totAnak  += d.anak||0;
-      totTamu  += d.tamu||0;
-    });
-
-    teks += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${jenisKey}\n`;
-    teks += `Total: ${totHadir} hadir (EfataID: ${totEfata}, Anak: ${totAnak}, Tamu: ${totTamu})\n`;
-    tglList.forEach(tgl => {
-      const d = tglMap[tgl];
-      teks += `  ${tgl}: ${d.total_hadir} hadir (EfataID:${d.efata} Anak:${d.anak} Tamu:${d.tamu})\n`;
-    });
-
-    html += `
-      <div class="lap-scalable" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;font-size:${laporanFontSize}px;">
-        <div style="font-weight:700;font-size:1.05em;margin-bottom:6px;color:var(--accent);">${escHtml(jenisKey)}</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;">
-          ${[
-            [totHadir,'Total Hadir','var(--green)'],
-            [totEfata,'EfataID','var(--accent)'],
-            [totAnak,'Anak','var(--accent3)'],
-            [totTamu,'Tamu','var(--yellow)'],
-          ].map(([v,l,c])=>`<div style="background:var(--surface2);border-radius:7px;padding:7px 4px;text-align:center;border:1px solid var(--border);">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.1em;font-weight:700;color:${c};">${v}</div>
-            <div style="font-size:.7em;color:var(--text3);">${l}</div>
-          </div>`).join('')}
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:.9em;">
-          <thead><tr style="background:var(--surface2);">
-            <th style="padding:5px 8px;border:1px solid var(--border);text-align:left;font-size:.85em;color:var(--text3);">Tanggal</th>
-            <th style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--text3);">Hadir</th>
-            <th style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--text3);">EfataID</th>
-            <th style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--text3);">Anak</th>
-            <th style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--text3);">Tamu</th>
-          </tr></thead>
-          <tbody>
-            ${tglList.map(tgl => {
-              const d = tglMap[tgl];
-              return `<tr>
-                <td style="padding:5px 8px;border:1px solid var(--border);">${formatTglDisplay(tgl)}</td>
-                <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;font-weight:700;color:var(--green);">${d.total_hadir||0}</td>
-                <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--accent);">${d.efata||0}</td>
-                <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--accent3);">${d.anak||0}</td>
-                <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--yellow);">${d.tamu||0}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-          <tfoot><tr style="background:var(--surface2);font-weight:700;">
-            <td style="padding:5px 8px;border:1px solid var(--border);">TOTAL</td>
-            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--green);">${totHadir}</td>
-            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--accent);">${totEfata}</td>
-            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--accent3);">${totAnak}</td>
-            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--yellow);">${totTamu}</td>
-          </tr></tfoot>
-        </table>
-      </div>`;
-  });
-
-  laporanAbsenState._teksLaporan = teks;
-  el.innerHTML = html + `<div id="lap-teks-copy" style="display:none;">${escHtml(teks)}</div>`;
-}
-
 function lapExportPDF() {
-  const teks     = laporanAbsenState._teksLaporan || '';
-  const periode  = `${formatTglDisplay(laporanAbsenState.tglAwal)} – ${formatTglDisplay(laporanAbsenState.tglAkhir)}`;
-  const fname    = `Laporan_Absensi_${periode.replace(/[\s\/]/g,'-')}.pdf`;
+  const el = document.getElementById('laporan-result'); if (!el) return;
+  const txt = laporanAbsenState._teksLaporan || '';
+  const periode = `${formatTglDisplay(laporanAbsenState.tglAwal)} – ${formatTglDisplay(laporanAbsenState.tglAkhir)}`;
+  const fname = `Laporan_Absensi_${periode.replace(/[\s\/]/g,'-')}.pdf`;
+
+  // Buat halaman print
   const win = window.open('','_blank');
-  if (!win) { toast('⚠️ Pop-up diblokir'); return; }
+  if (!win) { toast('⚠️ Pop-up diblokir browser'); return; }
   win.document.title = fname;
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${fname}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;}
-    pre{font-family:Arial,sans-serif;white-space:pre-wrap;line-height:1.7;font-size:10px;}</style></head><body>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>${fname}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#111;}
+      h2{font-size:14px;} h3{font-size:12px;margin:12px 0 4px;}
+      table{width:100%;border-collapse:collapse;margin-bottom:12px;}
+      td,th{border:1px solid #ccc;padding:3px 7px;text-align:left;}
+      th{background:#e8eaf6;font-weight:bold;}
+      .grand{background:#e3f2fd;}
+      pre{font-family:Arial,sans-serif;font-size:10px;white-space:pre-wrap;line-height:1.7;}
+    </style></head><body>
     <h2>LAPORAN ABSENSI SIDANG</h2>
-    <p>Periode: <b>${escHtml(periode)}</b><br>Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-    <pre>${escHtml(teks)}</pre></body></html>`);
+    <p>Periode: <b>${escHtml(periode)}</b><br>
+    Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${escHtml(currentUser?.username||'-')}</p>
+    <pre>${escHtml(txt)}</pre>
+    </body></html>`);
   win.document.close();
   setTimeout(() => win.print(), 600);
 }
+
+
 
 
 // ══════════════════════════════════════════════════
