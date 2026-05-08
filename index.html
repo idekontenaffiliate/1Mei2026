@@ -479,9 +479,10 @@ body {
 /* ── Fix: flex container di absensi sidang sort row ──
    overflow-x:hidden pada flex bisa collapse body width  */
 #app-content [style*="overflow-x:hidden"],
+/*
 #app-content [style*="overflow-x: hidden"] {
   overflow-x: clip !important; /* clip tidak mempengaruhi scroll width, hidden bisa */
-}
+} */
 
 /* ── Fix: sdg-scalable item di renderSidangList ── */
 .sdg-scalable {
@@ -531,7 +532,7 @@ body {
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.15 @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.25 @2026</span></div>
   </div>
 </div>
 
@@ -4777,7 +4778,7 @@ async function logHistory(menu,action){
   if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
 }
 // Watchdog: pantau jika body width turun di bawah threshold   
-function() {
+(function() {
   let _prevWidth = window.innerWidth;
   const checkWidth = () => {
     const cw = document.body.offsetWidth;
