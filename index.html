@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.10 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.00 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -740,7 +740,7 @@ function doLogout(){
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('main-nav').innerHTML='';
   document.getElementById('app-content').innerHTML='';
-  document.getElementById('header-title').textContent='Acara Solo 2026';
+  document.getElementById('header-title').textContent='Statistik 2026';
   document.getElementById('header-sub').textContent='loading...';
   document.getElementById('user').value='';
   document.getElementById('pass').value='';
@@ -2794,7 +2794,7 @@ async function simpanSemuaAbsenKTM(){
   if (absenKTMState.jenis === 'KTM_Tahir' && !absenKTMState.user2)
     return toast('⚠️ KTM Tahir wajib 2 user');
 
-  toast('⏳ Menyimpan semua...');
+  toast('⏳ Proses Menyimpan semua, jangan tutup, tunggu pesan selanjutnya tampil...');
   const tgl = absenKTMState.tanggal;
 
   // Gabung jemaat + tamu
@@ -3110,8 +3110,8 @@ function renderAbsensiSidang() {
         <button onclick="toggleTamuAbsenMode(true)" class="btn-action" style="font-size:.78rem;border-color:var(--yellow);color:var(--yellow);">➕ Tamu/Anak</button>
         <button onclick="cariDariMasterModal()" class="btn-action" style="font-size:.78rem;border-color:var(--accent2);color:var(--accent2);">🔍 Cari Master</button>
         ${absenSidangState.mode==='master'?`
-        <button onclick="sdgSemuaHadir()" class="btn-action green" style="font-size:.78rem;">✅ Semua</button>
-        <button onclick="sdgSemuaTidak()" class="btn-action red" style="font-size:.78rem;">❌ Reset</button>`:''}
+        <button onclick="sdgSemuaHadir()" class="btn-action green" style="font-size:.78rem;">✅ Semua Hadir</button>
+        <button onclick="sdgSemuaTidak()" class="btn-action red" style="font-size:.78rem;">❌ Reset Hadir</button>`:''}
         <button onclick="simpanSemuaSidang()" class="btn-action"
           style="font-size:.78rem;background:var(--yellow);color:#000;border-color:var(--yellow);font-weight:700;">
           💾 Simpan
@@ -3877,7 +3877,7 @@ async function simpanSatuSidang(item) {
 async function simpanSemuaSidang() {
   if (!absenSidangState.daftarAbsen.length) return toast('⚠️ Daftar kosong');
   if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
-  toast('⏳ Proses Menyimpan semua, tunggu pesan selanjutnya...');
+  toast('⏳ Proses Menyimpan semua, jangan tutup, tunggu sampai pesan selanjutnya tampil...');
 
   const items = absenSidangState.daftarAbsen.map(x => ({
     no_efataid:x.no_efataid||'', nama:x.nama||'', hadir:x.hadir||'n',
@@ -3949,7 +3949,7 @@ const isBusBaur =
   (absenSidangState.jenisSidang || '').toLowerCase().includes('bus baur');
 
 // tampilkan gugus hanya jika bukan BUS SPR / BUS BAUR
-if (x.gugus && !isBusSPR && !isBusBaur) {
+if (!isBusSPR && !isBusBaur) {
   l += ` – ${x.gugus}`;
 }
      
@@ -3983,11 +3983,11 @@ if (x.gugus && !isBusSPR && !isBusBaur) {
   wrap.innerHTML = `
     <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-hadir').innerText).then(()=>toast('✅ Disalin! Hadir: ${hadirList.length}'))"
-        class="btn-action green" style="flex:1;padding:8px;font-size:.75rem;">📋 Hadir (${hadirList.length})</button>
+        class="btn-action green" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text Hadir (${hadirList.length})</button>
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-belum').innerText).then(()=>toast('✅ Disalin! Tidak hadir: ${belumList.length}'))"
-        class="btn-action red" style="flex:1;padding:8px;font-size:.75rem;">📋 Tidak (${belumList.length})</button>
+        class="btn-action red" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text Tidak (${belumList.length})</button>
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-all').innerText).then(()=>toast('✅ Disalin semua!'))"
-        class="btn-action" style="flex:1;padding:8px;font-size:.75rem;">📋 All</button>
+        class="btn-action" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text All</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div>
