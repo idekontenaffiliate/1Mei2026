@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.00 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v100.00 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -3949,9 +3949,7 @@ const isBusBaur =
   (absenSidangState.jenisSidang || '').toLowerCase().includes('bus baur');
 
 // tampilkan gugus hanya jika bukan BUS SPR / BUS BAUR
-if (!isBusSPR && !isBusBaur) {
-  l += ` – ${x.gugus}`;
-}
+// if (!isBusSPR && !isBusBaur) {  l += ` – ${x.gugus}`;}
      
     
     if (showExtra && isPenj && x.nama_dijenguk) l += ` → jenguk: ${x.nama_dijenguk}${x.ket_jenguk?' ('+x.ket_jenguk+')':''}`;
@@ -3983,11 +3981,11 @@ if (!isBusSPR && !isBusBaur) {
   wrap.innerHTML = `
     <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-hadir').innerText).then(()=>toast('✅ Disalin! Hadir: ${hadirList.length}'))"
-        class="btn-action green" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text Hadir (${hadirList.length})</button>
+        class="btn-action green" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text - Hadir (${hadirList.length})</button>
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-belum').innerText).then(()=>toast('✅ Disalin! Tidak hadir: ${belumList.length}'))"
-        class="btn-action red" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text Tidak (${belumList.length})</button>
+        class="btn-action red" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text - Tidak (${belumList.length})</button>
       <button onclick="navigator.clipboard.writeText(document.getElementById('sdg-t-all').innerText).then(()=>toast('✅ Disalin semua!'))"
-        class="btn-action" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text All</button>
+        class="btn-action" style="flex:1;padding:8px;font-size:.75rem;">📋 Copy Text - All</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div>
