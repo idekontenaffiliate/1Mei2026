@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v100.00 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">beri nilai 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -4552,7 +4552,7 @@ ${item.keputusan?`\n🏷 Keputusan: ${escHtml(item.keputusan)}`:''}
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  PATCH 3 — Laporan Summary Semua Absensi (fungsi baru)      ║
-// ║  Tambahkan di bagian bawah <script> sebelum </script>       ║
+// ║     ║
 // ╚══════════════════════════════════════════════════════════════╝
  
 // ── STATE LAPORAN ──────────────────────────────────────────────
@@ -4786,6 +4786,599 @@ async function logHistory(menu,action){
   const ex=JSON.parse(localStorage.getItem('activity_log')||'[]');ex.push(entry);if(ex.length>500)ex.splice(0,ex.length-500);localStorage.setItem('activity_log',JSON.stringify(ex));
   if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// PATCH: Kidung Book Mode + Font Long Press + Dashboard Fullscreen
+// Cara pakai: Salin semua kode di bawah ini, tempel di dalam <script>
+// di index.html, SEBELUM tag </script> penutup.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── 1. FONT LONG PRESS SYSTEM ─────────────────────────────────────────
+// State untuk long-press   
+let _fontPressTimer = null;
+let _fontPressInterval = null;
+
+function fontBtnDown(delta) {
+  // Langsung ubah sekali
+  adjustFont(delta);
+  // Setelah 400ms tahan, mulai auto-repeat setiap 80ms
+  _fontPressTimer = setTimeout(() => {
+    _fontPressInterval = setInterval(() => adjustFont(delta), 80);
+  }, 400);
+}
+
+function fontBtnUp() {
+  if (_fontPressTimer)   { clearTimeout(_fontPressTimer);  _fontPressTimer = null; }
+  if (_fontPressInterval){ clearInterval(_fontPressInterval); _fontPressInterval = null; }
+}
+
+// Versi FS (fullscreen lyric) dengan long-press
+function fsFontBtnDown(delta) {
+  fsAdjustFont(delta);
+  _fontPressTimer = setTimeout(() => {
+    _fontPressInterval = setInterval(() => fsAdjustFont(delta), 80);
+  }, 400);
+} 
+
+// ── 2. HELPER: Buat tombol font dengan long-press ─────────────────────
+// Mengembalikan HTML tombol font untuk modal kidung
+function buildFontBtns(isFS) {
+  const down = isFS ? 'fsFontBtnDown' : 'fontBtnDown';
+  const up   = 'fontBtnUp()';
+  const big  = (delta, label) =>
+    `<button class="btn-action"
+      onpointerdown="${down}(${delta})"
+      onpointerup="${up}" onpointerleave="${up}"
+      style="user-select:none;-webkit-user-select:none;"
+      title="Tahan untuk auto">${label}</button>`;
+  return `
+    ${big(-5,'A−−')}
+    ${big(-1,'A−')}
+    <span id="${isFS?'fs-':''}font-size-disp"
+      style="font-family:'JetBrains Mono',monospace;font-size:.8rem;
+      color:var(--accent);background:var(--surface2);padding:3px 8px;
+      border-radius:6px;border:1px solid var(--border);min-width:44px;
+      text-align:center;cursor:default;">${currentFontSize}px</span>
+    ${big(1,'A+')}
+    ${big(5,'A++')}`;
+}
+
+// Update tampilan ukuran font di semua display
+function updateFontSizeDisp() {
+  document.querySelectorAll('#font-size-disp, #fs-font-size-disp')
+    .forEach(el => el.textContent = currentFontSize + 'px');
+}
+
+// Override adjustFont agar update display juga
+const _origAdjustFont = adjustFont;
+adjustFont = function(d) {
+  _origAdjustFont(d);
+  updateFontSizeDisp();
+};
+
+// Override fsAdjustFont juga
+const _origFsAdjustFont = fsAdjustFont;
+fsAdjustFont = function(d) {
+  _origFsAdjustFont(d);
+  updateFontSizeDisp();
+};
+
+
+// ── 3. BOOK MODE FULLSCREEN ───────────────────────────────────────────
+
+let bookPages   = [];   // Array halaman (string)
+let bookPageIdx = 0;    // Halaman saat ini
+let bookTitle   = '';
+let bookStartX  = 0;    // Untuk swipe touch
+
+// Memecah teks lirik menjadi halaman berdasarkan baris kosong (bait)
+function splitToPages(text, linesPerPage) {
+  linesPerPage = linesPerPage || 20;
+  const rawLines = text.split('\n');
+  const pages    = [];
+  let current    = [];
+
+  rawLines.forEach(line => {
+    current.push(line);
+    if (current.length >= linesPerPage) {
+      // Potong di baris kosong terdekat setelah linesPerPage
+      const emptyIdx = current.slice(Math.floor(linesPerPage * 0.7))
+        .findIndex(l => l.trim() === '');
+      if (emptyIdx >= 0) {
+        const cutAt = Math.floor(linesPerPage * 0.7) + emptyIdx + 1;
+        pages.push(current.slice(0, cutAt).join('\n'));
+        current = current.slice(cutAt);
+      } else {
+        pages.push(current.join('\n'));
+        current = [];
+      }
+    }
+  });
+  if (current.length) pages.push(current.join('\n'));
+  return pages.filter(p => p.trim());
+}
+
+function openBookMode(text, title) {
+  if (!text) return;
+  bookTitle  = title || 'Lirik';
+  bookPages  = splitToPages(text, 22);
+  bookPageIdx = 0;
+
+  const old = document.getElementById('book-fullscreen');
+  if (old) old.remove();
+
+  const div = document.createElement('div');
+  div.id = 'book-fullscreen';
+  div.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:var(--fs-bg,var(--bg));color:var(--fs-text,var(--text));
+    display:flex;flex-direction:column;overflow:hidden;
+    touch-action:pan-y;
+  `;
+
+  div.innerHTML = `
+    <!-- HEADER -->
+    <div style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 14px;background:var(--header-bg);
+      border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap;">
+      <button class="fs-back" onclick="closeBookMode()"
+        style="position:static;padding:6px 12px;font-size:.8rem;">← Kembali</button>
+      <div style="font-size:.82rem;font-weight:700;flex:1;min-width:0;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+        📖 ${escHtml(bookTitle)}
+      </div>
+      <!-- Font controls -->
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
+        ${buildFontBtns(true)}
+        <button class="fs-ctrl-btn" onclick="toggleFontModeFS()"
+          style="padding:5px 9px;font-size:.78rem;">🔤</button>
+        <button class="fs-ctrl-btn" onclick="closeBookMode()"
+          style="padding:5px 9px;font-size:.78rem;">✕</button>
+      </div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <div id="book-page-wrap" style="
+      flex:1;overflow:hidden;position:relative;
+      display:flex;align-items:stretch;">
+
+      <!-- Prev area -->
+      <div id="book-prev-area" onclick="bookNav(-1)" style="
+        position:absolute;left:0;top:0;bottom:0;width:48px;z-index:5;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;opacity:.5;transition:opacity .2s;"
+        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.5'">
+        <div style="
+          width:36px;height:36px;border-radius:50%;
+          background:var(--surface);border:1px solid var(--border);
+          display:flex;align-items:center;justify-content:center;
+          font-size:1.2rem;color:var(--text);">‹</div>
+      </div>
+
+      <!-- Page text -->
+      <div id="book-content" style="
+        flex:1;padding:24px 64px;overflow-y:auto;
+        font-size:${currentFontSize}px;line-height:1.8;
+        white-space:pre-wrap;word-wrap:break-word;
+        font-family:'JetBrains Mono',monospace;">
+      </div>
+
+      <!-- Next area -->
+      <div id="book-next-area" onclick="bookNav(1)" style="
+        position:absolute;right:0;top:0;bottom:0;width:48px;z-index:5;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;opacity:.5;transition:opacity .2s;"
+        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.5'">
+        <div style="
+          width:36px;height:36px;border-radius:50%;
+          background:var(--surface);border:1px solid var(--border);
+          display:flex;align-items:center;justify-content:center;
+          font-size:1.2rem;color:var(--text);">›</div>
+      </div>
+    </div>
+
+    <!-- FOOTER / NAV BAR -->
+    <div style="
+      padding:10px 14px;background:var(--header-bg);
+      border-top:1px solid var(--border);flex-shrink:0;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <button class="btn-action" onclick="bookNav(-1)" style="padding:9px 18px;font-size:.9rem;">← Sebelum</button>
+      <div style="text-align:center;">
+        <div id="book-page-indicator" style="
+          font-family:'JetBrains Mono',monospace;font-size:.78rem;
+          color:var(--accent);font-weight:700;"></div>
+        <div id="book-dots" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:4px;max-width:200px;"></div>
+      </div>
+      <button class="btn-action" onclick="bookNav(1)" style="padding:9px 18px;font-size:.9rem;">Berikut →</button>
+    </div>
+  `;
+
+  document.body.appendChild(div);
+  bookRender();
+  bookInitSwipe(div);
+
+  // Fullscreen request
+  if (div.requestFullscreen) div.requestFullscreen().catch(() => {});
+}
+
+function bookRender() {
+  const content = document.getElementById('book-content');
+  const indicator = document.getElementById('book-page-indicator');
+  const dotsEl = document.getElementById('book-dots');
+  const prevArea = document.getElementById('book-prev-area');
+  const nextArea = document.getElementById('book-next-area');
+  if (!content) return;
+
+  // Animasi slide
+  content.style.opacity = '0';
+  content.style.transform = 'translateX(20px)';
+  setTimeout(() => {
+    content.textContent = bookPages[bookPageIdx] || '';
+    content.style.transition = 'opacity .18s ease, transform .18s ease';
+    content.style.opacity = '1';
+    content.style.transform = 'translateX(0)';
+
+    // Sync font
+    content.style.fontSize = currentFontSize + 'px';
+    fontModes.forEach(f => content.classList.remove(f.cls));
+    content.classList.add(fontModes[fontModeIndex].cls);
+  }, 80);
+
+  if (indicator) indicator.textContent = `Hal. ${bookPageIdx + 1} / ${bookPages.length}`;
+
+  // Dots (maks 12)
+  if (dotsEl) {
+    const max = Math.min(bookPages.length, 12);
+    dotsEl.innerHTML = Array.from({length: max}, (_, i) => {
+      const pi = bookPages.length > 12 ? Math.round(i * (bookPages.length - 1) / (max - 1)) : i;
+      const active = bookPageIdx === (bookPages.length > 12 ? pi : i);
+      return `<div onclick="bookGoTo(${bookPages.length > 12 ? pi : i})" style="
+        width:${active?10:6}px;height:${active?10:6}px;border-radius:50%;cursor:pointer;
+        background:${active ? 'var(--accent)' : 'var(--border)'};
+        transition:all .2s;flex-shrink:0;"></div>`;
+    }).join('');
+  }
+
+  // Tampilkan/sembunyikan nav
+  if (prevArea) prevArea.style.display = bookPageIdx > 0 ? 'flex' : 'none';
+  if (nextArea) nextArea.style.display = bookPageIdx < bookPages.length - 1 ? 'flex' : 'none';
+
+  updateFontSizeDisp();
+}
+
+function bookNav(dir) {
+  const newIdx = bookPageIdx + dir;
+  if (newIdx < 0 || newIdx >= bookPages.length) return;
+  bookPageIdx = newIdx;
+  bookRender();
+}
+
+function bookGoTo(idx) {
+  bookPageIdx = Math.max(0, Math.min(bookPages.length - 1, idx));
+  bookRender();
+}
+
+function closeBookMode() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  const el = document.getElementById('book-fullscreen');
+  if (el) el.remove();
+}
+
+// Swipe touch untuk book mode
+function bookInitSwipe(container) {
+  let startX = 0, startY = 0;
+  container.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      bookNav(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
+  // Arrow keys
+  container.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') bookNav(1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') bookNav(-1);
+    else if (e.key === 'Escape') closeBookMode();
+  });
+}
+
+// Keyboard global juga handle book mode
+const _origKeydown = document.onkeydown;
+document.addEventListener('keydown', e => {
+  const book = document.getElementById('book-fullscreen');
+  if (!book) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') bookNav(1);
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp')  bookNav(-1);
+});
+const _origOpenKidungDetail = openKidungDetail;
+openKidungDetail = function(k) {
+  _origOpenKidungDetail(k);
+
+  // Cari action-row pertama di modal dan tambah tombol baru
+  // (kita inject setelah render selesai)
+  setTimeout(() => {
+    const modal = document.getElementById('tab-teks');
+    if (!modal) return;
+
+    const actionRow = modal.querySelector('.action-row');
+    if (!actionRow) return;
+
+    const lyricText = k['isi kidung'] || '';
+    const judulText = `${k['no kidung']}. ${k['judul kidung'] || ''}`;
+
+    // Hapus tombol fullscreen lama kalau ada, supaya tidak duplikat
+    actionRow.querySelectorAll('.btn-fs-old').forEach(b => b.remove());
+
+    // Ganti tombol ⛶ Full🔤 dan ⛶ Full lama dengan versi baru
+    const oldBtns = actionRow.querySelectorAll('button');
+    oldBtns.forEach(btn => {
+      if (btn.textContent.includes('Full🔤') || btn.textContent.includes('⛶ Full')) {
+        btn.remove();
+      }
+    });
+
+    // Tombol baru: ⛶ Gulir (scrolling) + 📖 Book
+    const btnGulir = document.createElement('button');
+    btnGulir.className = 'btn-action';
+    btnGulir.innerHTML = '⛶ Gulir';
+    btnGulir.title = 'Fullscreen mode gulir (scroll)';
+    btnGulir.onclick = () => openLyricFullscreenFromDom();
+
+    const btnBook = document.createElement('button');
+    btnBook.className = 'btn-action accent';
+    btnBook.innerHTML = '📖 Book';
+    btnBook.title = 'Fullscreen mode buku (halaman)';
+    btnBook.onclick = () => openBookMode(lyricText, judulText);
+
+    actionRow.appendChild(btnGulir);
+    actionRow.appendChild(btnBook);
+
+    // Patch tombol font A- A+ dengan versi long-press + tampilkan ukuran
+    patchFontBtnsInActionRow(actionRow);
+
+  }, 100);
+};
+
+
+// ── 5. PATCH TOMBOL FONT DI MODAL ────────────────────────────────────
+function patchFontBtnsInActionRow(actionRow) {
+  if (!actionRow) return;
+
+  // Cari & ganti tombol A- dan A+
+  const btns = [...actionRow.querySelectorAll('button')];
+  let aMinusBtn = btns.find(b => b.textContent.trim() === 'A−');
+  let aPlusBtn  = btns.find(b => b.textContent.trim() === 'A+');
+
+  if (aMinusBtn) {
+    // Sisipkan A-- sebelum A-
+    const aMinus2 = document.createElement('button');
+    aMinus2.className = 'btn-action';
+    aMinus2.innerHTML = 'A−−';
+    aMinus2.title = 'Kurang 5 (tahan untuk auto)';
+    aMinus2.onpointerdown = () => fontBtnDown(-5);
+    aMinus2.onpointerup   = fontBtnUp;
+    aMinus2.onpointerleave = fontBtnUp;
+    actionRow.insertBefore(aMinus2, aMinusBtn);
+
+    // Patch A- jadi long-press
+    aMinusBtn.innerHTML = 'A−';
+    aMinusBtn.onpointerdown = () => fontBtnDown(-1);
+    aMinusBtn.onpointerup   = fontBtnUp;
+    aMinusBtn.onpointerleave = fontBtnUp;
+    aMinusBtn.onclick = null;
+  }
+
+  if (aPlusBtn) {
+    // Sisipkan size display & A++ setelah A+
+    const sizeDisp = document.createElement('span');
+    sizeDisp.id = 'font-size-disp';
+    sizeDisp.style.cssText = `
+      font-family:'JetBrains Mono',monospace;font-size:.78rem;
+      color:var(--accent);background:var(--surface2);padding:3px 8px;
+      border-radius:6px;border:1px solid var(--border);
+      min-width:44px;text-align:center;`;
+    sizeDisp.textContent = currentFontSize + 'px';
+
+    const aPlus2 = document.createElement('button');
+    aPlus2.className = 'btn-action';
+    aPlus2.innerHTML = 'A++';
+    aPlus2.title = 'Tambah 5 (tahan untuk auto)';
+    aPlus2.onpointerdown = () => fontBtnDown(5);
+    aPlus2.onpointerup   = fontBtnUp;
+    aPlus2.onpointerleave = fontBtnUp;
+
+    // Patch A+ jadi long-press
+    aPlusBtn.innerHTML = 'A+';
+    aPlusBtn.onpointerdown = () => fontBtnDown(1);
+    aPlusBtn.onpointerup   = fontBtnUp;
+    aPlusBtn.onpointerleave = fontBtnUp;
+    aPlusBtn.onclick = null;
+
+    // Sisipkan: sizeDisp setelah A+, lalu A++
+    const nextEl = aPlusBtn.nextSibling;
+    actionRow.insertBefore(sizeDisp, nextEl);
+    actionRow.insertBefore(aPlus2, nextEl);
+  }
+}
+
+
+// ── 6. OVERRIDE openLyricFullscreen ─────────────────────────────────
+// Tambah tombol Book & font display di fullscreen gulir
+const _origOpenLyricFullscreen = openLyricFullscreen;
+openLyricFullscreen = function(text) {
+  _origOpenLyricFullscreen(text);
+  setTimeout(() => {
+    const fsDiv = document.getElementById('fullscreen-lyric');
+    if (!fsDiv) return;
+    const controls = fsDiv.querySelector('.fs-controls');
+    if (!controls) return;
+
+    // Tambah size display dan tombol Book
+    const sizeDisp = document.createElement('span');
+    sizeDisp.id = 'fs-font-size-disp';
+    sizeDisp.style.cssText = `
+      font-family:'JetBrains Mono',monospace;font-size:.75rem;
+      color:var(--accent);background:var(--surface);padding:3px 8px;
+      border-radius:6px;border:1px solid var(--border);
+      min-width:44px;text-align:center;`;
+    sizeDisp.textContent = currentFontSize + 'px';
+    controls.insertBefore(sizeDisp, controls.firstChild);
+
+    // Patch tombol A- dan A+ yang sudah ada
+    const fsBtns = [...controls.querySelectorAll('button')];
+    const fsAMinus = fsBtns.find(b => b.textContent.trim() === 'A−');
+    const fsAPlus  = fsBtns.find(b => b.textContent.trim() === 'A+');
+
+    if (fsAMinus) {
+      fsAMinus.onpointerdown = () => fsFontBtnDown(-1);
+      fsAMinus.onpointerup   = fontBtnUp;
+      fsAMinus.onpointerleave = fontBtnUp;
+      fsAMinus.onclick = null;
+      // A-- 
+      const fsAMinus2 = document.createElement('button');
+      fsAMinus2.className = 'fs-ctrl-btn';
+      fsAMinus2.textContent = 'A−−';
+      fsAMinus2.onpointerdown = () => fsFontBtnDown(-5);
+      fsAMinus2.onpointerup   = fontBtnUp;
+      fsAMinus2.onpointerleave = fontBtnUp;
+      controls.insertBefore(fsAMinus2, fsAMinus);
+    }
+    if (fsAPlus) {
+      fsAPlus.onpointerdown = () => fsFontBtnDown(1);
+      fsAPlus.onpointerup   = fontBtnUp;
+      fsAPlus.onpointerleave = fontBtnUp;
+      fsAPlus.onclick = null;
+      // A++
+      const fsAPlus2 = document.createElement('button');
+      fsAPlus2.className = 'fs-ctrl-btn';
+      fsAPlus2.textContent = 'A++';
+      fsAPlus2.onpointerdown = () => fsFontBtnDown(5);
+      fsAPlus2.onpointerup   = fontBtnUp;
+      fsAPlus2.onpointerleave = fontBtnUp;
+      controls.insertBefore(fsAPlus2, fsAPlus.nextSibling);
+    }
+
+    updateFontSizeDisp();
+  }, 80);
+};
+
+
+// ── 7. DASHBOARD FULLSCREEN ───────────────────────────────────────────
+
+function openDashboardFullscreen() {
+  // Ambil konten dashboard yang sedang tampil
+  const contentEl = document.getElementById('app-content');
+  if (!contentEl) return toast('⚠️ Dashboard belum dimuat');
+
+  const html = contentEl.innerHTML;
+
+  const old = document.getElementById('dash-fullscreen');
+  if (old) old.remove();
+
+  const div = document.createElement('div');
+  div.id = 'dash-fullscreen';
+  div.style.cssText = `
+    position:fixed;inset:0;z-index:9998;
+    background:var(--bg);color:var(--text);
+    display:flex;flex-direction:column;overflow:hidden;`;
+
+  div.innerHTML = `
+    <!-- TOOLBAR -->
+    <div style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 14px;background:var(--header-bg);
+      border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="hdr-dot" style="width:7px;height:7px;border-radius:50%;
+          background:var(--green);box-shadow:0 0 6px var(--green);
+          animation:blink 2s infinite;flex-shrink:0;"></div>
+        <div style="font-weight:700;font-size:.9rem;">📊 Dashboard — Fullscreen</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <div id="dash-fs-clock" style="
+          font-family:'JetBrains Mono',monospace;font-size:.65rem;
+          color:var(--accent2);background:var(--surface2);
+          padding:3px 8px;border-radius:7px;border:1px solid var(--border);
+          white-space:nowrap;"></div>
+        <button onclick="refreshDashboardFS()" class="icon-btn" title="Refresh" style="font-size:.8rem;">🔄</button>
+        <button onclick="closeDashboardFullscreen()" class="icon-btn" title="Keluar" style="font-size:.9rem;">✕</button>
+      </div>
+    </div>
+
+    <!-- CONTENT (scrollable) -->
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="content-area" id="dash-fs-content" style="padding:12px 12px 80px;">${html}</div>
+    </div>
+  `;
+
+  document.body.appendChild(div);
+  if (div.requestFullscreen) div.requestFullscreen().catch(() => {});
+
+  // Clock
+  const updateDFSClock = () => {
+    const n = new Date();
+    const pad = x => String(x).padStart(2, '0');
+    const el = document.getElementById('dash-fs-clock');
+    if (el) el.textContent = `${pad(n.getDate())}/${pad(n.getMonth()+1)} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  };
+  updateDFSClock();
+  div._clockInterval = setInterval(updateDFSClock, 1000);
+}
+
+function closeDashboardFullscreen() {
+  const el = document.getElementById('dash-fullscreen');
+  if (el) {
+    if (el._clockInterval) clearInterval(el._clockInterval);
+    el.remove();
+  }
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+function refreshDashboardFS() {
+  const contentEl = document.getElementById('app-content');
+  const fsContent = document.getElementById('dash-fs-content');
+  if (contentEl && fsContent) {
+    fsContent.innerHTML = contentEl.innerHTML;
+    toast('✅ Dashboard diperbarui');
+  }
+}
+
+// Tambah tombol FS ke dashboard setelah render
+const _origRenderDashboard = renderDashboard;
+renderDashboard = function() {
+  _origRenderDashboard();
+  // Tunggu render selesai lalu inject tombol FS
+  setTimeout(() => {
+    const contentEl = document.getElementById('app-content');
+    if (!contentEl) return;
+
+    // Cek sudah ada tombol belum (hindari duplikat)
+    if (document.getElementById('btn-dash-fullscreen')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'btn-dash-fullscreen';
+    btn.className = 'btn-action accent';
+    btn.style.cssText = 'width:100%;padding:11px;margin-bottom:10px;font-weight:700;';
+    btn.innerHTML = '⛶ Fullscreen Dashboard';
+    btn.onclick = openDashboardFullscreen;
+
+    // Sisipkan di awal konten
+    contentEl.insertBefore(btn, contentEl.firstChild);
+  }, 200);
+};
+
+// ── 8. ESC KEY HANDLER (dash fullscreen) ─────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const dash = document.getElementById('dash-fullscreen');
+    if (dash) { closeDashboardFullscreen(); return; }
+  }
+});   
 </script>
 </body>
 </html>
