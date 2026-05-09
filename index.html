@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v25.25 cek layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v10.10 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -1528,7 +1528,7 @@ function applySavedFontMode(){const saved=localStorage.getItem('fontMode');if(sa
 // FULLSCREEN LYRIC
 // ══════════════════════════════════════════════════
 function openLyricFullscreen(text){if(!text)return;const old=document.getElementById('fullscreen-lyric');if(old)old.remove();const div=document.createElement('div');div.id='fullscreen-lyric';div.innerHTML=`<button class="fs-back" onclick="closeLyricFullscreen()">← Kembali</button><div class="fs-controls"><button class="fs-ctrl-btn" onclick="fsAdjustFont(-2)">A−</button><button class="fs-ctrl-btn" onclick="fsAdjustFont(2)">A+</button><button class="fs-ctrl-btn" onclick="toggleFontModeFS()">🔤</button><button class="fs-ctrl-btn" onclick="closeLyricFullscreen()">✕ Keluar</button></div><div class="fs-content" id="fs-content-inner">${escHtml(text)}</div>`;document.body.appendChild(div);const fsc=div.querySelector('.fs-content');if(fsc){fsc.style.fontSize=currentFontSize+'px';fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}if(div.requestFullscreen)div.requestFullscreen().catch(()=>{});}
-function fsAdjustFont(d){currentFontSize=Math.max(9,Math.min(50,currentFontSize+d));const fsc=document.getElementById('fs-content-inner');if(fsc)fsc.style.fontSize=currentFontSize+'px';}
+function fsAdjustFont(d){currentFontSize=Math.max(8,Math.min(250,currentFontSize+d));const fsc=document.getElementById('fs-content-inner');if(fsc)fsc.style.fontSize=currentFontSize+'px';}
 function toggleFontModeFS(){fontModeIndex=(fontModeIndex+1)%fontModes.length;localStorage.setItem('fontMode',fontModeIndex);const fsc=document.getElementById('fs-content-inner');if(fsc){fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}toast(`Font: ${fontModes[fontModeIndex].label}`);}
 function openLyricFullscreenFromDom(){const el=document.querySelector('.lyric-box .scalable-text');if(!el)return;openLyricFullscreen(el.innerText);}
 function closeLyricFullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const el=document.getElementById('fullscreen-lyric');if(el)el.remove();}
@@ -2952,13 +2952,13 @@ function renderAbsenKTMLog() {
 // ═══════════════════════════════════════════════════════════════
 
 const SIDANG_OPTIONS = [
-  'SPR Pagi','SPR Siang','Gugus','Pemuda',
-  'Remaja','Anak-anak','Doa','Tutur Sabda','Penjengukan','CGM','BIS - SPR','PP'
+  'SPR Pagi','SPR Siang','BIS - SPR','Gugus','Pemuda',
+  'Remaja','Anak-anak','Doa','Tutur Sabda','Penjengukan','CGM','BIS - BAUR','PP'
 ];
 
 // Keyword field "ibadah yang diikuti" → jenis sidang
 const SIDANG_PELAYANAN_MAP = {
-  'SPR Pagi'    :['SPR','SPR Pagi'],
+  'SPR Pagi'    :['SPR Pagi'],
   'SPR Siang'   :['SPR','SPR Siang'],
   'BIS - SPR'   :['BIS SPR'],
   'Gugus'       :['Gugus'],
@@ -2969,7 +2969,7 @@ const SIDANG_PELAYANAN_MAP = {
   'Tutur Sabda' :['Tutur Sabda','Tutur'],
   'Penjengukan' :['Penjengukan'],
   'CGM'         :['CGM'],
-  'BIS - BAUR'   :['BIS BAUR'],
+  'BIS - BAUR'  :['BIS BAUR'],
   'PP'          :['PP'],
 };
 
@@ -3941,14 +3941,18 @@ function renderSidangTextView(wrap) {
   const fmtLine = (x,i,showExtra) => {
     let l = `${i+1}. ${x.nama_panggilan||x.nama}`;
     if (x.kategori && x.kategori!=='Kaum Saleh') l += ` [${x.kategori}]`;
-  const isBusSPR = (x.ibadah_diikuti || '')
-    .toLowerCase()
-    .includes('bus spr');
+  
+     const isBusSPR =
+  (absenSidangState.jenisSidang || '').toLowerCase().includes('bus spr');
 
-  // tampilkan gugus hanya jika bukan Bus SPR
-  if (x.gugus && !isBusSPR) {
-    l += ` – ${x.gugus}`;
-  }
+const isBusBaur =
+  (absenSidangState.jenisSidang || '').toLowerCase().includes('bus baur');
+
+// tampilkan gugus hanya jika bukan BUS SPR / BUS BAUR
+if (x.gugus && !isBusSPR && !isBusBaur) {
+  l += ` – ${x.gugus}`;
+}
+     
     
     if (showExtra && isPenj && x.nama_dijenguk) l += ` → jenguk: ${x.nama_dijenguk}${x.ket_jenguk?' ('+x.ket_jenguk+')':''}`;
     return l;
