@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">beri nilai 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">apa sekarang nilainya 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -938,12 +938,10 @@ function renderDashboard() {
   const acara = db.Acara || [];
   const kidung = db.Kidung || [];
 
-  // Hitung statistik jemaat
   const total = jemaat.length;
   const pria = jemaat.filter(j => j.Gender === 'Pria').length;
   const wanita = jemaat.filter(j => j.Gender === 'Wanita').length;
 
-  // Usia
   const usia = {anak:0,remaja:0,pemuda:0,muda:0,dewasa:0,tua:0,tidaktahu:0};
   jemaat.forEach(j => {
     const u = parseInt(j.Usia);
@@ -956,7 +954,6 @@ function renderDashboard() {
     else usia.tua++;
   });
 
-  // Baptis
   const baptisMap = {sudah:0,belum:0};
   jemaat.forEach(j => {
     const t = (j['Tanggal Baptis'] || '').trim();
@@ -964,7 +961,6 @@ function renderDashboard() {
     else baptisMap.belum++;
   });
 
-  // EfataID
   const efataidMap = {ya:0,tidak:0,lainnya:0};
   jemaat.forEach(j => {
     const ef = (j['efataid'] || j['Efataid'] || '').toLowerCase().trim();
@@ -973,7 +969,6 @@ function renderDashboard() {
     else if (ef) efataidMap.lainnya++;
   });
 
-  // Ikut Solo
   const ikutSoloMap = {ya:0,tidak:0};
   jemaat.forEach(j => {
     const v = String(j['ikutSolo'] || j['Ikut Solo'] || '').toLowerCase().replace(/\s+/g,'').trim();
@@ -981,30 +976,18 @@ function renderDashboard() {
     else if (v) ikutSoloMap.tidak++;
   });
 
-  // Kategori
   const katMap = {};
   jemaat.forEach(j => {
     const k = (j['Kategori'] || j['kategori'] || '').trim();
     if (k) katMap[k] = (katMap[k] || 0) + 1;
   });
 
-  // Gugus
   const gugusMap = {};
   jemaat.forEach(j => {
     const g = (j['Gugus'] || j['gugus'] || '').trim();
     if (g) gugusMap[g] = (gugusMap[g] || 0) + 1;
   });
 
-  // Kelas
-  const kelasGMap = {}, kelasNonGMap = {};
-  jemaat.forEach(j => {
-    const k = (j['kelas'] || j['Kelas'] || '').trim();
-    if (!k) return;
-    if (/^G[\s\-]/i.test(k)) kelasGMap[k] = (kelasGMap[k] || 0) + 1;
-    else kelasNonGMap[k] = (kelasNonGMap[k] || 0) + 1;
-  });
-
-  // Ibadah
   const ibadahMap = {};
   jemaat.forEach(j => {
     (j['ibadah yang diikuti'] || '').split(/[,;\/]/).forEach(x => {
@@ -1012,7 +995,6 @@ function renderDashboard() {
     });
   });
 
-  // Pelayanan
   const pelayananMap = {};
   jemaat.forEach(j => {
     (j['pelayanan'] || '').split(/[,;\/]/).forEach(x => {
@@ -1020,11 +1002,19 @@ function renderDashboard() {
     });
   });
 
-  // Bangun section acara
   const acaraSection = buildDashAcaraSection(acara);
 
-  // Bangun HTML
+  // ── TOMBOL FULLSCREEN DASHBOARD (di atas semua konten) ──
   let html = `
+    <button id="btn-dash-fullscreen" onclick="openDashboardFullscreen()"
+      style="width:100%;padding:11px;margin-bottom:10px;
+      background:linear-gradient(135deg,var(--accent),var(--accent3));
+      color:#fff;border:none;border-radius:10px;
+      font-family:'DM Sans',sans-serif;font-weight:700;font-size:.9rem;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+      ⛶ Fullscreen Dashboard
+    </button>
+
     <div class="clock-card">
       <div class="clock-big" id="dash-clock">--:--:--</div>
       <div class="clock-date" id="dash-date">-- --- 2026</div>
@@ -1040,7 +1030,6 @@ function renderDashboard() {
     </div>`;
 
   if (total > 0) {
-    // Gender & Baptis row
     html += `
     <div class="dash-grid" style="margin-top:10px;">
       <div class="dash-card">
@@ -1061,7 +1050,6 @@ function renderDashboard() {
       </div>
     </div>`;
 
-    // Usia
     const usiaSegments = [
       {val:usia.tidaktahu,color:'#eff4b4',label:'?'},
       {val:usia.anak,color:'#506981',label:'≤12'},
@@ -1086,7 +1074,6 @@ function renderDashboard() {
       </div>
     </div>`;
 
-    // EfataID & Ikut Solo
     html += `
     <div class="dash-grid" style="margin-top:10px;">
       <div class="dash-card">
@@ -1108,7 +1095,6 @@ function renderDashboard() {
       </div>
     </div>`;
 
-    // Kategori
     if (Object.keys(katMap).length > 0) {
       const katSegments = Object.entries(katMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
       html += `
@@ -1128,7 +1114,6 @@ function renderDashboard() {
       </div>`;
     }
 
-    // Gugus
     if (Object.keys(gugusMap).length > 0) {
       const gugusSegments = Object.entries(gugusMap).map(([k,v],i) => ({val:v,color:MC[i%MC.length],label:k}));
       html += `
@@ -1139,7 +1124,6 @@ function renderDashboard() {
       </div>`;
     }
 
-    // Ibadah yang diikuti — pie + bar chart
     if (Object.keys(ibadahMap).length > 0) {
       const ibadahSegments = Object.entries(ibadahMap).map(([k,v],i) => ({val:v,color:MC[(i+2)%MC.length],label:k}));
       html += `
@@ -1152,7 +1136,6 @@ function renderDashboard() {
       </div>`;
     }
 
-    // Pelayanan — pie + bar chart
     if (Object.keys(pelayananMap).length > 0) {
       const pelayananSegments = Object.entries(pelayananMap).map(([k,v],i) => ({val:v,color:MC[(i+3)%MC.length],label:k}));
       html += `
@@ -1162,12 +1145,10 @@ function renderDashboard() {
         <div class="pie-legend">${pelayananSegments.map(s=>`<div class="pie-leg-item"><span class="pie-leg-dot" style="background:${s.color};"></span>${s.label}: ${s.val}</div>`).join('')}</div>
       </div>`;
     }
-
   }
 
   content.innerHTML = html;
 
-  // Tambahkan tombol toggle laporan setelah konten utama
   const laporanToggleHtml = `
     <div style="margin-top:14px;">
       <button id="btn-toggle-laporan" onclick="toggleDashLaporan()" style="width:100%;padding:11px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
@@ -1177,6 +1158,7 @@ function renderDashboard() {
     </div>`;
   const contentEl=document.getElementById('app-content');
   contentEl.insertAdjacentHTML('beforeend',laporanToggleHtml);
+
   const updateDashClock = () => {
     const n = new Date();
     const pad = x => String(x).padStart(2,'0');
@@ -1191,13 +1173,10 @@ function renderDashboard() {
   if (window._dashClockInterval) clearInterval(window._dashClockInterval);
   window._dashClockInterval = setInterval(updateDashClock, 1000);
 
-  // Lazy-load data yang belum ada
   if (!db.Jemaat) Papa.parse(URLS.Jemaat,{download:true,header:true,complete:r=>{db.Jemaat=r.data;renderDashboard();}});
   if (!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderDashboard();}});
   if (!db.Kidung) Papa.parse(URLS.Kidung,{download:true,header:true,complete:r=>{db.Kidung=r.data;renderDashboard();}});
-  // if (!db.Alkitab) Papa.parse(URLS.Alkitab,{download:true,header:true,complete:r=>{db.Alkitab=r.data;renderDashboard();}});
 }
-
 // ══════════════════════════════════════════════════
 // LAPORAN TOGGLE DI DASHBOARD
 // ══════════════════════════════════════════════════
@@ -1564,9 +1543,27 @@ function openKidungDetail(k){
   if(videoRaw)tabs+=`<button class="tab-btn" onclick="switchKTab('video',this)">${isYt?'▶ YouTube':'🎬 Video'}</button>`;
   if(hasPdf)tabs+=`<button class="tab-btn" onclick="switchKTab('pdftab',this)">📄 PDF</button>`;
   if(audio)tabs+=`<button class="tab-btn" onclick="switchKTab('player',this)">🎵 Player</button>`;
+
+  // Siapkan judul untuk book mode
+  const judulBook = `${k['no kidung']}. ${k['judul kidung']||''}`;
+  const lyricSafe = encodeURIComponent(k['isi kidung']||'');
+  const judulSafe = encodeURIComponent(judulBook);
+
   const body=`<h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:5px;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</h2><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">${k['style']?`<span class="tag">${k['style']}</span>`:''}${k['Kategori']?`<span class="tag purple">${k['Kategori']}</span>`:''}${isYt?`<span class="yt-badge">▶ YouTube</span>`:''}</div><div class="tab-group">${tabs}</div>
     <div id="tab-teks" class="kidung-tab active-tab">${audio?`<div class="music-player"><audio controls src="${audio}" style="width:100%;margin-bottom:8px;"></audio><div class="transpose-row"><span class="transpose-label">Akord:</span><button class="btn-action" onclick="changeTranspose(-1)">♭ −1</button><span class="transpose-display">+0 (C)</span><button class="btn-action" onclick="changeTranspose(1)">♯ +1</button><button class="btn-action" onclick="resetTranspose()">↺</button></div></div>`:''}
-      <div class="action-row"><button class="btn-action" onclick="adjustFont(-2)">A−</button><button class="btn-action" onclick="adjustFont(2)">A+</button><button class="btn-action" onclick="toggleFontMode()">🔤 Font</button><button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}<button class="btn-action" onclick="openLyricFullscreenFromDom()">⛶ Full🔤</button><button class="btn-action btn-fullscreen" data-lyric="${encodeURIComponent(k['isi kidung']||'')}">⛶ Full</button></div>
+      <div class="action-row">
+        <button class="btn-action" onpointerdown="fontBtnDown(-5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;" title="Kurang 5px (tahan=auto)">A−−</button>
+        <button class="btn-action" onpointerdown="fontBtnDown(-1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;" title="Kurang 1px (tahan=auto)">A−</button>
+        <span id="font-size-disp" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);min-width:44px;text-align:center;line-height:2.2;">${currentFontSize}px</span>
+        <button class="btn-action" onpointerdown="fontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;" title="Tambah 1px (tahan=auto)">A+</button>
+        <button class="btn-action" onpointerdown="fontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;" title="Tambah 5px (tahan=auto)">A++</button>
+        <button class="btn-action" onclick="toggleFontMode()">🔤 Font</button>
+        <button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>
+        ${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}
+        ${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}
+        <button class="btn-action" onclick="openLyricFullscreenFromDom()" title="Fullscreen gulir (scroll)">⛶ Gulir</button>
+        <button class="btn-action accent" onclick="openBookMode(decodeURIComponent('${lyricSafe}'),decodeURIComponent('${judulSafe}'))" title="Fullscreen mode buku (halaman kiri/kanan)">📖 Book</button>
+      </div>
       <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${k['isi kidung']||''}</div>
       <div id="kidung-copy-2" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}${hasBas?'\n\nBas/Kunci:\n'+k['kunci_bas']:''}${hasNot?'\n\nNot Angka:\n'+k['not_angka']:''}\n\nSyair:\n${k['isi kidung']||''}</div>
       <div class="lyric-box"><div class="scalable-text"><span style="font-weight:700;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</span>${hasBas?`\n<span class="key-line" data-orig="${escHtml(k['kunci_bas'])}">${escHtml(k['kunci_bas'])}</span>`:''}${hasNot?`\n<span class="note-line">${escHtml(k['not_angka'])}</span>`:''}
@@ -1582,6 +1579,8 @@ ${escHtml(k['isi kidung']||'')}${k['Cerita kidung']?`\n\n— Cerita: ${escHtml(k
   if(audio)setTimeout(()=>buildTonePlayer(audio,'#tone-player-wrap'),200);
   logHistory('kidung',k['judul kidung']);
   setTimeout(applySavedFontMode,50);
+  // Update font size display setelah render
+  setTimeout(()=>{const d=document.getElementById('font-size-disp');if(d)d.textContent=currentFontSize+'px';},80);
 }
 function switchKTab(id,btn){document.querySelectorAll('.kidung-tab').forEach(t=>t.classList.remove('active-tab'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));const el=document.getElementById('tab-'+id);if(el)el.classList.add('active-tab');btn.classList.add('active');}
 
@@ -4786,15 +4785,12 @@ async function logHistory(menu,action){
   const ex=JSON.parse(localStorage.getItem('activity_log')||'[]');ex.push(entry);if(ex.length>500)ex.splice(0,ex.length-500);localStorage.setItem('activity_log',JSON.stringify(ex));
   if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
 }
-
 // ══════════════════════════════════════════════════════════════════════
-// PATCH: Kidung Book Mode + Font Long Press + Dashboard Fullscreen
+// PATCH additional: Kidung Book Mode + Font Long Press + Dashboard Fullscreen
 // Cara pakai: Salin semua kode di bawah ini, tempel di dalam <script>
 // di index.html, SEBELUM tag </script> penutup.
 // ══════════════════════════════════════════════════════════════════════
-
-// ── 1. FONT LONG PRESS SYSTEM ─────────────────────────────────────────
-// State untuk long-press   
+   
 let _fontPressTimer = null;
 let _fontPressInterval = null;
 
@@ -4818,7 +4814,7 @@ function fsFontBtnDown(delta) {
   _fontPressTimer = setTimeout(() => {
     _fontPressInterval = setInterval(() => fsAdjustFont(delta), 80);
   }, 400);
-} 
+}
 
 // ── 2. HELPER: Buat tombol font dengan long-press ─────────────────────
 // Mengembalikan HTML tombol font untuk modal kidung
@@ -5095,55 +5091,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'PageDown') bookNav(1);
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp')  bookNav(-1);
 });
-const _origOpenKidungDetail = openKidungDetail;
-openKidungDetail = function(k) {
-  _origOpenKidungDetail(k);
-
-  // Cari action-row pertama di modal dan tambah tombol baru
-  // (kita inject setelah render selesai)
-  setTimeout(() => {
-    const modal = document.getElementById('tab-teks');
-    if (!modal) return;
-
-    const actionRow = modal.querySelector('.action-row');
-    if (!actionRow) return;
-
-    const lyricText = k['isi kidung'] || '';
-    const judulText = `${k['no kidung']}. ${k['judul kidung'] || ''}`;
-
-    // Hapus tombol fullscreen lama kalau ada, supaya tidak duplikat
-    actionRow.querySelectorAll('.btn-fs-old').forEach(b => b.remove());
-
-    // Ganti tombol ⛶ Full🔤 dan ⛶ Full lama dengan versi baru
-    const oldBtns = actionRow.querySelectorAll('button');
-    oldBtns.forEach(btn => {
-      if (btn.textContent.includes('Full🔤') || btn.textContent.includes('⛶ Full')) {
-        btn.remove();
-      }
-    });
-
-    // Tombol baru: ⛶ Gulir (scrolling) + 📖 Book
-    const btnGulir = document.createElement('button');
-    btnGulir.className = 'btn-action';
-    btnGulir.innerHTML = '⛶ Gulir';
-    btnGulir.title = 'Fullscreen mode gulir (scroll)';
-    btnGulir.onclick = () => openLyricFullscreenFromDom();
-
-    const btnBook = document.createElement('button');
-    btnBook.className = 'btn-action accent';
-    btnBook.innerHTML = '📖 Book';
-    btnBook.title = 'Fullscreen mode buku (halaman)';
-    btnBook.onclick = () => openBookMode(lyricText, judulText);
-
-    actionRow.appendChild(btnGulir);
-    actionRow.appendChild(btnBook);
-
-    // Patch tombol font A- A+ dengan versi long-press + tampilkan ukuran
-    patchFontBtnsInActionRow(actionRow);
-
-  }, 100);
-};
-
 
 // ── 5. PATCH TOMBOL FONT DI MODAL ────────────────────────────────────
 function patchFontBtnsInActionRow(actionRow) {
@@ -5348,37 +5295,15 @@ function refreshDashboardFS() {
   }
 }
 
-// Tambah tombol FS ke dashboard setelah render
-const _origRenderDashboard = renderDashboard;
-renderDashboard = function() {
-  _origRenderDashboard();
-  // Tunggu render selesai lalu inject tombol FS
-  setTimeout(() => {
-    const contentEl = document.getElementById('app-content');
-    if (!contentEl) return;
-
-    // Cek sudah ada tombol belum (hindari duplikat)
-    if (document.getElementById('btn-dash-fullscreen')) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'btn-dash-fullscreen';
-    btn.className = 'btn-action accent';
-    btn.style.cssText = 'width:100%;padding:11px;margin-bottom:10px;font-weight:700;';
-    btn.innerHTML = '⛶ Fullscreen Dashboard';
-    btn.onclick = openDashboardFullscreen;
-
-    // Sisipkan di awal konten
-    contentEl.insertBefore(btn, contentEl.firstChild);
-  }, 200);
-};
-
 // ── 8. ESC KEY HANDLER (dash fullscreen) ─────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const dash = document.getElementById('dash-fullscreen');
     if (dash) { closeDashboardFullscreen(); return; }
   }
-});   
+});
+
+   
 </script>
 </body>
 </html>
