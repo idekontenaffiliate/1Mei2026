@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v15.25 cek layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v25.25 cek layout @2026</span></div>
   </div>
 </div>
 
@@ -3224,35 +3224,73 @@ function applySidangSort(arr) {
     sorted.sort((a,b)=>(parseInt(b.usia)||0)-(parseInt(a.usia)||0));
   else if (mode === 'efata_priority') {
 
-    sorted.sort((a,b)=>{
+sorted.sort((a,b)=>{
 
-      // cek anak
-      const aAnak = (a.kategori || '').toLowerCase().includes('anak');
-      const bAnak = (b.kategori || '').toLowerCase().includes('anak');
+    // cek anak
+    const aAnak = (a.kategori || '')
+      .toLowerCase()
+      .includes('anak');
 
-      // cek punya EfataID
-      const aEfata = !!(a.no_efataID && String(a.no_efataID).trim() !== '');
-      const bEfata = !!(b.no_efataID && String(b.no_efataID).trim() !== '');
+    const bAnak = (b.kategori || '')
+      .toLowerCase()
+      .includes('anak');
 
-      // PRIORITAS:
-      // 1. Punya EfataID
-      // 2. Tidak punya EfataID
-      // 3. Anak-anak
+    // cek punya EfataID
+    const aEfata = !!(
+      a.no_efataid &&
+      String(a.no_efataid).trim() !== ''
+    );
 
-      // EfataID paling atas
-      if (aEfata && !bEfata) return -1;
-      if (!aEfata && bEfata) return 1;
+    const bEfata = !!(
+      b.no_efataid &&
+      String(b.no_efataid).trim() !== ''
+    );
 
-      // Anak-anak paling bawah
-      if (aAnak && !bAnak) return 1;
-      if (!aAnak && bAnak) return -1;
+    // =========================
+    // PRIORITAS 1:
+    // bukan anak + punya efata
+    // =========================
 
-      // Urut nama A-Z
-      return (a.nama_panggilan || a.nama)
-        .localeCompare(b.nama_panggilan || b.nama, 'id');
+    if (!aAnak && aEfata && (bAnak || !bEfata)) {
+      return -1;
+    }
 
-    });
+    if (!bAnak && bEfata && (aAnak || !aEfata)) {
+      return 1;
+    }
 
+    // =========================
+    // PRIORITAS 2:
+    // bukan anak + tidak punya efata
+    // =========================
+
+    if (!aAnak && !aEfata && bAnak) {
+      return -1;
+    }
+
+    if (!bAnak && !bEfata && aAnak) {
+      return 1;
+    }
+
+    // =========================
+    // PRIORITAS 3:
+    // anak-anak paling bawah
+    // =========================
+
+    if (aAnak && !bAnak) return 1;
+    if (!aAnak && bAnak) return -1;
+
+    // =========================
+    // Dalam grup: urut nama
+    // =========================
+
+    return (a.nama_panggilan || a.nama || '')
+      .localeCompare(
+        (b.nama_panggilan || b.nama || ''),
+        'id'
+      );
+
+  });
   } 
   return sorted;
 }
