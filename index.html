@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v23.25 cek layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">v15.25 cek layout @2026</span></div>
   </div>
 </div>
 
@@ -1780,6 +1780,7 @@ ${isAdminUser() ? `
         <button class="view-toggle-btn" id="vtbtn-detail" onclick="setJemaatView('detail')">🗂 Detail</button>
         <button class="view-toggle-btn" id="vtbtn-text" onclick="setJemaatView('text')">📝 Teks</button>
         <button class="view-toggle-btn" id="vtbtn-qrcode" onclick="setJemaatView('qrcode')">📷 QRCode</button>
+        <button class="view-toggle-btn" id="vtbtn-wajah" onclick="setJemaatView('wajah')">📷 Wajah</button>
       </div>
       <button class="btn-action" onclick="clearAllJemaatFilter()" title="Reset semua filter" style="background:var(--red);color:#fff;border-color:var(--red);">🗑 Reset Filter</button>
       <button class="btn-action" onclick="copyJemaatFilter()">📋 Copy</button>
@@ -1808,7 +1809,7 @@ function toggleAndOr(type){
   else if(type==='gugus'){jemaatFilterGugusMode=flip(jemaatFilterGugusMode);const b=document.getElementById('gugus-andor');if(b){b.textContent=jemaatFilterGugusMode;b.classList.toggle('active',jemaatFilterGugusMode==='AND');}}
   filterJemaat();
 }
-function setJemaatView(mode){jemaatViewMode=mode;['grid','detail','text','qrcode'].forEach(m=>{const b=document.getElementById('vtbtn-'+m);if(b)b.classList.toggle('active',m===mode);});filterJemaat();}
+function setJemaatView(mode){jemaatViewMode=mode;['grid','detail','text','qrcode','wajah'].forEach(m=>{const b=document.getElementById('vtbtn-'+m);if(b)b.classList.toggle('active',m===mode);});filterJemaat();}
 function multiMatch(fieldVal,filterArr,mode){
   if(!filterArr.length)return true;
   const parts=(fieldVal||'').split(/[,;/]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
@@ -1882,6 +1883,7 @@ function renderJemaatResult(data){
   const container=document.getElementById('jemaat-result-container');if(!container)return;
   if(!data.length){container.innerHTML=`<div class="empty-state"><div class="icon">👥</div><p>Tidak ada jemaat</p></div>`;return;}
   if(jemaatViewMode==='qrcode'){renderJemaatQRCode(data,container);return;}
+  if(jemaatViewMode==='wajah'){renderJemaatWajah(data,container);return;}
   if(jemaatViewMode==='grid'){
     container.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;" id="jemaat-grid"></div>`;
     const grid=document.getElementById('jemaat-grid');
@@ -1992,6 +1994,54 @@ function renderJemaatQRCode(data, container) {
 
   if (!withPhoto.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata</p></div>`;
+    return;
+  }
+
+  const allUrls  = withPhoto.map(x => x.url);
+  const allNames = withPhoto.map(x => x.j['Nama Lengkap'] || x.j['Nama Panggilan'] || '-');
+
+  container.innerHTML = `
+    <div style="padding:8px 4px;">
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;text-align:center;">
+        ${withPhoto.length} foto dari ${data.length} jemaat · Tap gambar untuk fullscreen
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;" id="qrcode-grid"></div>
+    </div>`;
+
+  const grid = document.getElementById('qrcode-grid');
+
+  withPhoto.forEach((x, vi) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;';
+    card.onmouseover = () => { card.style.transform = 'scale(1.03)'; card.style.boxShadow = '0 4px 16px rgba(0,0,0,.3)'; };
+    card.onmouseout  = () => { card.style.transform = ''; card.style.boxShadow = ''; };
+
+    // ✅ PERBAIKAN: buka viewer dengan semua nama, dan gunakan callback onNav
+    card.onclick = () => openImgViewerWithNames(allUrls, allNames, vi);
+
+    card.innerHTML = `
+      <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
+        <img src="${x.url}" alt="${escHtml(x.j['Nama Lengkap'] || '-')}"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:6px;"
+          onerror="this.parentElement.innerHTML='<div style=\'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;\'>❌</div>'">
+      </div>
+      <div style="padding:6px 8px;font-size:.68px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);">
+        ${escHtml(x.j['Nama Lengkap'] || x.j['Nama Panggilan'] || '-')}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+// ══════════════════════════════════════════════════
+// QRCODE VIEW — Tampilkan semua foto efata sekaligus
+// ══════════════════════════════════════════════════
+function renderJemaatWajah(data, container) {
+  const withPhoto = data.map((j, i) => ({
+    j, i,
+    url: fmtImg(j['link foto'] || j['Link Foto'] || '')
+  })).filter(x => x.url);
+
+  if (!withPhoto.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Wajah</p></div>`;
     return;
   }
 
@@ -2910,6 +2960,7 @@ const SIDANG_OPTIONS = [
 const SIDANG_PELAYANAN_MAP = {
   'SPR Pagi'    :['SPR','SPR Pagi'],
   'SPR Siang'   :['SPR','SPR Siang'],
+  'BIS - SPR'   :['BIS SPR'],
   'Gugus'       :['Gugus'],
   'Pemuda'      :['Pemuda'],
   'Remaja'      :['Remaja'],
@@ -2918,7 +2969,7 @@ const SIDANG_PELAYANAN_MAP = {
   'Tutur Sabda' :['Tutur Sabda','Tutur'],
   'Penjengukan' :['Penjengukan'],
   'CGM'         :['CGM'],
-  'BIS - SPR'   :['BIS SPR'],
+  'BIS - BAUR'   :['BIS BAUR'],
   'PP'          :['PP'],
 };
 
@@ -3074,15 +3125,17 @@ function renderAbsensiSidang() {
         <button onclick="setSidangView('text')" id="sdg-vbtn-text"
           class="view-toggle-btn${absenSidangState.viewMode==='text'?' active':''}">📝 Teks</button>
         <button onclick="setSidangView('qrcode')" id="sdg-vbtn-qrcode"
-          class="view-toggle-btn${absenSidangState.viewMode==='qrcode'?' active':''}">📷 QR</button>
+          class="view-toggle-btn${absenSidangState.viewMode==='qrcode'?' active':''}">📷📝 QR</button>
+        <button onclick="setSidangView('wajah')" id="sdg-vbtn-qrcode"
+          class="view-toggle-btn${absenSidangState.viewMode==='wajah'?' active':''}">📷 Wajah</button>
         </div>
 
-      <!-- Sort — 4 tombol -->
+      <!-- Sort — 5 tombol -->
       <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:.65rem;color:var(--text3);align-self:center;">Urut:</span>
         ${[
           ['az','A→Z'],['za','Z→A'],
-          ['umur_asc','Muda→Tua'],['umur_desc','Tua→Muda'],['none','Default']
+          ['umur_asc','Muda→Tua'],['umur_desc','Tua→Muda'],['efata_priority','whassapp'],['none','Default']
         ].map(([m,l])=>`<button onclick="setSidangSort('${m}')" id="sdg-sort-${m}"
           class="btn-action${absenSidangState.sortMode===m?' accent':''}"
           style="font-size:.7rem;padding:4px 8px;">${l}</button>`).join('')}
@@ -3169,6 +3222,38 @@ function applySidangSort(arr) {
     sorted.sort((a,b)=>(parseInt(a.usia)||999)-(parseInt(b.usia)||999));
   else if (mode === 'umur_desc')
     sorted.sort((a,b)=>(parseInt(b.usia)||0)-(parseInt(a.usia)||0));
+  else if (mode === 'efata_priority') {
+
+    sorted.sort((a,b)=>{
+
+      // cek anak
+      const aAnak = (a.kategori || '').toLowerCase().includes('anak');
+      const bAnak = (b.kategori || '').toLowerCase().includes('anak');
+
+      // cek punya EfataID
+      const aEfata = !!(a.no_efataID && String(a.no_efataID).trim() !== '');
+      const bEfata = !!(b.no_efataID && String(b.no_efataID).trim() !== '');
+
+      // PRIORITAS:
+      // 1. Punya EfataID
+      // 2. Tidak punya EfataID
+      // 3. Anak-anak
+
+      // EfataID paling atas
+      if (aEfata && !bEfata) return -1;
+      if (!aEfata && bEfata) return 1;
+
+      // Anak-anak paling bawah
+      if (aAnak && !bAnak) return 1;
+      if (!aAnak && bAnak) return -1;
+
+      // Urut nama A-Z
+      return (a.nama_panggilan || a.nama)
+        .localeCompare(b.nama_panggilan || b.nama, 'id');
+
+    });
+
+  } 
   return sorted;
 }
 
@@ -3193,7 +3278,7 @@ function setSidangMode(mode) {
 
 function setSidangView(mode) {
   absenSidangState.viewMode = mode;
-  ['grid','text','qrcode'].forEach(m =>
+  ['grid','text','qrcode','wajah'].forEach(m =>
     document.getElementById('sdg-vbtn-'+m)?.classList.toggle('active', m===mode));
   renderSidangList();
 }
@@ -3428,7 +3513,8 @@ function buildSidangMaster(jenisSidang, subGugus) {
       .map(x=>x.trim().toLowerCase()).filter(Boolean);
     const cocok = ibadahList.some(ib => keywords.some(kw => ib.includes(kw.toLowerCase())));
     if (!cocok) return;
-
+    const ikutBusSPR = ibadahList.includes('BUS SPR');
+ 
     if (subKeyCol && subGugus) {
       const fieldVal = (j[subKeyCol]||j[subKeyCol.toLowerCase()]||
         j['Gugus']||j['gugus']||j['kelas']||j['Kelas']||'')
@@ -3453,6 +3539,7 @@ function buildSidangMaster(jenisSidang, subGugus) {
       usia          : (j['Usia']||'').trim(),
       ayah          : (j['Ayah']||j['ayah']||j['Nama Ayah']||'').trim(),
       ibu           : (j['Ibu']||j['ibu']||j['Nama Ibu']||'').trim(),
+      ibadah_diikuti: (j['ibadah yang diikuti'] || '').trim(),
     });
   });
   return result;
@@ -3503,6 +3590,7 @@ function renderSidangList() {
   const wrap = document.getElementById('sidang-list-wrap');
   if (!wrap || !absenSidangState.sudahLoad) return;
 
+  if (absenSidangState.viewMode==='wajah') { renderSidangWajah(wrap); return; }
   if (absenSidangState.viewMode==='qrcode') { renderSidangQRCode(wrap); return; }
   if (absenSidangState.viewMode==='text')   { renderSidangTextView(wrap); return; }
 
@@ -3751,7 +3839,7 @@ async function simpanSatuSidang(item) {
 async function simpanSemuaSidang() {
   if (!absenSidangState.daftarAbsen.length) return toast('⚠️ Daftar kosong');
   if (!absenSidangState.tanggal) return toast('⚠️ Pilih tanggal');
-  toast('⏳ Menyimpan semua...');
+  toast('⏳ Proses Menyimpan semua, tunggu pesan selanjutnya...');
 
   const items = absenSidangState.daftarAbsen.map(x => ({
     no_efataid:x.no_efataid||'', nama:x.nama||'', hadir:x.hadir||'n',
@@ -3785,6 +3873,7 @@ async function simpanSemuaSidang() {
   } catch(e) { toast('⚠️ '+e.message); }
 }
 
+}   
 // ── TEXT VIEW — 3 tombol copy ─────────────────────────────────
 function renderSidangTextView(wrap) {
   const s    = hitungSidang();
@@ -3815,7 +3904,15 @@ function renderSidangTextView(wrap) {
   const fmtLine = (x,i,showExtra) => {
     let l = `${i+1}. ${x.nama_panggilan||x.nama}`;
     if (x.kategori && x.kategori!=='Kaum Saleh') l += ` [${x.kategori}]`;
-    if (x.gugus) l += ` – ${x.gugus}`;
+  const isBusSPR = (x.ibadah_diikuti || '')
+    .toLowerCase()
+    .includes('bus spr');
+
+  // tampilkan gugus hanya jika bukan Bus SPR
+  if (x.gugus && !isBusSPR) {
+    l += ` – ${x.gugus}`;
+  }
+    
     if (showExtra && isPenj && x.nama_dijenguk) l += ` → jenguk: ${x.nama_dijenguk}${x.ket_jenguk?' ('+x.ket_jenguk+')':''}`;
     return l;
   };
@@ -3906,6 +4003,47 @@ function renderSidangQRCode(wrap) {
         :`<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata dari yang hadir.</p></div>`}
     </div>`;
 }
+// ── QR CODE VIEW ──────────────────────────────────────────────
+function renderSidangWajah(wrap) {
+  const hadirEfata = applySidangSort(absenSidangState.daftarAbsen).filter(x=>x.hadir==='y');
+  sidangQRImages=[]; sidangQRNames=[];
+
+  const withPhoto = hadirEfata.map(x => {
+    const jd = x.no_efataid ? (db.Jemaat||[]).find(j =>
+      (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim()===x.no_efataid) : null;
+    const url = jd ? fmtImg(jd['link foto']||jd['Link Foto']||'') : '';
+    return {...x, url};
+  }).filter(x=>x.url);
+
+  withPhoto.forEach(x => {
+    sidangQRImages.push(x.url);
+    sidangQRNames.push(x.nama_panggilan||x.nama);
+  });
+
+  const s = hitungSidang();
+  wrap.innerHTML = `
+    <div style="padding:4px 0 12px;">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:10px;">
+        ✅ Hadir: ${s.total} · EfataID:${s.efata} Anak:${s.anak} Tamu:${s.tamu}
+        ${withPhoto.length?` · 📷 ${withPhoto.length} foto`:''}
+        ${withPhoto.length?`<button onclick="openSidangQR(0)" class="btn-action accent" style="font-size:.72rem;padding:3px 9px;margin-left:6px;">⛶ Full</button>`:''}
+      </div>
+      ${withPhoto.length
+        ?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">
+          ${withPhoto.map((x,i)=>`
+            <div onclick="openSidangQR(${i})" style="background:var(--surface);border:1px solid rgba(16,185,129,.4);border-radius:10px;overflow:hidden;cursor:pointer;">
+              <div style="position:relative;width:100%;padding-top:100%;background:var(--surface2);">
+                <img src="${x.url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;" loading="lazy">
+              </div>
+              <div style="padding:4px 6px;font-size:.65rem;font-weight:600;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid rgba(16,185,129,.3);">
+                ${escHtml(x.nama_panggilan||x.nama)}
+              </div>
+            </div>`).join('')}
+        </div>`
+        :`<div class="empty-state"><div class="icon">📷</div><p>Belum ada foto Efata dari yang hadir.</p></div>`}
+    </div>`;
+}
+
 
 function openSidangQR(i) {
   if (!sidangQRImages.length) return;
