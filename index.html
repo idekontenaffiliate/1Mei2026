@@ -4154,14 +4154,14 @@ function renderSidangLog() {
         <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.8rem;">
           <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);min-width:20px;">${i+1}</span>
           <span style="flex:1;">${escHtml(j.nama)}</span>
-          ${isPenjengukan()&&absenSidangState.absenMap[j.no_efataid]?.nama_dijenguk
+          ${absenSidangState.jenisSidang === 'Penjengukan'&&absenSidangState.absenMap[j.no_efataid]?.nama_dijenguk
             ?`<span style="font-size:.68rem;color:var(--text3);">→ ${escHtml(absenSidangState.absenMap[j.no_efataid].nama_dijenguk)}</span>`:''}
         </div>`).join('')}
       ${hadirTamu.map((t,i)=>`
         <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.8rem;">
           <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--yellow);min-width:20px;">T${i+1}</span>
           <span style="flex:1;">${escHtml(t.nama)} <span style="color:var(--yellow);font-size:.65rem;">(Tamu)</span></span>
-          ${isPenjengukan()&&t.nama_dijenguk
+          ${absenSidangState.jenisSidang === 'Penjengukan'&&t.nama_dijenguk
             ?`<span style="font-size:.68rem;color:var(--text3);">→ ${escHtml(t.nama_dijenguk)}</span>`:''}
         </div>`).join('')}
     </div>`;
@@ -4696,11 +4696,9 @@ async function loadLaporanAbsensi() {
   }
 }
 
-!-- ================================================================
-  PATCH 2: LAPORAN ABSENSI — GANTI fungsi `renderLaporanResult`
-  (cari "function renderLaporanResult(el, data) {" → hapus sampai
-  penutup "}" terakhir fungsi itu, paste yang baru)
-================================================================ -->
+// ================================================================
+// PATCH 2: LAPORAN ABSENSI — renderLaporanResult
+// ================================================================     
 
 // ── Helper: Analisis Umur dari data Jemaat ────────────────────────────
 /**
@@ -4943,7 +4941,7 @@ function renderUmurAnalysisHtml(targetPct){
         position:relative;">
         <div style="height:100%;width:${Math.min(100,barPct)}%;
           background:${color};border-radius:4px;transition:width .5s;"></div>
-        <!-- Garis target -->
+        // Garis target
         <div style="position:absolute;top:0;bottom:0;left:${targetPct}%;
           width:2px;background:rgba(245,158,11,.8);"></div>
       </div>
@@ -5236,16 +5234,7 @@ function fontBtnUp(){
   if(_fontPressTimer){clearTimeout(_fontPressTimer);_fontPressTimer=null;}
   if(_fontPressInterval){clearInterval(_fontPressInterval);_fontPressInterval=null;}
 }
-function fsFontBtnDown(d){
-  fsAdjustFont(d);
-  updateFontSizeDisp();
-  _fontPressTimer=setTimeout(()=>{
-    _fontPressInterval=setInterval(()=>{
-      fsAdjustFont(d);
-      updateFontSizeDisp();
-    },80);
-  },400);
-}
+
 function updateFontSizeDisp(){
   document.querySelectorAll('#font-size-disp,#fs-font-size-disp').forEach(el=>el.textContent=currentFontSize+'px');
 }
