@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">coba apa nilainya 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">cek apa nilainya 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -1005,8 +1005,9 @@ function renderDashboard() {
   const acaraSection = buildDashAcaraSection(acara);
 
   // ── TOMBOL FULLSCREEN DASHBOARD (di atas semua konten) ──
-  let html = `
-    <button id="btn-dash-fullscreen" onclick="openDashboardFullscreen()"
+  
+let html = `
+    <button onclick="openDashboardFullscreen()"
       style="width:100%;padding:11px;margin-bottom:10px;
       background:linear-gradient(135deg,var(--accent),var(--accent3));
       color:#fff;border:none;border-radius:10px;
@@ -1014,7 +1015,7 @@ function renderDashboard() {
       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
       ⛶ Fullscreen Dashboard
     </button>
-
+         
     <div class="clock-card">
       <div class="clock-big" id="dash-clock">--:--:--</div>
       <div class="clock-date" id="dash-date">-- --- 2026</div>
@@ -1536,53 +1537,102 @@ function filterKidung(){
   if(!count)list.innerHTML=`<div class="empty-state"><div class="icon">🎵</div><p>Tidak ada kidung ditemukan</p></div>`;
 }
 function getKidungImages(k){const imgs=[];['link foto kidung','link foto kidung 1','link foto kidung 2','link foto kidung 3','link foto kidung 4','link foto kidung 5'].forEach(key=>{const f=fmtImg(k[key]);if(f)imgs.push(f);});return imgs;}
+
 function openKidungDetail(k){
-  currentTranspose=0;const imgs=getKidungImages(k);const audio=k['link lagu'];const videoRaw=k['link video']||k['link_video'];const hasBas=k['kunci_bas'];const hasNot=k['not_angka'];const hasPdf=k['pdf']||k['pdf_link'];const isYt=isYoutubeUrl(videoRaw);
-  let tabs=`<button class="tab-btn active" onclick="switchKTab('teks',this)">📝 Teks</button>`;
-  if(imgs.length)tabs+=`<button class="tab-btn" onclick="switchKTab('foto',this)">🖼️ Foto (${imgs.length})</button>`;
-  if(videoRaw)tabs+=`<button class="tab-btn" onclick="switchKTab('video',this)">${isYt?'▶ YouTube':'🎬 Video'}</button>`;
-  if(hasPdf)tabs+=`<button class="tab-btn" onclick="switchKTab('pdftab',this)">📄 PDF</button>`;
-  if(audio)tabs+=`<button class="tab-btn" onclick="switchKTab('player',this)">🎵 Player</button>`;
+  currentTranspose=0;
+  const imgs=getKidungImages(k);
+  const audio=k['link lagu'];
+  const videoRaw=k['link video']||k['link_video'];
+  const hasBas=k['kunci_bas'];
+  const hasNot=k['not_angka'];
+  const hasPdf=k['pdf']||k['pdf_link'];
+  const isYt=isYoutubeUrl(videoRaw);
 
-  // Siapkan judul untuk book mode
-  const judulBook = `${k['no kidung']}. ${k['judul kidung']||''}`;
-  const lyricSafe = encodeURIComponent(k['isi kidung']||'');
-  const judulSafe = encodeURIComponent(judulBook);
+  let tabs='<button class="tab-btn active" onclick="switchKTab(\'teks\',this)">📝 Teks</button>';
+  if(imgs.length) tabs+='<button class="tab-btn" onclick="switchKTab(\'foto\',this)">🖼️ Foto ('+imgs.length+')</button>';
+  if(videoRaw) tabs+='<button class="tab-btn" onclick="switchKTab(\'video\',this)">'+(isYt?'▶ YouTube':'🎬 Video')+'</button>';
+  if(hasPdf) tabs+='<button class="tab-btn" onclick="switchKTab(\'pdftab\',this)">📄 PDF</button>';
+  if(audio) tabs+='<button class="tab-btn" onclick="switchKTab(\'player\',this)">🎵 Player</button>';
 
-  const body=`<h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:5px;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</h2><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">${k['style']?`<span class="tag">${k['style']}</span>`:''}${k['Kategori']?`<span class="tag purple">${k['Kategori']}</span>`:''}${isYt?`<span class="yt-badge">▶ YouTube</span>`:''}</div><div class="tab-group">${tabs}</div>
-    <div id="tab-teks" class="kidung-tab active-tab">${audio?`<div class="music-player"><audio controls src="${audio}" style="width:100%;margin-bottom:8px;"></audio><div class="transpose-row"><span class="transpose-label">Akord:</span><button class="btn-action" onclick="changeTranspose(-1)">♭ −1</button><span class="transpose-display">+0 (C)</span><button class="btn-action" onclick="changeTranspose(1)">♯ +1</button><button class="btn-action" onclick="resetTranspose()">↺</button></div></div>`:''}
-      
-      <div class="action-row">
-  <button class="btn-action" onpointerdown="fontBtnDown(-5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−−</button>
-  <button class="btn-action" onpointerdown="fontBtnDown(-1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−</button>
-  <span id="font-size-disp" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);min-width:44px;text-align:center;line-height:2.2;">${currentFontSize}px</span>
-  <button class="btn-action" onpointerdown="fontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A+</button>
-  <button class="btn-action" onpointerdown="fontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A++</button>
-  <button class="btn-action" onclick="toggleFontMode()">🔤 Font</button>
-  <button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>
-  ${hasBas||hasNot?`<button class="btn-action accent" onclick="copyText('kidung-copy-2')">📋 Lengkap</button>`:''}
-  ${hasPdf?`<button class="btn-action red" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 PDF</button>`:''}
-  <button class="btn-action" onclick="openLyricFullscreenFromDom()" title="Fullscreen gulir">⛶ Gulir</button>
-  <button class="btn-action accent" onclick="openBookMode(decodeURIComponent('${lyricSafe}'),decodeURIComponent('${judulSafe}'))" title="Fullscreen mode buku">📖 Book</button>
+  // Simpan teks untuk fullscreen
+  const lyricText=(k['isi kidung']||'');
+  const judulBook=(k['no kidung']+'. '+(k['judul kidung']||''));
+
+  // Simpan ke variable global agar bisa diakses dari tombol
+  window._currentKidungLyric=lyricText;
+  window._currentKidungJudul=judulBook;
+
+  const body=`<h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:5px;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</h2>
+<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
+  ${k['style']?'<span class="tag">'+k['style']+'</span>':''}
+  ${k['Kategori']?'<span class="tag purple">'+k['Kategori']+'</span>':''}
+  ${isYt?'<span class="yt-badge">▶ YouTube</span>':''}
 </div>
-      <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${k['isi kidung']||''}</div>
-      <div id="kidung-copy-2" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}${hasBas?'\n\nBas/Kunci:\n'+k['kunci_bas']:''}${hasNot?'\n\nNot Angka:\n'+k['not_angka']:''}\n\nSyair:\n${k['isi kidung']||''}</div>
-      <div class="lyric-box"><div class="scalable-text"><span style="font-weight:700;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</span>${hasBas?`\n<span class="key-line" data-orig="${escHtml(k['kunci_bas'])}">${escHtml(k['kunci_bas'])}</span>`:''}${hasNot?`\n<span class="note-line">${escHtml(k['not_angka'])}</span>`:''}
+<div class="tab-group">${tabs}</div>
 
-${escHtml(k['isi kidung']||'')}${k['Cerita kidung']?`\n\n— Cerita: ${escHtml(k['Cerita kidung'])}`:''}
-      </div></div>
+<div id="tab-teks" class="kidung-tab active-tab">
+  ${audio?`<div class="music-player">
+    <audio controls src="${audio}" style="width:100%;margin-bottom:8px;"></audio>
+    <div class="transpose-row">
+      <span class="transpose-label">Akord:</span>
+      <button class="btn-action" onclick="changeTranspose(-1)">♭ −1</button>
+      <span class="transpose-display">+0 (C)</span>
+      <button class="btn-action" onclick="changeTranspose(1)">♯ +1</button>
+      <button class="btn-action" onclick="resetTranspose()">↺</button>
     </div>
-    ${imgs.length?`<div id="tab-foto" class="kidung-tab"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:10px;">${imgs.map((img,i)=>`<div style="aspect-ratio:1;overflow:hidden;border-radius:10px;cursor:pointer;border:2px solid var(--border);" onclick='openImgViewer(${JSON.stringify(imgs)},${i},"${escHtml(k['judul kidung']||'')}");'><img src="${img}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>`).join('')}</div><button class="btn-action accent" style="width:100%;" onclick='openImgViewer(${JSON.stringify(imgs)},0,"${escHtml(k['judul kidung']||'')}");'>🔍 Fullscreen</button></div>`:''}
-    ${videoRaw?`<div id="tab-video" class="kidung-tab">${isYt?`<div class="yt-badge">▶ YouTube</div><div class="yt-player-wrap"><iframe src="${ytEmbedUrl(videoRaw)}" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>`:`<div class="yt-player-wrap"><iframe src="${fmtPrev(videoRaw)}" allowfullscreen></iframe></div>`}</div>`:''}
-    ${hasPdf?`<div id="tab-pdftab" class="kidung-tab"><button class="btn-action accent" style="width:100%;padding:14px;" onclick="openPdf('${k['pdf']||k['pdf_link']}','${escHtml(k['judul kidung']||'')}')">📄 Buka PDF Fullscreen</button></div>`:''}
-    ${audio?`<div id="tab-player" class="kidung-tab"><div id="tone-player-wrap"></div></div>`:''}`;
+  </div>`:''}
+
+  <div class="action-row">
+    <button class="btn-action" onpointerdown="fontBtnDown(-5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−−</button>
+    <button class="btn-action" onpointerdown="fontBtnDown(-1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−</button>
+    <span id="font-size-disp" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);min-width:44px;text-align:center;line-height:2.2;">${currentFontSize}px</span>
+    <button class="btn-action" onpointerdown="fontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A+</button>
+    <button class="btn-action" onpointerdown="fontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A++</button>
+    <button class="btn-action" onclick="toggleFontMode()">🔤 Font</button>
+    <button class="btn-action green" onclick="copyText('kidung-copy-1')">📋 Syair</button>
+    ${hasBas||hasNot?'<button class="btn-action accent" onclick="copyText(\'kidung-copy-2\')">📋 Lengkap</button>':''}
+    ${hasPdf?'<button class="btn-action red" onclick="openPdf(\''+escHtml(k['pdf']||k['pdf_link']||'')+'\',\''+escHtml(k['judul kidung']||'')+'\')">📄 PDF</button>':''}
+    <button class="btn-action" onclick="openLyricFullscreenFromDom()" title="Fullscreen gulir">⛶ Gulir</button>
+    <button class="btn-action accent" onclick="openBookMode(window._currentKidungLyric, window._currentKidungJudul)" title="Fullscreen mode buku">📖 Book</button>
+  </div>
+
+  <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${lyricText}</div>
+  <div id="kidung-copy-2" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}${hasBas?'\n\nBas/Kunci:\n'+k['kunci_bas']:''}${hasNot?'\n\nNot Angka:\n'+k['not_angka']:''}\n\nSyair:\n${lyricText}</div>
+
+  <div class="lyric-box">
+    <div class="scalable-text">
+      <span style="font-weight:700;">${k['no kidung']}. ${escHtml(k['judul kidung']||'')}</span>${hasBas?'\n<span class="key-line" data-orig="'+escHtml(k['kunci_bas'])+'">'+escHtml(k['kunci_bas'])+'</span>':''}${hasNot?'\n<span class="note-line">'+escHtml(k['not_angka'])+'</span>':''}
+
+${escHtml(lyricText)}${k['Cerita kidung']?'\n\n— Cerita: '+escHtml(k['Cerita kidung']):''}
+    </div>
+  </div>
+</div>
+
+${imgs.length?`<div id="tab-foto" class="kidung-tab">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:10px;">
+    ${imgs.map((img,i)=>'<div style="aspect-ratio:1;overflow:hidden;border-radius:10px;cursor:pointer;border:2px solid var(--border);" onclick="openImgViewer('+JSON.stringify(imgs)+','+i+',\''+escHtml(k['judul kidung']||'')+'\');"><img src="'+img+'" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>').join('')}
+  </div>
+  <button class="btn-action accent" style="width:100%;" onclick="openImgViewer(${JSON.stringify(imgs)},0,'${escHtml(k['judul kidung']||'')}')">🔍 Fullscreen</button>
+</div>`:''}
+
+${videoRaw?`<div id="tab-video" class="kidung-tab">
+  ${isYt?'<div class="yt-badge">▶ YouTube</div><div class="yt-player-wrap"><iframe src="'+ytEmbedUrl(videoRaw)+'" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>':'<div class="yt-player-wrap"><iframe src="'+fmtPrev(videoRaw)+'" allowfullscreen></iframe></div>'}
+</div>`:''}
+
+${hasPdf?`<div id="tab-pdftab" class="kidung-tab">
+  <button class="btn-action accent" style="width:100%;padding:14px;" onclick="openPdf('${escHtml(k['pdf']||k['pdf_link']||'')}','${escHtml(k['judul kidung']||'')}')">📄 Buka PDF Fullscreen</button>
+</div>`:''}
+
+${audio?`<div id="tab-player" class="kidung-tab">
+  <div id="tone-player-wrap"></div>
+</div>`:''}`;
+
   showModal(body);
-  if(audio)setTimeout(()=>buildTonePlayer(audio,'#tone-player-wrap'),200);
+  if(audio) setTimeout(()=>buildTonePlayer(audio,'#tone-player-wrap'),200);
   logHistory('kidung',k['judul kidung']);
   setTimeout(applySavedFontMode,50);
-  // Update font size display setelah render
   setTimeout(()=>{const d=document.getElementById('font-size-disp');if(d)d.textContent=currentFontSize+'px';},80);
-}
+}   
 function switchKTab(id,btn){document.querySelectorAll('.kidung-tab').forEach(t=>t.classList.remove('active-tab'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));const el=document.getElementById('tab-'+id);if(el)el.classList.add('active-tab');btn.classList.add('active');}
 
 // ══════════════════════════════════════════════════
@@ -4794,7 +4844,13 @@ async function logHistory(menu,action){
 let _fontPressTimer=null,_fontPressInterval=null;
 function fontBtnDown(d){
   adjustFont(d);
-  _fontPressTimer=setTimeout(()=>{_fontPressInterval=setInterval(()=>{adjustFont(d);updateFontSizeDisp();},80);},400);
+  updateFontSizeDisp();
+  _fontPressTimer=setTimeout(()=>{
+    _fontPressInterval=setInterval(()=>{
+      adjustFont(d);
+      updateFontSizeDisp();
+    },80);
+  },400);
 }
 function fontBtnUp(){
   if(_fontPressTimer){clearTimeout(_fontPressTimer);_fontPressTimer=null;}
@@ -4802,7 +4858,13 @@ function fontBtnUp(){
 }
 function fsFontBtnDown(d){
   fsAdjustFont(d);
-  _fontPressTimer=setTimeout(()=>{_fontPressInterval=setInterval(()=>{fsAdjustFont(d);updateFontSizeDisp();},80);},400);
+  updateFontSizeDisp();
+  _fontPressTimer=setTimeout(()=>{
+    _fontPressInterval=setInterval(()=>{
+      fsAdjustFont(d);
+      updateFontSizeDisp();
+    },80);
+  },400);
 }
 function updateFontSizeDisp(){
   document.querySelectorAll('#font-size-disp,#fs-font-size-disp').forEach(el=>el.textContent=currentFontSize+'px');
@@ -4927,31 +4989,45 @@ function closeBookMode(){
 // DASHBOARD FULLSCREEN
 // ══════════════════════════════════════════════════
 function openDashboardFullscreen(){
-  const contentEl=document.getElementById('app-content');if(!contentEl)return toast('⚠️ Dashboard belum dimuat');
+  const contentEl=document.getElementById('app-content');
+  if(!contentEl)return toast('⚠️ Dashboard belum dimuat');
   const html=contentEl.innerHTML;
-  const old=document.getElementById('dash-fullscreen');if(old){if(old._clk)clearInterval(old._clk);old.remove();}
+  const old=document.getElementById('dash-fullscreen');
+  if(old){if(old._clk)clearInterval(old._clk);old.remove();}
+
   const div=document.createElement('div');
   div.id='dash-fullscreen';
   div.style.cssText='position:fixed;inset:0;z-index:9998;background:var(--bg);color:var(--text);display:flex;flex-direction:column;overflow:hidden;';
   div.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--header-bg);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--header-bg);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite;"></div>
         <div style="font-weight:700;font-size:.88rem;">📊 Dashboard Fullscreen</div>
       </div>
       <div style="display:flex;gap:5px;align-items:center;">
         <div id="dash-fs-clock" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--accent2);background:var(--surface2);padding:3px 8px;border-radius:7px;border:1px solid var(--border);white-space:nowrap;"></div>
-        <button onclick="refreshDashboardFS()" class="icon-btn" title="Refresh">🔄</button>
-        <button onclick="closeDashboardFullscreen()" class="icon-btn logout" title="Keluar">✕</button>
+        <button onclick="refreshDashboardFS()" class="icon-btn" title="Refresh data">🔄</button>
+        <button onclick="closeDashboardFullscreen()" class="icon-btn logout" title="Keluar Fullscreen">✕</button>
       </div>
     </div>
     <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <div class="content-area" id="dash-fs-content" style="padding:12px 12px 80px;">${html}</div>
     </div>`;
+
   document.body.appendChild(div);
-  if(div.requestFullscreen)div.requestFullscreen().catch(()=>{});
-  const upd=()=>{const n=new Date(),pad=x=>String(x).padStart(2,'0'),el=document.getElementById('dash-fs-clock');if(el)el.textContent=`${pad(n.getDate())}/${pad(n.getMonth()+1)} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;};
-  upd();div._clk=setInterval(upd,1000);
+
+  // Minta fullscreen browser jika tersedia
+  if(div.requestFullscreen) div.requestFullscreen().catch(()=>{});
+  else if(div.webkitRequestFullscreen) div.webkitRequestFullscreen();
+
+  // Jam live di header fullscreen
+  const upd=()=>{
+    const n=new Date(),pad=x=>String(x).padStart(2,'0');
+    const el=document.getElementById('dash-fs-clock');
+    if(el) el.textContent=`${pad(n.getDate())}/${pad(n.getMonth()+1)} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  };
+  upd();
+  div._clk=setInterval(upd,1000);
 }
 function closeDashboardFullscreen(){
   const el=document.getElementById('dash-fullscreen');
