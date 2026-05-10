@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">cek apa nilainya 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">masih nanya, apa 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -4696,8 +4696,340 @@ async function loadLaporanAbsensi() {
   }
 }
 
-function renderLaporanResult(el, data) {
-  let grandHadir=0, grandTotal=0, grandEfata=0, grandAnak=0, grandTamu=0;
+!-- ================================================================
+  PATCH 2: LAPORAN ABSENSI — GANTI fungsi `renderLaporanResult`
+  (cari "function renderLaporanResult(el, data) {" → hapus sampai
+  penutup "}" terakhir fungsi itu, paste yang baru)
+================================================================ -->
+
+// ── Helper: Analisis Umur dari data Jemaat ────────────────────────────
+/**
+ * Hitung distribusi umur dari db.Jemaat.
+ * Mengembalikan array bucket umur dengan persentase & jumlah.
+ * Juga menghitung berapa % tiap bucket terhadap total.
+ *
+ * @param {number} targetPctPerBucket - Target % per bucket (default: 20%)
+ *   Digunakan untuk menghitung "perkiraan" distribusi ideal.
+ */
+function calcUmurAnalysis(targetPctPerBucket){
+  targetPctPerBucket = targetPctPerBucket || 20;
+  const jemaat = db.Jemaat || [];
+  const totalJemaat = jemaat.length;
+  if(!totalJemaat) return null;
+
+  // Definisi bucket umur
+  const BUCKETS = [
+    {label:'0–5 th',   min:0,  max:5},
+    {label:'6–10 th',  min:6,  max:10},
+    {label:'11–15 th', min:11, max:15},
+    {label:'16–20 th', min:16, max:20},
+    {label:'21–25 th', min:21, max:25},
+    {label:'26–30 th', min:26, max:30},
+    {label:'31–35 th', min:31, max:35},
+    {label:'36–40 th', min:36, max:40},
+    {label:'41–50 th', min:41, max:50},
+    {label:'51–60 th', min:51, max:60},
+    {label:'61–70 th', min:61, max:70},
+    {label:'71+ th',   min:71, max:999},
+    {label:'Tidak Diketahui', min:-1, max:-1},
+  ];
+
+  const counts = {};
+  BUCKETS.forEach(b => { counts[b.label] = 0; });
+
+  jemaat.forEach(j => {
+    const u = parseInt(j.Usia || j.usia || '');
+    if(isNaN(u) || u < 0){
+      counts['Tidak Diketahui']++;
+    } else {
+      const bucket = BUCKETS.find(b => b.min >= 0 && u >= b.min && u <= b.max);
+      if(bucket) counts[bucket.label]++;
+    }
+  });
+
+  // Hitung % target → berapa orang yang "ideal" untuk setiap bucket
+  const idealPerBucket = Math.round(totalJemaat * targetPctPerBucket / 100);
+
+  return BUCKETS.map(b => {
+    const count  = counts[b.label] || 0;
+    const pct    = totalJemaat > 0 ? (count / totalJemaat * 100).toFixed(1) : '0.0';
+    // "Berapa orang untuk mencapai target%"
+    const selisih = idealPerBucket - count;
+    return {
+      label: b.label,
+      count,
+      pct: parseFloat(pct),
+      ideal: idealPerBucket,
+      selisih, // positif = kurang, negatif = lebih
+    };
+  }).filter(b => b.label !== 'Tidak Diketahui' || b.count > 0);
+}
+
+/** Warna untuk pie/bar chart per jenis sidang */
+const SIDANG_PIE_COLORS = [
+  '#3b82f6','#06b6d4','#8b5cf6','#ec4899','#10b981',
+  '#f59e0b','#ef4444','#6366f1','#f97316','#14b8a6',
+  '#84cc16','#e879f9','#fb923c'
+];
+
+/**
+ * Render pie chart SVG sederhana (inline, tanpa lib eksternal)
+ * @param {Array} segments [{label, val, color}]
+ * @param {number} size - ukuran SVG px
+ */
+function renderInlinePie(segments, size){
+  size = size || 120;
+  const total = segments.reduce((s,x) => s + x.val, 0);
+  if(!total) return '<div style="color:var(--text3);font-size:.78rem;text-align:center;padding:10px;">Tidak ada data</div>';
+
+  const cx = size/2, cy = size/2, r = size/2 - 4;
+  let paths = '', offset = 0;
+
+  segments.forEach(seg => {
+    if(!seg.val) return;
+    const frac  = seg.val / total;
+    const angle = frac * 2 * Math.PI;
+    const x1 = cx + r * Math.sin(offset);
+    const y1 = cy - r * Math.cos(offset);
+    offset += angle;
+    const x2 = cx + r * Math.sin(offset);
+    const y2 = cy - r * Math.cos(offset);
+    const large = frac > 0.5 ? 1 : 0;
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z"
+      fill="${seg.color}" opacity=".9" stroke="var(--bg)" stroke-width="1.5">
+      <title>${seg.label}: ${seg.val} (${(frac*100).toFixed(1)}%)</title></path>`;
+  });
+
+  // Lubang tengah
+  paths += `<circle cx="${cx}" cy="${cy}" r="${r*0.38}" fill="var(--surface)"/>
+    <text x="${cx}" y="${cy+4}" text-anchor="middle"
+      font-size="${Math.round(r*0.28)}" font-weight="bold" fill="var(--text)">${total}</text>`;
+
+  return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg"
+    style="width:${size}px;height:${size}px;">${paths}</svg>`;
+}
+
+/** Render bar chart horizontal sederhana */
+function renderHorizBar(segments, maxVal){
+  maxVal = maxVal || Math.max(...segments.map(s=>s.val), 1);
+  return segments.map(s => {
+    const pct = Math.round(s.val / maxVal * 100);
+    return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+      <div style="font-size:.7rem;color:var(--text2);min-width:90px;max-width:90px;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(s.label)}">${escHtml(s.label)}</div>
+      <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${s.color};border-radius:4px;
+          display:flex;align-items:center;justify-content:flex-end;padding-right:5px;
+          transition:width .5s cubic-bezier(.4,0,.2,1);">
+          ${pct>15?`<span style="font-size:.62rem;font-weight:700;color:#fff;">${s.val}</span>`:''}
+        </div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;
+        color:var(--text2);min-width:28px;text-align:right;">${s.val}</div>
+    </div>`;
+  }).join('');
+}
+
+/** Render chart analisis tanggal per sidang */
+function renderLaporanCharts(data){
+  // data = { jenisSidang: { tanggal: {efata, anak, tamu, total_hadir} } }
+  const jenisEntries = Object.entries(data).sort();
+  if(!jenisEntries.length) return '';
+
+  // 1. PIE CHART — distribusi total hadir per jenis sidang
+  const pieSegments = jenisEntries.map(([jenis, byTgl], i) => {
+    const total = Object.values(byTgl).reduce((s, v) => s + (v.total_hadir || 0), 0);
+    return { label: jenis, val: total, color: SIDANG_PIE_COLORS[i % SIDANG_PIE_COLORS.length] };
+  }).filter(s => s.val > 0);
+
+  const pieHtml = pieSegments.length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">
+        🥧 Distribusi Kehadiran per Jenis Sidang
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex-shrink:0;">${renderInlinePie(pieSegments, 130)}</div>
+        <div style="flex:1;min-width:130px;">
+          ${pieSegments.map(s => `
+            <div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.75rem;">
+              <div style="width:10px;height:10px;border-radius:50%;
+                background:${s.color};flex-shrink:0;"></div>
+              <span style="flex:1;color:var(--text2);">${escHtml(s.label)}</span>
+              <span style="font-family:'JetBrains Mono',monospace;
+                font-weight:700;color:var(--text);">${s.val}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  // 2. BAR CHART — frekuensi sesi per jenis sidang (berapa kali ada dalam periode)
+  const freqSegments = jenisEntries.map(([jenis, byTgl], i) => ({
+    label: jenis,
+    val: Object.keys(byTgl).length,
+    color: SIDANG_PIE_COLORS[i % SIDANG_PIE_COLORS.length],
+  })).filter(s => s.val > 0).sort((a,b) => b.val - a.val);
+
+  const freqHtml = freqSegments.length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">
+        📅 Frekuensi Sesi per Jenis Sidang
+      </div>
+      ${renderHorizBar(freqSegments)}
+    </div>` : '';
+
+  // 3. BAR CHART — rata-rata kehadiran per sesi per jenis
+  const avgSegments = jenisEntries.map(([jenis, byTgl], i) => {
+    const vals    = Object.values(byTgl);
+    const totHdr  = vals.reduce((s,v) => s + (v.total_hadir||0), 0);
+    const avg     = vals.length ? Math.round(totHdr / vals.length) : 0;
+    return { label: jenis, val: avg, color: SIDANG_PIE_COLORS[i % SIDANG_PIE_COLORS.length] };
+  }).filter(s => s.val > 0).sort((a,b) => b.val - a.val);
+
+  const avgHtml = avgSegments.length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">
+        📊 Rata-rata Kehadiran per Sesi
+      </div>
+      ${renderHorizBar(avgSegments)}
+    </div>` : '';
+
+  return pieHtml + freqHtml + avgHtml;
+}
+
+/** Render analisis persentase umur jemaat */
+function renderUmurAnalysisHtml(targetPct){
+  targetPct = targetPct || 20;
+  const analysis = calcUmurAnalysis(targetPct);
+  if(!analysis) return '';
+
+  const totalJemaat = (db.Jemaat || []).length;
+  if(!totalJemaat) return '';
+
+  // Hitung berapa bucket non-zero untuk info
+  const activeBuckets = analysis.filter(b => b.count > 0).length;
+  const idealCount    = Math.round(totalJemaat * targetPct / 100);
+
+  // Pie chart umur
+  const umurPieSegs = analysis.filter(b => b.count > 0).map((b, i) => ({
+    label: b.label,
+    val:   b.count,
+    color: SIDANG_PIE_COLORS[i % SIDANG_PIE_COLORS.length],
+  }));
+
+  // Bar chart dengan indikator target
+  const umurBarRows = analysis.map((b, i) => {
+    const pct        = totalJemaat > 0 ? (b.count / totalJemaat * 100).toFixed(1) : 0;
+    const barPct     = Math.round(b.count / Math.max(totalJemaat, 1) * 100);
+    const overTarget = b.count >= idealCount;
+    const color      = SIDANG_PIE_COLORS[i % SIDANG_PIE_COLORS.length];
+    const selisihTxt = b.selisih > 0
+      ? `<span style="color:var(--red);font-size:.65rem;">−${b.selisih} kurang</span>`
+      : b.selisih < 0
+        ? `<span style="color:var(--green);font-size:.65rem;">+${Math.abs(b.selisih)} lebih</span>`
+        : `<span style="color:var(--yellow);font-size:.65rem;">✓ tepat</span>`;
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+        <div style="font-size:.72rem;font-weight:600;color:var(--text2);min-width:80px;">${b.label}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;
+          color:var(--text);font-weight:700;min-width:24px;">${b.count}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;
+          color:var(--text3);">(${pct}%)</div>
+        ${selisihTxt}
+      </div>
+      <div style="height:14px;background:var(--surface2);border-radius:4px;overflow:hidden;
+        position:relative;">
+        <div style="height:100%;width:${Math.min(100,barPct)}%;
+          background:${color};border-radius:4px;transition:width .5s;"></div>
+        <!-- Garis target -->
+        <div style="position:absolute;top:0;bottom:0;left:${targetPct}%;
+          width:2px;background:rgba(245,158,11,.8);"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--accent3);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:4px;">
+        🎂 Analisis Distribusi Umur Jemaat
+      </div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;">
+        Total: <strong style="color:var(--text);">${totalJemaat}</strong> jemaat ·
+        Target merata: <strong style="color:var(--yellow);">${targetPct}%</strong> per kelompok
+        = <strong style="color:var(--yellow);">${idealCount} orang</strong> per kelompok
+        · Garis kuning = target merata
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex-shrink:0;">${renderInlinePie(umurPieSegs, 120)}</div>
+        <div style="flex:1;min-width:130px;">
+          ${umurPieSegs.slice(0,7).map(s => `
+            <div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:.7rem;">
+              <div style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
+              <span style="flex:1;color:var(--text2);">${escHtml(s.label)}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);">${s.val}</span>
+            </div>`).join('')}
+          ${umurPieSegs.length > 7 ? `<div style="font-size:.65rem;color:var(--text3);margin-top:2px;">... +${umurPieSegs.length-7} kelompok lain</div>` : ''}
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">${umurBarRows}</div>
+
+      <!-- Tabel Ringkasan -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.72rem;">
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              color:var(--text3);font-size:.63rem;">Kelompok Umur</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              color:var(--text3);font-size:.63rem;">Jumlah</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              color:var(--text3);font-size:.63rem;">%</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              color:var(--text3);font-size:.63rem;">Target ${targetPct}%</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              color:var(--text3);font-size:.63rem;">Selisih</th>
+          </tr></thead>
+          <tbody>
+            ${analysis.map((b,i) => {
+              const pct = (b.pct).toFixed(1);
+              const ok  = b.count >= idealCount;
+              const selColor = b.selisih > 0 ? 'var(--red)' : b.selisih < 0 ? 'var(--green)' : 'var(--yellow)';
+              return `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:4px 7px;font-weight:500;">${escHtml(b.label)}</td>
+                <td style="padding:4px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
+                  font-weight:700;color:var(--text);">${b.count}</td>
+                <td style="padding:4px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
+                  color:var(--text2);">${pct}%</td>
+                <td style="padding:4px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
+                  color:var(--yellow);">${idealCount}</td>
+                <td style="padding:4px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
+                  font-weight:700;color:${selColor};">${b.selisih > 0 ? '−'+b.selisih : b.selisih < 0 ? '+'+Math.abs(b.selisih) : '✓'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Keterangan -->
+      <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:.68rem;color:var(--text3);">
+        <span style="display:flex;align-items:center;gap:3px;">
+          <span style="color:var(--red);">■</span> Kurang dari target</span>
+        <span style="display:flex;align-items:center;gap:3px;">
+          <span style="color:var(--green);">■</span> Melebihi target</span>
+        <span style="display:flex;align-items:center;gap:3px;">
+          <span style="color:var(--yellow);">■</span> Tepat target</span>
+      </div>
+    </div>`;
+}
+
+
+/** GANTI seluruh fungsi renderLaporanResult dengan versi ini */
+function renderLaporanResult(el, data){
+  let grandHadir=0, grandEfata=0, grandAnak=0, grandTamu=0;
   const teksLines = [
     `LAPORAN ABSENSI SIDANG`,
     `Periode : ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
@@ -4705,14 +5037,32 @@ function renderLaporanResult(el, data) {
     '',
   ];
 
-  let html = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+  // ── Header tombol copy & filter target % ─────────────────────
+  const targetPctInput = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="font-weight:700;font-size:.9rem;">
-        📊 ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} — ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}
+        📊 ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))}
+        — ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}
       </div>
-      <button onclick="copyLaporanText()" class="btn-action green" style="padding:7px 14px;font-size:.78rem;">📋 Copy</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;">
+        <label style="font-size:.72rem;color:var(--text3);">Target % merata:</label>
+        <input type="number" id="target-pct-input" value="20" min="1" max="100"
+          class="k-input" style="width:64px;text-align:center;"
+          onchange="rebuildUmurAnalysis()">
+        <span style="font-size:.72rem;color:var(--text3);">%</span>
+        <button onclick="copyLaporanText()" class="btn-action green"
+          style="padding:7px 14px;font-size:.78rem;">📋 Copy</button>
+      </div>
     </div>`;
 
+  // ── Chart section ─────────────────────────────────────────────
+  const chartSectionHtml = renderLaporanCharts(data);
+
+  // ── Umur analysis placeholder ─────────────────────────────────
+  const umurSectionHtml = `<div id="laporan-umur-section">${renderUmurAnalysisHtml(20)}</div>`;
+
+  // ── Tabel per jenis sidang ────────────────────────────────────
+  let tabelHtml = '';
   Object.entries(data).sort().forEach(([jenis, byTgl]) => {
     let jenisHadir=0, jenisEfata=0, jenisAnak=0, jenisTamu=0;
     const sortedTgl = Object.keys(byTgl).sort((a,b) => {
@@ -4721,74 +5071,104 @@ function renderLaporanResult(el, data) {
     });
 
     teksLines.push(`▸ ${jenis}`);
-    html += `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+    tabelHtml += `
+      <div style="background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--radius);padding:14px;margin-bottom:10px;">
         <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;">📋 ${escHtml(jenis)}</div>
         <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
           <thead><tr style="background:var(--surface2);">
-            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.62rem;color:var(--text3);">Tanggal</th>
-            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.62rem;color:var(--accent);">EfataID</th>
-            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.62rem;color:var(--accent3);">Anak</th>
-            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.62rem;color:var(--yellow);">Tamu</th>
-            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.62rem;color:var(--green);">Total</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.62rem;color:var(--text3);">Tanggal</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              font-size:.62rem;color:var(--accent);">EfataID</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              font-size:.62rem;color:var(--accent3);">Anak</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              font-size:.62rem;color:var(--yellow);">Tamu</th>
+            <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+              font-size:.62rem;color:var(--green);">Total</th>
           </tr></thead><tbody>`;
 
     sortedTgl.forEach(tgl => {
-      const s = byTgl[tgl];
-      const efata = s.efata||s.hadir||0;
-      const anak  = s.anak||0;
-      const tamu  = s.tamu||0;
-      const total = s.total_hadir || (efata+anak+tamu);
+      const s     = byTgl[tgl];
+      const efata = s.efata || s.hadir || 0;
+      const anak  = s.anak  || 0;
+      const tamu  = s.tamu  || 0;
+      const total = s.total_hadir || (efata + anak + tamu);
       jenisHadir += total; jenisEfata += efata; jenisAnak += anak; jenisTamu += tamu;
       teksLines.push(`  ${formatTglDisplay(tgl)}: Total ${total} (EfataID ${efata}, Anak ${anak}, Tamu ${tamu})`);
-      html += `<tr style="border-bottom:1px solid var(--border);">
+      tabelHtml += `<tr style="border-bottom:1px solid var(--border);">
         <td style="padding:5px 7px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
-        <td style="padding:5px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${efata}</td>
-        <td style="padding:5px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${anak}</td>
-        <td style="padding:5px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${tamu}</td>
-        <td style="padding:5px 7px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${total}</td>
+        <td style="padding:5px 7px;text-align:center;color:var(--accent);
+          font-family:'JetBrains Mono',monospace;">${efata}</td>
+        <td style="padding:5px 7px;text-align:center;color:var(--accent3);
+          font-family:'JetBrains Mono',monospace;">${anak}</td>
+        <td style="padding:5px 7px;text-align:center;color:var(--yellow);
+          font-family:'JetBrains Mono',monospace;">${tamu}</td>
+        <td style="padding:5px 7px;text-align:center;color:var(--green);font-weight:700;
+          font-family:'JetBrains Mono',monospace;">${total}</td>
       </tr>`;
     });
 
-    grandHadir += jenisHadir; grandEfata += jenisEfata; grandAnak += jenisAnak; grandTamu += jenisTamu;
+    grandHadir += jenisHadir; grandEfata += jenisEfata;
+    grandAnak  += jenisAnak;  grandTamu  += jenisTamu;
     teksLines.push(`  TOTAL ${jenis}: ${jenisHadir} (EfataID ${jenisEfata}, Anak ${jenisAnak}, Tamu ${jenisTamu})`);
     teksLines.push('');
 
-    html += `<tr style="background:var(--surface2);font-weight:700;">
+    tabelHtml += `<tr style="background:var(--surface2);font-weight:700;">
       <td style="padding:5px 7px;">TOTAL</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${jenisEfata}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${jenisAnak}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${jenisTamu}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisHadir}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--accent);
+        font-family:'JetBrains Mono',monospace;">${jenisEfata}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--accent3);
+        font-family:'JetBrains Mono',monospace;">${jenisAnak}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--yellow);
+        font-family:'JetBrains Mono',monospace;">${jenisTamu}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--green);
+        font-family:'JetBrains Mono',monospace;">${jenisHadir}</td>
     </tr></tbody></table></div>`;
   });
 
-  // Grand total header
+  // ── Grand Total ───────────────────────────────────────────────
   const grandHtml = `
-    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
-      <div style="font-size:.78rem;font-weight:700;color:var(--text3);margin-bottom:8px;">🏆 GRAND TOTAL SEMUA SIDANG</div>
+    <div style="background:var(--surface);border:1px solid var(--accent);
+      border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text3);margin-bottom:8px;">
+        🏆 GRAND TOTAL SEMUA SIDANG
+      </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
-        <div style="background:rgba(16,185,129,.1);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--green);">${grandHadir}</div>
-          <div style="font-size:.6rem;color:var(--green);">Total</div>
-        </div>
-        <div style="background:rgba(59,130,246,.1);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--accent);">${grandEfata}</div>
-          <div style="font-size:.6rem;color:var(--accent);">EfataID</div>
-        </div>
-        <div style="background:rgba(139,92,246,.1);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--accent3);">${grandAnak}</div>
-          <div style="font-size:.6rem;color:var(--accent3);">Anak</div>
-        </div>
-        <div style="background:rgba(245,158,11,.1);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--yellow);">${grandTamu}</div>
-          <div style="font-size:.6rem;color:var(--yellow);">Tamu</div>
-        </div>
+        ${[
+          [grandHadir,'Total','var(--green)','rgba(16,185,129,.1)'],
+          [grandEfata,'EfataID','var(--accent)','rgba(59,130,246,.1)'],
+          [grandAnak,'Anak','var(--accent3)','rgba(139,92,246,.1)'],
+          [grandTamu,'Tamu','var(--yellow)','rgba(245,158,11,.1)'],
+        ].map(([v,l,c,bg]) => `
+          <div style="background:${bg};border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;
+              font-weight:700;color:${c};">${v}</div>
+            <div style="font-size:.6rem;color:${c};">${l}</div>
+          </div>`).join('')}
       </div>
     </div>`;
 
+  teksLines.push(`GRAND TOTAL: ${grandHadir} (EfataID ${grandEfata}, Anak ${grandAnak}, Tamu ${grandTamu})`);
   laporanAbsenState._teksLaporan = teksLines.join('\n');
-  el.innerHTML = grandHtml + html;
+
+  el.innerHTML = targetPctInput + grandHtml + chartSectionHtml + umurSectionHtml + tabelHtml;
+
+  // Load jemaat jika belum ada (untuk analisis umur)
+  if(!db.Jemaat){
+    Papa.parse(URLS.Jemaat, {download:true, header:true, complete:r=>{
+      db.Jemaat = r.data;
+      rebuildUmurAnalysis();
+    }});
+  }
+}
+
+/** Rebuild hanya bagian umur saat target % diubah */
+function rebuildUmurAnalysis(){
+  const pct = parseInt(document.getElementById('target-pct-input')?.value || '20') || 20;
+  const el  = document.getElementById('laporan-umur-section');
+  if(el) el.innerHTML = renderUmurAnalysisHtml(pct);
 }
 function copyLaporanText(){
   const t = laporanAbsenState._teksLaporan||'';
@@ -4871,120 +5251,248 @@ function updateFontSizeDisp(){
 }
 
 // ══════════════════════════════════════════════════
-// BOOK MODE
+// BOOK MODE — v3 (keyboard + real-time font + adaptive lines)
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
 
-function splitToPages(text,linesPerPage){
-  linesPerPage=linesPerPage||20;
-  const lines=text.split('\n');
-  const pages=[];
-  let cur=[];
-  lines.forEach(line=>{
-    cur.push(line);
-    if(cur.length>=linesPerPage){
-      // Cari baris kosong terdekat dari belakang untuk potong bersih
-      let cutAt=cur.length;
-      for(let i=cur.length-1;i>=Math.floor(linesPerPage*0.6);i--){
-        if(cur[i].trim()===''){cutAt=i+1;break;}
-      }
-      pages.push(cur.slice(0,cutAt).join('\n'));
-      cur=cur.slice(cutAt);
-    }
-  });
-  if(cur.length)pages.push(cur.join('\n'));
-  return pages.filter(p=>p.trim());
+/**
+ * Hitung berapa baris yang muat dalam 1 halaman
+ * berdasarkan tinggi area tampil dan ukuran font.
+ * Rumus: tinggi_area / (fontSize * lineHeight)
+ */
+function calcAdaptiveLines(fontSize){
+  // lineHeight di book mode = 1.8em
+  const lineHeightPx = (fontSize || currentFontSize) * 1.8;
+  // Tinggi area konten = tinggi layar - header (54) - footer (60) - padding (40)
+  const availH = window.innerHeight - 54 - 60 - 40;
+  const lines = Math.floor(availH / lineHeightPx);
+  // Minimal 5 baris, maksimal 60 baris
+  return Math.max(5, Math.min(60, lines));
 }
 
-function openBookMode(text,title){
-  if(!text)return;
-  bookTitle=title||'Lirik';
-  bookPages=splitToPages(text,22);
-  bookPageIdx=0;
-  const old=document.getElementById('book-fullscreen');if(old)old.remove();
-  const div=document.createElement('div');
-  div.id='book-fullscreen';
-  div.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--fs-bg,var(--bg));color:var(--fs-text,var(--text));display:flex;flex-direction:column;overflow:hidden;touch-action:pan-y;';
-  div.innerHTML=`
+function splitToPages(text, linesPerPage){
+  linesPerPage = linesPerPage || calcAdaptiveLines(currentFontSize);
+  const lines = text.split('\n');
+  const pages = [];
+  let cur = [];
+  lines.forEach(line => {
+    cur.push(line);
+    if(cur.length >= linesPerPage){
+      // Cari baris kosong terdekat dari belakang untuk potong bersih
+      let cutAt = cur.length;
+      for(let i = cur.length-1; i >= Math.floor(linesPerPage*0.6); i--){
+        if(cur[i].trim() === ''){ cutAt = i+1; break; }
+      }
+      pages.push(cur.slice(0, cutAt).join('\n'));
+      cur = cur.slice(cutAt);
+    }
+  });
+  if(cur.length) pages.push(cur.join('\n'));
+  return pages.filter(p => p.trim());
+}
+
+function openBookMode(text, title){
+  if(!text) return;
+  bookTitle = title || 'Lirik';
+  bookPages = splitToPages(text, calcAdaptiveLines(currentFontSize));
+  bookPageIdx = 0;
+
+  const old = document.getElementById('book-fullscreen');
+  if(old){ if(old._clk) clearInterval(old._clk); old.remove(); }
+
+  const div = document.createElement('div');
+  div.id = 'book-fullscreen';
+  div.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--fs-bg,var(--bg));color:var(--fs-text,var(--text));display:flex;flex-direction:column;overflow:hidden;touch-action:pan-y;';
+  div.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--header-bg);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap;">
       <button class="fs-back" onclick="closeBookMode()" style="position:static;padding:6px 12px;">← Kembali</button>
       <div style="font-size:.82rem;font-weight:700;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📖 ${escHtml(bookTitle)}</div>
       <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
-        <button class="fs-ctrl-btn" onpointerdown="fsFontBtnDown(-5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−−</button>
-        <button class="fs-ctrl-btn" onpointerdown="fsFontBtnDown(-1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−</button>
-        <span id="fs-font-size-disp" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent2);background:var(--surface2);padding:2px 7px;border-radius:5px;border:1px solid var(--border);min-width:40px;text-align:center;">${currentFontSize}px</span>
-        <button class="fs-ctrl-btn" onpointerdown="fsFontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A+</button>
-        <button class="fs-ctrl-btn" onpointerdown="fsFontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A++</button>
+        <button class="fs-ctrl-btn" id="book-fdn5" onpointerdown="fsFontBtnDown(-5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−−</button>
+        <button class="fs-ctrl-btn" id="book-fdn1" onpointerdown="fsFontBtnDown(-1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A−</button>
+        <span id="fs-font-size-disp" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent2);background:var(--surface2);padding:2px 7px;border-radius:5px;border:1px solid var(--border);min-width:44px;text-align:center;">${currentFontSize}px</span>
+        <button class="fs-ctrl-btn" id="book-fup1" onpointerdown="fsFontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A+</button>
+        <button class="fs-ctrl-btn" id="book-fup5" onpointerdown="fsFontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A++</button>
         <button class="fs-ctrl-btn" onclick="toggleFontModeFS()">🔤</button>
         <button class="fs-ctrl-btn" onclick="closeBookMode()">✕</button>
       </div>
     </div>
 
     <div id="book-page-wrap" style="flex:1;overflow:hidden;position:relative;display:flex;align-items:stretch;">
-      <div id="book-prev-area" onclick="bookNav(-1)" style="position:absolute;left:0;top:0;bottom:0;width:52px;z-index:5;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.4;transition:opacity .2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.4'">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--text);">‹</div>
+      <div id="book-prev-area" onclick="bookNav(-1)"
+        style="position:absolute;left:0;top:0;bottom:0;width:52px;z-index:5;
+        display:flex;align-items:center;justify-content:center;cursor:pointer;
+        opacity:.35;transition:opacity .2s;"
+        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.35'">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--surface);
+          border:1px solid var(--border);display:flex;align-items:center;
+          justify-content:center;font-size:1.6rem;color:var(--text);">‹</div>
       </div>
-      <div id="book-content" style="flex:1;padding:20px 64px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.8;transition:opacity .15s ease;"></div>
-      <div id="book-next-area" onclick="bookNav(1)" style="position:absolute;right:0;top:0;bottom:0;width:52px;z-index:5;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.4;transition:opacity .2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.4'">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--text);">›</div>
+      <div id="book-content"
+        style="flex:1;padding:20px 64px;overflow-y:auto;white-space:pre-wrap;
+        word-wrap:break-word;line-height:1.8;transition:opacity .12s ease;
+        font-size:${currentFontSize}px;"></div>
+      <div id="book-next-area" onclick="bookNav(1)"
+        style="position:absolute;right:0;top:0;bottom:0;width:52px;z-index:5;
+        display:flex;align-items:center;justify-content:center;cursor:pointer;
+        opacity:.35;transition:opacity .2s;"
+        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.35'">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--surface);
+          border:1px solid var(--border);display:flex;align-items:center;
+          justify-content:center;font-size:1.6rem;color:var(--text);">›</div>
       </div>
     </div>
 
-    <div style="padding:10px 14px;background:var(--header-bg);border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div style="padding:10px 14px;background:var(--header-bg);border-top:1px solid var(--border);
+      flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <button class="btn-action" onclick="bookNav(-1)" style="padding:9px 18px;">← Sebelum</button>
       <div style="text-align:center;">
-        <div id="book-page-indicator" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);font-weight:700;"></div>
-        <div id="book-dots" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:4px;max-width:200px;"></div>
+        <div id="book-page-indicator" style="font-family:'JetBrains Mono',monospace;
+          font-size:.78rem;color:var(--accent);font-weight:700;"></div>
+        <div id="book-dots" style="display:flex;gap:5px;justify-content:center;
+          flex-wrap:wrap;margin-top:4px;max-width:220px;"></div>
       </div>
       <button class="btn-action" onclick="bookNav(1)" style="padding:9px 18px;">Berikut →</button>
     </div>`;
+
   document.body.appendChild(div);
   bookRender();
-  // Swipe touch
-  let sx=0,sy=0;
-  div.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
-  div.addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50)bookNav(dx<0?1:-1);
+
+  // ── Keyboard navigation ──────────────────────────────────────
+  div._keyHandler = (e) => {
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown')
+      bookNav(1);
+    else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp')
+      bookNav(-1);
+    else if(e.key === 'Escape')
+      closeBookMode();
+    else if(e.key === '+' || e.key === '='){
+      fsAdjustFont(2);
+      bookRebuildPages();
+    }
+    else if(e.key === '-'){
+      fsAdjustFont(-2);
+      bookRebuildPages();
+    }
+  };
+  document.addEventListener('keydown', div._keyHandler);
+
+  // ── Swipe touch ──────────────────────────────────────────────
+  let sx=0, sy=0;
+  div.addEventListener('touchstart', e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+  div.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) bookNav(dx < 0 ? 1 : -1);
   },{passive:true});
-  if(div.requestFullscreen)div.requestFullscreen().catch(()=>{});
+
+  // Minta fullscreen browser
+  if(div.requestFullscreen) div.requestFullscreen().catch(()=>{});
+  else if(div.webkitRequestFullscreen) div.webkitRequestFullscreen();
+}
+
+/** Rebuild halaman saat font berubah (pertahankan posisi proporsional) */
+function bookRebuildPages(){
+  if(!bookPages.length) return;
+  // Ambil teks asli dari semua halaman
+  const fullText = bookPages.join('\n\n').replace(/\n{3,}/g, '\n\n');
+  const oldTotal = bookPages.length;
+  const oldIdx   = bookPageIdx;
+  bookPages = splitToPages(fullText, calcAdaptiveLines(currentFontSize));
+  // Jaga posisi proporsional
+  bookPageIdx = Math.round((oldIdx / Math.max(1, oldTotal-1)) * Math.max(1, bookPages.length-1));
+  bookPageIdx = Math.max(0, Math.min(bookPages.length-1, bookPageIdx));
+  bookRender();
 }
 
 function bookRender(){
-  const content=document.getElementById('book-content');
-  const indicator=document.getElementById('book-page-indicator');
-  const dotsEl=document.getElementById('book-dots');
-  const prevArea=document.getElementById('book-prev-area');
-  const nextArea=document.getElementById('book-next-area');
-  if(!content)return;
-  content.style.opacity='0';
-  setTimeout(()=>{
-    content.textContent=bookPages[bookPageIdx]||'';
-    content.style.fontSize=currentFontSize+'px';
-    fontModes.forEach(f=>content.classList.remove(f.cls));
+  const content   = document.getElementById('book-content');
+  const indicator = document.getElementById('book-page-indicator');
+  const dotsEl    = document.getElementById('book-dots');
+  const prevArea  = document.getElementById('book-prev-area');
+  const nextArea  = document.getElementById('book-next-area');
+  if(!content) return;
+
+  // ── Fade out → update → fade in ──────────────────────────────
+  content.style.opacity = '0';
+  setTimeout(() => {
+    content.textContent  = bookPages[bookPageIdx] || '';
+    content.style.fontSize = currentFontSize + 'px';
+    fontModes.forEach(f => content.classList.remove(f.cls));
     content.classList.add(fontModes[fontModeIndex].cls);
-    content.style.opacity='1';
+    content.style.opacity = '1';
     updateFontSizeDisp();
-  },80);
-  if(indicator)indicator.textContent=`Hal. ${bookPageIdx+1} / ${bookPages.length}`;
+  }, 90);
+
+  // ── Indikator halaman ─────────────────────────────────────────
+  if(indicator)
+    indicator.textContent = `Hal. ${bookPageIdx+1} / ${bookPages.length}`;
+
+  // ── Dots navigasi ─────────────────────────────────────────────
   if(dotsEl){
-    const max=Math.min(bookPages.length,15);
-    dotsEl.innerHTML=Array.from({length:max},(_,i)=>{
-      const pi=bookPages.length>15?Math.round(i*(bookPages.length-1)/(max-1)):i;
-      const active=bookPageIdx===(bookPages.length>15?pi:i);
-      return`<div onclick="bookGoTo(${bookPages.length>15?pi:i})" style="width:${active?10:6}px;height:${active?10:6}px;border-radius:50%;cursor:pointer;background:${active?'var(--accent)':'var(--border)'};transition:all .2s;flex-shrink:0;"></div>`;
+    const maxDots = Math.min(bookPages.length, 15);
+    dotsEl.innerHTML = Array.from({length: maxDots}, (_, i) => {
+      const pi = bookPages.length > 15
+        ? Math.round(i * (bookPages.length-1) / (maxDots-1))
+        : i;
+      const active = bookPageIdx === (bookPages.length > 15 ? pi : i);
+      return `<div onclick="bookGoTo(${bookPages.length>15?pi:i})"
+        style="width:${active?10:6}px;height:${active?10:6}px;border-radius:50%;
+        cursor:pointer;background:${active?'var(--accent)':'var(--border)'};
+        transition:all .2s;flex-shrink:0;"></div>`;
     }).join('');
   }
-  if(prevArea)prevArea.style.display=bookPageIdx>0?'flex':'none';
-  if(nextArea)nextArea.style.display=bookPageIdx<bookPages.length-1?'flex':'none';
-}
-function bookNav(dir){const n=bookPageIdx+dir;if(n<0||n>=bookPages.length)return;bookPageIdx=n;bookRender();}
-function bookGoTo(i){bookPageIdx=Math.max(0,Math.min(bookPages.length-1,i));bookRender();}
-function closeBookMode(){
-  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-  const el=document.getElementById('book-fullscreen');if(el)el.remove();
+
+  // ── Tampilkan/sembunyikan tombol prev/next ────────────────────
+  if(prevArea) prevArea.style.display = bookPageIdx > 0 ? 'flex' : 'none';
+  if(nextArea) nextArea.style.display = bookPageIdx < bookPages.length-1 ? 'flex' : 'none';
 }
 
+function bookNav(dir){
+  const n = bookPageIdx + dir;
+  if(n < 0 || n >= bookPages.length) return;
+  bookPageIdx = n;
+  bookRender();
+}
+function bookGoTo(i){
+  bookPageIdx = Math.max(0, Math.min(bookPages.length-1, i));
+  bookRender();
+}
+function closeBookMode(){
+  const el = document.getElementById('book-fullscreen');
+  if(el){
+    if(el._keyHandler) document.removeEventListener('keydown', el._keyHandler);
+    if(el._clk) clearInterval(el._clk);
+    el.remove();
+  }
+  if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+}
+
+/**
+ * Override fsFontBtnDown agar saat di Book Mode
+ * langsung rebuild halaman (adaptive lines update).
+ * Fungsi ini menggantikan fsFontBtnDown yang sudah ada.
+ */
+// NOTE: fsFontBtnDown sudah ada, kita patch dengan wrapper.
+// Tambahkan baris berikut SETELAH definisi fsFontBtnDown asli,
+// atau ganti seluruh fsFontBtnDown dengan versi ini:
+function fsFontBtnDown(d){
+  fsAdjustFont(d);
+  updateFontSizeDisp();
+  // Jika Book Mode aktif, rebuild halaman adaptif
+  if(document.getElementById('book-fullscreen')){
+    bookRebuildPages();
+  }
+  _fontPressTimer = setTimeout(() => {
+    _fontPressInterval = setInterval(() => {
+      fsAdjustFont(d);
+      updateFontSizeDisp();
+      if(document.getElementById('book-fullscreen')){
+        bookRebuildPages();
+      }
+    }, 100);
+  }, 420);
+}
 // ══════════════════════════════════════════════════
 // DASHBOARD FULLSCREEN
 // ══════════════════════════════════════════════════
