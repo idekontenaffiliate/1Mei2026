@@ -5273,26 +5273,7 @@ let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') |
  */
 
 
-function splitToPages(text, linesPerPage){
-  linesPerPage = linesPerPage || calcAdaptiveLines(currentFontSize);
-  const lines = text.split('\n');
-  const pages = [];
-  let cur = [];
-  lines.forEach(line => {
-    cur.push(line);
-    if(cur.length >= linesPerPage){
-      // Cari baris kosong terdekat dari belakang untuk potong bersih
-      let cutAt = cur.length;
-      for(let i = cur.length-1; i >= Math.floor(linesPerPage*0.6); i--){
-        if(cur[i].trim() === ''){ cutAt = i+1; break; }
-      }
-      pages.push(cur.slice(0, cutAt).join('\n'));
-      cur = cur.slice(cutAt);
-    }
-  });
-  if(cur.length) pages.push(cur.join('\n'));
-  return pages.filter(p => p.trim());
-}
+
 // ── KONFIGURASI BOOK MODE (bisa diubah manual) ──────────────────
 // Kalau calcAdaptiveLines masih meleset, set BOOK_LINES_OVERRIDE > 0
 // Contoh: BOOK_LINES_OVERRIDE = 12 → paksa 12 baris per halaman
@@ -5308,16 +5289,7 @@ const FONT_LH_FACTOR = {
   'font-thin'    : 1.80,
 };
 
-function calcAdaptiveLines(fontSize) {
-  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
-  const currentFontClass = fontModes[fontModeIndex]?.cls || 'font-normal';
-  const lhFactor = FONT_LH_FACTOR[currentFontClass] || 1.8;
-  const lineHeightPx = (fontSize || currentFontSize) * lhFactor;
-  // Kurangi: header(54) + footer(60) + padding atas-bawah(40) + buffer(10)
-  const availH = window.innerHeight - 54 - 60 - 40 - 10;
-  const lines = Math.floor(availH / lineHeightPx);
-  return Math.max(5, Math.min(60, lines));
-}
+
 function openBookCalibModal(){
   const old = document.getElementById('book-calib-modal');
   if(old){ old.remove(); return; }
@@ -5430,6 +5402,64 @@ function fsFontBtnDown(d){
       }
     }, 100);
   }, 420);
+} 
+// ═══════════════════════════════════════════════
+// GANTI 3 fungsi ini di bagian Book Mode index.html
+// ═══════════════════════════════════════════════
+
+// FUNGSI 1: Ukur tinggi 1 baris langsung dari DOM
+// (akurat 100% untuk semua ukuran font & font family)
+function measureLineHeight(fontSize, fontClass) {
+  const probe = document.createElement('div');
+  probe.style.cssText = [
+    'position:absolute', 'visibility:hidden', 'pointer-events:none',
+    'top:-9999px', 'left:0', 'white-space:pre',
+    'font-size:' + fontSize + 'px',
+    'line-height:1.75', 'padding:0', 'margin:0',
+  ].join(';');
+  if (fontClass) probe.classList.add(fontClass);
+  probe.textContent = 'Teks Contoh Baris Satu';
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  document.body.removeChild(probe);
+  return Math.ceil(h) + 2; // +2 px buffer antar baris
+}
+
+// FUNGSI 2: Hitung berapa baris yang muat di layar
+// (mengukur langsung, bukan pakai rumus)
+function calcAdaptiveLines(fontSize) {
+  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
+  const fontClass = fontModes[fontModeIndex]?.cls || '';
+  const lineH = measureLineHeight(fontSize || currentFontSize, fontClass);
+  // Header (54px) + Footer (60px) + padding atas-bawah (40px) + buffer (10px)
+  const usedH = 54 + 60 + 40 + 10;
+  const avail = window.innerHeight - usedH;
+  const lines = Math.floor(avail / lineH);
+  return Math.max(4, Math.min(80, lines));
+}
+
+// FUNGSI 3: Potong teks ke halaman
+// (memotong di baris kosong terdekat agar tidak terpotong di tengah kalimat)
+function splitToPages(text, linesPerPage) {
+  linesPerPage = linesPerPage || calcAdaptiveLines(currentFontSize);
+  const lines = text.split('\n');
+  const pages = [];
+  let cur = [];
+  for (let i = 0; i < lines.length; i++) {
+    cur.push(lines[i]);
+    if (cur.length >= linesPerPage) {
+      // Cari baris kosong terdekat dari belakang untuk potong bersih
+      let cutAt = cur.length;
+      const minCut = Math.floor(linesPerPage * 0.65);
+      for (let j = cur.length - 1; j >= minCut; j--) {
+        if (cur[j].trim() === '') { cutAt = j + 1; break; }
+      }
+      pages.push(cur.slice(0, cutAt).join('\n'));
+      cur = cur.slice(cutAt);
+    }
+  }
+  if (cur.length) pages.push(cur.join('\n'));
+  return pages.filter(p => p.trim());
 }   
 function openBookMode(text, title){
   if(!text) return;
