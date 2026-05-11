@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 100.111 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 111.111 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5296,7 +5296,7 @@ function updateFontSizeDisp(){
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
 // let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;   
-let BOOK_LINES_OVERRIDE = 20;
+let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;
 /**
  * Hitung berapa baris yang muat dalam 1 halaman
  * berdasarkan tinggi area tampil dan ukuran font.
@@ -5531,28 +5531,33 @@ function measureLineHeight(fontSize, fontClass) {
 // (mengukur langsung, bukan pakai rumus)
 
 
+
 function calcAdaptiveLines(fontSize) {
+  // Selalu gunakan nilai manual dari BOOK_LINES_OVERRIDE
   return BOOK_LINES_OVERRIDE;
 }   
 // FUNGSI 3: Potong teks ke halaman
 // (memotong di baris kosong terdekat agar tidak terpotong di tengah kalimat)
 
 // 3. splitToPages — harus pakai BOOK_LINES_OVERRIDE langsung, TIDAK "smart cutting":
-    function splitToPages(text, linesPerPage) {
-      linesPerPage = BOOK_LINES_OVERRIDE;  ← wajib ini di baris pertama
-      const lines = text.split('\n');
-      const pages = [];
-      let cur = [];
-      for (let i = 0; i < lines.length; i++) {
-        cur.push(lines[i]);
-        if (cur.length >= linesPerPage) {
-          pages.push(cur.join('\n'));
-          cur = [];
-        }
-      }
-      if (cur.length > 0) pages.push(cur.join('\n'));
-     return pages.filter(p => p.trim());
-    }   
+
+function splitToPages(text, linesPerPage) {
+  // Selalu pakai BOOK_LINES_OVERRIDE agar setting manual selalu berlaku
+  linesPerPage = BOOK_LINES_OVERRIDE;
+  const lines = text.split('\n');
+  const pages = [];
+  let cur = [];
+  for (let i = 0; i < lines.length; i++) {
+    cur.push(lines[i]);
+    if (cur.length >= linesPerPage) {
+      pages.push(cur.join('\n'));
+      cur = [];
+    }
+  }
+  if (cur.length > 0) pages.push(cur.join('\n'));
+  return pages.filter(p => p.trim());
+}
+    
 function openBookMode(text, title){
   if(!text) return;
   bookTitle = title || 'Lirik';
@@ -5656,6 +5661,7 @@ function openBookMode(text, title){
 
 /** Rebuild halaman saat font berubah (pertahankan posisi proporsional) */
 
+
 function bookRebuildPages() {
   if (!bookPages.length) return;
  
@@ -5664,13 +5670,13 @@ function bookRebuildPages() {
   const oldTotal = bookPages.length;
   const oldIdx   = bookPageIdx;
  
-  // Potong ulang — splitToPages sudah pakai BOOK_LINES_OVERRIDE langsung
+  // Potong ulang — splitToPages pakai BOOK_LINES_OVERRIDE langsung
   bookPages = splitToPages(fullText);
  
   // Pertahankan posisi halaman secara proporsional
-  if (bookPages.length > 1) {
+  if (bookPages.length > 1 && oldTotal > 1) {
     bookPageIdx = Math.round(
-      (oldIdx / Math.max(1, oldTotal - 1)) * Math.max(1, bookPages.length - 1)
+      (oldIdx / (oldTotal - 1)) * (bookPages.length - 1)
     );
   } else {
     bookPageIdx = 0;
@@ -5678,7 +5684,7 @@ function bookRebuildPages() {
   bookPageIdx = Math.max(0, Math.min(bookPages.length - 1, bookPageIdx));
  
   bookRender();
-}
+}   
 
 function bookRender(){
   const content   = document.getElementById('book-content');
