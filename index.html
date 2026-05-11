@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 22 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 33 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5295,14 +5295,21 @@ function updateFontSizeDisp(){
 // BOOK MODE — v3 (keyboard + real-time font + adaptive lines)
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
-let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;   
+let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;
+let BOOK_CHARS_PER_LINE = parseInt(localStorage.getItem('book_chars_per_line') || '0') || 0;
 /**
  * Hitung berapa baris yang muat dalam 1 halaman
  * berdasarkan tinggi area tampil dan ukuran font.
  * Rumus: tinggi_area / (fontSize * lineHeight)
  */
 
-
+function countVisualLines(line) {
+  if (BOOK_CHARS_PER_LINE <= 0) return 1; // mode lama: 1 data line = 1 visual line
+  const len = (line || '').length;
+  if (len === 0) return 1; // baris kosong tetap 1 baris
+  return Math.ceil(len / BOOK_CHARS_PER_LINE);
+}
+ 
 
 // ── KONFIGURASI BOOK MODE (bisa diubah manual) ──────────────────
 // Kalau calcAdaptiveLines masih meleset, set BOOK_LINES_OVERRIDE > 0
@@ -5318,11 +5325,23 @@ const FONT_LH_FACTOR = {
 };
 
 function openBookCalibModal() {
-  // Toggle: kalau sudah ada, tutup
   var existing = document.getElementById('book-calib-modal');
   if (existing) { existing.remove(); return; }
  
   var curLines = BOOK_LINES_OVERRIDE;
+  var curChars = BOOK_CHARS_PER_LINE;
+ 
+  // Estimasi halaman berdasarkan teks saat ini
+  function estimatePages(lines, chars) {
+    if (!bookPages.length) return '?';
+    var fullText = bookPages.join('\n');
+    var oldL = BOOK_LINES_OVERRIDE, oldC = BOOK_CHARS_PER_LINE;
+    BOOK_LINES_OVERRIDE = lines;
+    BOOK_CHARS_PER_LINE = chars;
+    var pg = splitToPages(fullText);
+    BOOK_LINES_OVERRIDE = oldL; BOOK_CHARS_PER_LINE = oldC;
+    return pg.length;
+  }
  
   var modal = document.createElement('div');
   modal.id = 'book-calib-modal';
@@ -5336,120 +5355,241 @@ function openBookCalibModal() {
     'border-radius:20px',
     'padding:20px',
     'width:calc(100% - 20px)',
-    'max-width:380px',
+    'max-width:420px',
     'box-shadow:0 20px 60px rgba(0,0,0,.7)',
     'overflow-y:auto',
     'max-height:calc(100vh - 80px)',
   ].join(';');
  
   modal.innerHTML = [
-    '<div style="font-family:\'Playfair Display\',serif;font-size:1.1rem;font-weight:700;',
-      'color:var(--text);margin-bottom:4px;">⚙️ Atur Baris Per Halaman</div>',
+    // Judul
+    '<div style="font-family:\'Playfair Display\',serif;font-size:1.05rem;font-weight:700;',
+      'color:var(--text);margin-bottom:12px;">⚙️ Kalibrasi Book Mode</div>',
  
-    '<div style="font-size:.72rem;color:var(--text3);margin-bottom:12px;line-height:1.6;">',
-      'Font sekarang: <b style="color:var(--accent);">' + currentFontSize + 'px</b> &nbsp;·&nbsp; ',
-      'Setting sekarang: <b style="color:var(--yellow);">' + curLines + ' baris</b><br>',
-      'Geser +/− lalu klik ✅ Terapkan. Buka ReadBook lagi untuk melihat hasilnya.',
+    // Info font
+    '<div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;',
+      'background:var(--surface2);border-radius:8px;padding:8px 10px;line-height:1.7;">',
+      '🔤 Font: <b style="color:var(--accent);">' + currentFontSize + 'px</b> &nbsp;',
+      '📄 Halaman saat ini: <b style="color:var(--accent);" id="bc-page-est">' + bookPages.length + '</b>',
     '</div>',
  
-    // Nilai baris
-    '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;">',
-      '<button id="bc-m5" style="width:42px;height:42px;border-radius:10px;border:1px solid var(--border);',
-        'background:var(--surface2);color:var(--text);font-size:.9rem;font-weight:700;cursor:pointer;">−5</button>',
-      '<button id="bc-m1" style="width:42px;height:42px;border-radius:10px;border:1px solid var(--border);',
-        'background:var(--surface2);color:var(--text);font-size:.9rem;font-weight:700;cursor:pointer;">−1</button>',
-      '<div id="bc-val" style="font-family:\'JetBrains Mono\',monospace;font-size:2rem;font-weight:800;',
-        'color:var(--accent);min-width:66px;text-align:center;background:var(--surface2);',
-        'border:2px solid var(--accent);border-radius:12px;padding:6px 12px;">' + curLines + '</div>',
-      '<button id="bc-p1" style="width:42px;height:42px;border-radius:10px;border:1px solid var(--border);',
-        'background:var(--surface2);color:var(--text);font-size:.9rem;font-weight:700;cursor:pointer;">+1</button>',
-      '<button id="bc-p5" style="width:42px;height:42px;border-radius:10px;border:1px solid var(--border);',
-        'background:var(--surface2);color:var(--text);font-size:.9rem;font-weight:700;cursor:pointer;">+5</button>',
+    // ── SETTING 1: BARIS PER HALAMAN ──────────────────────────
+    '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;',
+      'padding:12px;margin-bottom:12px;">',
+      '<div style="font-size:.75rem;font-weight:700;color:var(--text);margin-bottom:3px;">',
+        '📏 Baris per Halaman</div>',
+      '<div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;line-height:1.5;">',
+        'Berapa baris visual yang muat di layar.<br>',
+        '<span style="color:var(--yellow);">Tip: Font besar → angka kecil (mis. 8–12). Font kecil → angka besar (mis. 20–28).</span>',
+      '</div>',
+ 
+      '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;">',
+        '<button id="bc-l-m5" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">−5</button>',
+        '<button id="bc-l-m1" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">−1</button>',
+        '<div id="bc-val" style="font-family:\'JetBrains Mono\',monospace;font-size:1.8rem;font-weight:800;',
+          'color:var(--accent);min-width:60px;text-align:center;background:var(--surface);',
+          'border:2px solid var(--accent);border-radius:10px;padding:4px 10px;">' + curLines + '</div>',
+        '<button id="bc-l-p1" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">+1</button>',
+        '<button id="bc-l-p5" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">+5</button>',
+      '</div>',
+ 
+      // Preset baris
+      '<div style="font-size:.65rem;color:var(--text3);margin-bottom:5px;">Preset cepat (font → baris):</div>',
+      '<div id="bc-presets-lines" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;"></div>',
     '</div>',
  
-    // Preset
-    '<div style="font-size:.7rem;font-weight:700;color:var(--text3);margin-bottom:6px;',
-      'text-transform:uppercase;letter-spacing:.8px;">Preset Cepat (Font → Baris):</div>',
-    '<div id="bc-presets" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:14px;">',
+    // ── SETTING 2: KARAKTER PER BARIS ──────────────────────────
+    '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;',
+      'padding:12px;margin-bottom:12px;">',
+      '<div style="font-size:.75rem;font-weight:700;color:var(--text);margin-bottom:3px;">',
+        '🔤 Karakter per Baris (Lebar Teks)</div>',
+      '<div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;line-height:1.5;">',
+        'Berapa karakter dalam 1 baris sebelum wrap dihitung.<br>',
+        '<span style="color:var(--yellow);">0 = otomatis (tidak ada pemotongan per karakter).<br>',
+        'Layar lebar → angka besar (mis. 40+). Layar sempit → kecil (mis. 20–30).</span>',
+      '</div>',
+ 
+      '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;">',
+        '<button id="bc-c-m5" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">−5</button>',
+        '<button id="bc-c-m1" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">−1</button>',
+        '<div id="bc-cval" style="font-family:\'JetBrains Mono\',monospace;font-size:1.8rem;font-weight:800;',
+          'color:var(--accent2);min-width:60px;text-align:center;background:var(--surface);',
+          'border:2px solid var(--accent2);border-radius:10px;padding:4px 10px;">' + (curChars || '0') + '</div>',
+        '<button id="bc-c-p1" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">+1</button>',
+        '<button id="bc-c-p5" style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);',
+          'background:var(--surface);color:var(--text);font-weight:700;cursor:pointer;">+5</button>',
+      '</div>',
+ 
+      // Preset chars
+      '<div style="font-size:.65rem;color:var(--text3);margin-bottom:5px;">Preset (0=auto, atau pilih sesuai layar):</div>',
+      '<div id="bc-presets-chars" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;"></div>',
     '</div>',
  
-    // Info
+    // ── PREVIEW ────────────────────────────────────────────────
+    '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;',
+      'padding:12px;margin-bottom:12px;">',
+      '<div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:6px;">',
+        '👁 Preview Potongan Teks</div>',
+      '<div id="bc-preview" style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;',
+        'white-space:pre-wrap;line-height:1.7;color:var(--text2);',
+        'background:var(--surface);border:1px solid var(--border);border-radius:8px;',
+        'padding:8px;max-height:160px;overflow-y:auto;"></div>',
+      '<div id="bc-preview-info" style="font-size:.65rem;color:var(--text3);margin-top:4px;"></div>',
+    '</div>',
+ 
+    // Tip
     '<div style="font-size:.68rem;color:var(--text3);background:rgba(245,158,11,.08);',
-      'border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:8px;margin-bottom:12px;line-height:1.6;">',
-      '💡 <strong>Cara:</strong> Tekan +1/−1 sampai angka sesuai, lalu ✅ Terapkan.',
-      ' Makin besar font → makin kecil angka baris.',
+      'border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px;margin-bottom:12px;line-height:1.6;">',
+      '💡 <strong>Cara pakai:</strong><br>',
+      '1. Set <b>Karakter/baris</b> dulu (ukur lebar layar Anda).<br>',
+      '2. Lalu setel <b>Baris/halaman</b> sampai teks tepat di layar.<br>',
+      '3. Klik ✅ Terapkan lalu buka ReadBook lagi.',
     '</div>',
  
-    // Tombol aksi
+    // Tombol
     '<div style="display:flex;gap:7px;">',
       '<button id="bc-apply" style="flex:1;padding:11px;background:var(--green);color:#fff;',
         'border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;',
         'font-weight:700;font-size:.9rem;cursor:pointer;">✅ Terapkan</button>',
-      '<button id="bc-close" style="padding:11px 16px;background:var(--surface2);color:var(--text3);',
+      '<button id="bc-reset" style="padding:11px 14px;background:var(--surface2);color:var(--yellow);',
+        'border:1px solid var(--yellow);border-radius:10px;font-family:\'DM Sans\',sans-serif;',
+        'font-weight:600;font-size:.82rem;cursor:pointer;">↺ Reset</button>',
+      '<button id="bc-close" style="padding:11px 14px;background:var(--surface2);color:var(--text3);',
         'border:1px solid var(--border);border-radius:10px;font-family:\'DM Sans\',sans-serif;',
-        'font-weight:600;font-size:.88rem;cursor:pointer;">✕ Tutup</button>',
+        'font-weight:600;font-size:.82rem;cursor:pointer;">✕</button>',
     '</div>',
     '<div id="bc-status" style="margin-top:8px;font-size:.75rem;text-align:center;',
       'color:var(--green);min-height:18px;"></div>',
   ].join('');
  
-  // ── Append ke #book-fullscreen jika ada, else ke body ──
   var parent = document.getElementById('book-fullscreen') || document.body;
   parent.appendChild(modal);
  
-  // ── Isi preset buttons ──
-  var presets = [[13,24],[16,21],[18,18],[20,16],[22,14],[26,12],[30,10],[36,8],[42,7]];
-  var presetsEl = document.getElementById('bc-presets');
-  presets.forEach(function(pair) {
+  // ── Helper get/set values ──────────────────────────────────
+  function getL() { return Math.max(3, Math.min(80, parseInt(document.getElementById('bc-val').textContent) || 20)); }
+  function setL(n) { n = Math.max(3, Math.min(80, n)); document.getElementById('bc-val').textContent = n; updatePreview(); }
+  function getC() { return Math.max(0, Math.min(200, parseInt(document.getElementById('bc-cval').textContent) || 0)); }
+  function setC(n) { n = Math.max(0, Math.min(200, n)); document.getElementById('bc-cval').textContent = n; updatePreview(); }
+ 
+  // ── Preview ────────────────────────────────────────────────
+  function updatePreview() {
+    var lines = getL();
+    var chars = getC();
+    var previewEl = document.getElementById('bc-preview');
+    var infoEl    = document.getElementById('bc-preview-info');
+    var pageEst   = document.getElementById('bc-page-est');
+    if (!previewEl) return;
+ 
+    // Teks contoh dari halaman pertama yang ada, atau teks demo
+    var sampleText = bookPages.length > 0
+      ? bookPages.join('\n').slice(0, 800)
+      : 'Ini contoh baris pendek\nIni adalah contoh kalimat yang agak panjang dan bisa menjadi beberapa baris visual di layar tergantung lebar layar\nBaris berikutnya\nSatu dua tiga empat\nLima enam tujuh delapan sembilan sepuluh';
+ 
+    // Simulasi splitToPages sementara
+    var oldL = BOOK_LINES_OVERRIDE, oldC = BOOK_CHARS_PER_LINE;
+    BOOK_LINES_OVERRIDE = lines; BOOK_CHARS_PER_LINE = chars;
+    var testPages = splitToPages(sampleText);
+    BOOK_LINES_OVERRIDE = oldL; BOOK_CHARS_PER_LINE = oldC;
+ 
+    // Tampilkan halaman 1 dengan penanda
+    var pg1 = testPages[0] || '';
+    var pg2 = testPages[1] || '';
+    var displayText = pg1;
+    if (pg2) displayText += '\n─── HALAMAN 2 ───\n' + pg2.split('\n').slice(0, 4).join('\n') + (pg2.split('\n').length > 4 ? '\n...' : '');
+ 
+    previewEl.textContent = displayText;
+ 
+    // Info
+    var rawCount = sampleText.split('\n').length;
+    if (pageEst) pageEst.textContent = testPages.length + (bookPages.length > 0 ? ' (estimasi)' : '');
+    if (infoEl) infoEl.textContent =
+      'Baris data: ' + rawCount +
+      (chars > 0 ? ' | Karakter/baris: ' + chars + ' | Lebar ≈' + chars + ' huruf' : ' | Karakter: auto') +
+      ' | Baris/hal: ' + lines +
+      ' | Halaman: ~' + testPages.length;
+  }
+ 
+  // ── Preset Baris ──────────────────────────────────────────
+  var presetsLines = [[13,24],[16,20],[18,17],[20,15],[22,13],[26,11],[30,9],[42,7]];
+  var presLEl = document.getElementById('bc-presets-lines');
+  presetsLines.forEach(function(pair) {
     var f = pair[0], l = pair[1];
     var btn = document.createElement('button');
-    btn.style.cssText = 'padding:6px 3px;border-radius:8px;border:1px solid var(--border);' +
-      'background:' + (currentFontSize === f ? 'var(--accent)' : 'var(--surface2)') + ';' +
+    btn.style.cssText = 'padding:5px 2px;border-radius:7px;border:1px solid var(--border);' +
+      'background:' + (currentFontSize === f ? 'var(--accent)' : 'var(--surface)') + ';' +
       'color:' + (currentFontSize === f ? '#fff' : 'var(--text2)') + ';' +
-      'font-size:.7rem;cursor:pointer;font-family:\'DM Sans\',sans-serif;';
-    btn.textContent = f + 'px→' + l + 'b';
-    btn.addEventListener('click', function() {
-      var valEl = document.getElementById('bc-val');
-      if (valEl) valEl.textContent = l;
-      var st = document.getElementById('bc-status');
-      if (st) st.textContent = 'Preset ' + f + 'px → ' + l + ' baris dipilih. Klik ✅ Terapkan.';
-    });
-    presetsEl.appendChild(btn);
+      'font-size:.68rem;cursor:pointer;';
+    btn.textContent = f + 'px→' + l;
+    btn.addEventListener('click', function() { setL(l); });
+    presLEl.appendChild(btn);
   });
  
-  // ── Helper adjust value ──
-  function getVal() {
-    return parseInt(document.getElementById('bc-val').textContent) || 20;
-  }
-  function setVal(n) {
-    n = Math.max(3, Math.min(80, n));
-    document.getElementById('bc-val').textContent = n;
-  }
+  // ── Preset Chars ──────────────────────────────────────────
+  var presetsChars = [
+    [0,'auto'],[15,'15'],[20,'20'],[25,'25'],
+    [30,'30'],[35,'35'],[40,'40'],[50,'50']
+  ];
+  var presCEl = document.getElementById('bc-presets-chars');
+  presetsChars.forEach(function(pair) {
+    var c = pair[0], label = pair[1];
+    var btn = document.createElement('button');
+    btn.style.cssText = 'padding:5px 2px;border-radius:7px;border:1px solid var(--border);' +
+      'background:' + (curChars === c ? 'var(--accent2)' : 'var(--surface)') + ';' +
+      'color:' + (curChars === c ? '#fff' : 'var(--text2)') + ';' +
+      'font-size:.68rem;cursor:pointer;';
+    btn.textContent = label;
+    btn.addEventListener('click', function() { setC(c); });
+    presCEl.appendChild(btn);
+  });
  
-  // ── Event listeners tombol +/- ──
-  document.getElementById('bc-m5').addEventListener('click', function(){ setVal(getVal() - 5); });
-  document.getElementById('bc-m1').addEventListener('click', function(){ setVal(getVal() - 1); });
-  document.getElementById('bc-p1').addEventListener('click', function(){ setVal(getVal() + 1); });
-  document.getElementById('bc-p5').addEventListener('click', function(){ setVal(getVal() + 5); });
+  // ── Event listeners ────────────────────────────────────────
+  document.getElementById('bc-l-m5').addEventListener('click', function() { setL(getL() - 5); });
+  document.getElementById('bc-l-m1').addEventListener('click', function() { setL(getL() - 1); });
+  document.getElementById('bc-l-p1').addEventListener('click', function() { setL(getL() + 1); });
+  document.getElementById('bc-l-p5').addEventListener('click', function() { setL(getL() + 5); });
  
-  // ── Terapkan ──
+  document.getElementById('bc-c-m5').addEventListener('click', function() { setC(getC() - 5); });
+  document.getElementById('bc-c-m1').addEventListener('click', function() { setC(getC() - 1); });
+  document.getElementById('bc-c-p1').addEventListener('click', function() { setC(getC() + 1); });
+  document.getElementById('bc-c-p5').addEventListener('click', function() { setC(getC() + 5); });
+ 
+  // ── Terapkan ──────────────────────────────────────────────
   document.getElementById('bc-apply').addEventListener('click', function() {
-    var lines = getVal();
+    var lines = getL();
+    var chars = getC();
     BOOK_LINES_OVERRIDE = lines;
+    BOOK_CHARS_PER_LINE = chars;
     localStorage.setItem('book_lines_override', lines);
-    var st = document.getElementById('bc-status');
-    if (st) st.textContent = '✅ ' + lines + ' baris/halaman disimpan!';
-    toast('✅ ' + lines + ' baris/halaman diterapkan!');
+    localStorage.setItem('book_chars_per_line', chars);
+    toast('✅ ' + lines + ' baris/hal' + (chars > 0 ? ' · ' + chars + ' char/baris' : ' · auto lebar'));
     bookRebuildPages();
-    setTimeout(function(){ modal.remove(); }, 800);
+    var st = document.getElementById('bc-status');
+    if (st) st.textContent = '✅ Diterapkan! Halaman = ' + bookPages.length;
+    setTimeout(function() { modal.remove(); }, 1000);
   });
  
-  // ── Tutup ──
+  // ── Reset ─────────────────────────────────────────────────
+  document.getElementById('bc-reset').addEventListener('click', function() {
+    setL(20); setC(0);
+    toast('↺ Reset ke default (20 baris, auto lebar)');
+  });
+ 
+  // ── Tutup ─────────────────────────────────────────────────
   document.getElementById('bc-close').addEventListener('click', function() {
     modal.remove();
   });
-}
  
+  // Tampilkan preview awal
+  updatePreview();
+}
+   
 function bookCalibAdj(d){
   const el = document.getElementById('book-calib-val'); if(!el) return;
   const cur = parseInt(el.textContent) || calcAdaptiveLines(currentFontSize);
@@ -5539,18 +5679,39 @@ function calcAdaptiveLines(fontSize) {
 
 function splitToPages(text, linesPerPage) {
   linesPerPage = BOOK_LINES_OVERRIDE;
-  var lines = text.split('\n');
+  var rawLines = (text || '').split('\n');
   var pages = [];
-  var cur = [];
-  for (var i = 0; i < lines.length; i++) {
-    cur.push(lines[i]);
-    if (cur.length >= linesPerPage) {
-      pages.push(cur.join('\n'));
-      cur = [];
+  var curLines = [];        // baris teks yang sudah dikumpulkan untuk halaman ini
+  var curVisual = 0;        // total visual lines di halaman ini
+ 
+  for (var i = 0; i < rawLines.length; i++) {
+    var line = rawLines[i];
+    var vl = countVisualLines(line);
+ 
+    // Jika menambah baris ini akan meluber (dan halaman sudah ada isinya), potong dulu
+    if (curVisual + vl > linesPerPage && curLines.length > 0) {
+      pages.push(curLines.join('\n'));
+      curLines = [];
+      curVisual = 0;
+    }
+ 
+    curLines.push(line);
+    curVisual += vl;
+ 
+    // Jika tepat penuh, langsung potong
+    if (curVisual >= linesPerPage) {
+      pages.push(curLines.join('\n'));
+      curLines = [];
+      curVisual = 0;
     }
   }
-  if (cur.length > 0) pages.push(cur.join('\n'));
-  return pages.filter(function(p){ return p.trim(); });
+ 
+  // Sisa terakhir
+  if (curLines.length > 0) {
+    pages.push(curLines.join('\n'));
+  }
+ 
+  return pages.filter(function(p) { return p.trim(); });
 }
     
 function openBookMode(text, title){
@@ -5656,7 +5817,7 @@ function openBookMode(text, title){
 
 /** Rebuild halaman saat font berubah (pertahankan posisi proporsional) */
 
-   
+
 function bookRebuildPages() {
   if (!bookPages.length) return;
   var fullText = bookPages.join('\n');
