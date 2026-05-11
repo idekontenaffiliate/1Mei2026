@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">masih nanya supaya 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">sekarang 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5264,7 +5264,7 @@ function updateFontSizeDisp(){
 // BOOK MODE — v3 (keyboard + real-time font + adaptive lines)
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
-let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '0') || 0;   
+let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;   
 
 /**
  * Hitung berapa baris yang muat dalam 1 halaman
@@ -5293,57 +5293,131 @@ const FONT_LH_FACTOR = {
 function openBookCalibModal(){
   const old = document.getElementById('book-calib-modal');
   if(old){ old.remove(); return; }
-  
-  const lines = BOOK_LINES_OVERRIDE > 0 ? BOOK_LINES_OVERRIDE : calcAdaptiveLines(currentFontSize);
+
+  const curLines = BOOK_LINES_OVERRIDE > 0 ? BOOK_LINES_OVERRIDE : calcAdaptiveLines(currentFontSize);
+
   const modal = document.createElement('div');
   modal.id = 'book-calib-modal';
   modal.style.cssText = `
-    position:fixed;top:60px;right:10px;z-index:10001;
-    background:var(--surface);border:1px solid var(--accent);border-radius:12px;
-    padding:14px;width:240px;box-shadow:0 8px 24px rgba(0,0,0,.5);`;
-  
+    position:fixed;inset:0;z-index:10002;
+    background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:16px;`;
+
   modal.innerHTML = `
-    <div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
-      ⚙️ Kalibrasi Baris/Halaman
-    </div>
-    <div style="font-size:.7rem;color:var(--text3);margin-bottom:8px;">
-      Auto: ${calcAdaptiveLines(currentFontSize)} baris<br>
-      Layar: ${window.innerHeight}px · Font: ${currentFontSize}px
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <button onclick="bookCalibAdj(-1)" style="width:32px;height:32px;border-radius:8px;
-        border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:1rem;">−</button>
-      <span id="book-calib-val" style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;
-        font-size:1.1rem;font-weight:700;color:var(--text);">${lines}</span>
-      <button onclick="bookCalibAdj(1)" style="width:32px;height:32px;border-radius:8px;
-        border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:1rem;">+</button>
-    </div>
-    <div style="font-size:.65rem;color:var(--text3);margin-bottom:10px;">
-      Override manual (0 = pakai auto)
-    </div>
-    <div style="display:flex;gap:5px;">
-      <button onclick="bookCalibApply()" style="flex:1;padding:7px;background:var(--accent);
-        color:#fff;border:none;border-radius:8px;font-size:.78rem;cursor:pointer;font-weight:700;">
-        ✅ Terapkan
-      </button>
-      <button onclick="bookCalibReset()" style="flex:1;padding:7px;background:var(--surface2);
-        color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:.78rem;cursor:pointer;">
-        🔄 Auto
-      </button>
-    </div>
-    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
-      <div style="font-size:.65rem;color:var(--text3);font-weight:700;">PRESET CEPAT:</div>
-      ${[8,10,12,14,16,18,20].map(n=>`
-        <button onclick="bookCalibSet(${n})"
-          style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
-          background:${BOOK_LINES_OVERRIDE===n?'var(--accent)':'var(--surface2)'};
-          color:${BOOK_LINES_OVERRIDE===n?'#fff':'var(--text2)'};
-          font-size:.72rem;cursor:pointer;text-align:left;">
-          ${n} baris ${n<=10?'(font besar)':n<=14?'(font sedang)':'(font kecil)'}
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:20px;
+      padding:22px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
+        color:var(--text);margin-bottom:4px;">⚙️ Atur Baris Per Halaman</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:18px;line-height:1.5;">
+        Ukuran font sekarang: <b style="color:var(--accent);">${currentFontSize}px</b><br>
+        Kalau teks terpotong atau terlalu sedikit per halaman, ubah angka di bawah ini.
+      </div>
+
+      <!-- Ilustrasi sederhana -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+        padding:12px;margin-bottom:16px;">
+        <div style="font-size:.7rem;color:var(--text3);margin-bottom:8px;font-weight:600;
+          text-transform:uppercase;letter-spacing:.8px;">Ilustrasi Layar</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="background:rgba(59,130,246,.3);border-radius:4px;padding:5px 8px;
+            font-size:.68rem;color:var(--accent);">⬆ Header (tombol kembali, dll)</div>
+          <div id="baris-preview" style="background:rgba(34,197,94,.15);border:1px dashed rgba(34,197,94,.5);
+            border-radius:4px;padding:8px;font-size:.68rem;color:#22c55e;
+            min-height:60px;display:flex;align-items:center;justify-content:center;
+            font-family:'JetBrains Mono',monospace;font-weight:700;">
+            <span id="baris-preview-txt">${curLines} baris teks di sini</span>
+          </div>
+          <div style="background:rgba(139,92,246,.3);border-radius:4px;padding:5px 8px;
+            font-size:.68rem;color:var(--accent3);">⬇ Footer (tombol halaman, nomor halaman)</div>
+        </div>
+      </div>
+
+      <!-- Stepper utama -->
+      <div style="font-size:.78rem;font-weight:700;color:var(--text3);margin-bottom:8px;
+        text-transform:uppercase;letter-spacing:.8px;">Jumlah Baris Per Halaman:</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;">
+        <button onclick="bcAdj(-5)" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;">−5</button>
+        <button onclick="bcAdj(-1)" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;">−1</button>
+        <div id="bc-val" style="font-family:'JetBrains Mono',monospace;font-size:2.2rem;font-weight:800;
+          color:var(--accent);min-width:70px;text-align:center;background:var(--surface2);
+          border:2px solid var(--accent);border-radius:12px;padding:8px 14px;">${curLines}</div>
+        <button onclick="bcAdj(1)" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;">+1</button>
+        <button onclick="bcAdj(5)" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;">+5</button>
+      </div>
+
+      <!-- Preset cepat -->
+      <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;
+        text-transform:uppercase;letter-spacing:.8px;">Preset Cepat (Font → Baris):</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:14px;">
+        ${[[13,24],[16,20],[18,18],[20,16],[22,14],[26,12],[30,10],[36,8],[42,7]].map(([f,l])=>`
+        <button onclick="bcSet(${l},${f})"
+          id="bc-preset-${f}"
+          style="padding:7px 4px;border-radius:8px;border:1px solid var(--border);
+          background:${currentFontSize===f?'var(--accent)':'var(--surface2)'};
+          color:${currentFontSize===f?'#fff':'var(--text2)'};font-size:.7rem;cursor:pointer;">
+          ${f}px → ${l} baris
         </button>`).join('')}
+      </div>
+
+      <!-- Tombol aksi -->
+      <div style="display:flex;gap:8px;">
+        <button onclick="bcApply()" style="flex:1;padding:12px;background:var(--green);color:#fff;
+          border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:700;
+          font-size:.9rem;cursor:pointer;">✅ Terapkan</button>
+        <button onclick="bcReset()" style="padding:12px 16px;background:var(--surface2);color:var(--text2);
+          border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;
+          font-weight:600;font-size:.85rem;cursor:pointer;">🔄 Auto</button>
+        <button onclick="document.getElementById('book-calib-modal').remove()"
+          style="padding:12px 16px;background:var(--surface2);color:var(--text3);
+          border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;
+          font-weight:600;font-size:.85rem;cursor:pointer;">✕</button>
+      </div>
+
+      <div id="bc-status" style="margin-top:10px;font-size:.75rem;text-align:center;
+        color:var(--text3);min-height:18px;"></div>
     </div>`;
-  
-  document.getElementById('book-fullscreen')?.appendChild(modal);
+
+  document.body.appendChild(modal);
+
+  // Fungsi lokal untuk modal ini
+  window.bcAdj = (d) => {
+    const el = document.getElementById('bc-val'); if(!el) return;
+    const cur = parseInt(el.textContent) || 10;
+    const nv = Math.max(3, Math.min(80, cur + d));
+    el.textContent = nv;
+    const pv = document.getElementById('baris-preview-txt');
+    if(pv) pv.textContent = nv + ' baris teks di sini';
+  };
+  window.bcSet = (lines, font) => {
+    const el = document.getElementById('bc-val'); if(!el) return;
+    el.textContent = lines;
+    const pv = document.getElementById('baris-preview-txt');
+    if(pv) pv.textContent = lines + ' baris teks di sini';
+    const st = document.getElementById('bc-status');
+    if(st) st.innerHTML = `<span style="color:var(--yellow);">Preset font ${font}px → ${lines} baris dipilih</span>`;
+  };
+  window.bcApply = () => {
+    const el = document.getElementById('bc-val'); if(!el) return;
+    const lines = parseInt(el.textContent) || 10;
+    BOOK_LINES_OVERRIDE = lines;
+    localStorage.setItem('book_lines_override', lines);
+    toast(`✅ ${lines} baris/halaman diterapkan!`);
+    bookRebuildPages();
+    document.getElementById('book-calib-modal')?.remove();
+  };
+  window.bcReset = () => {
+    BOOK_LINES_OVERRIDE = 0;
+    localStorage.removeItem('book_lines_override');
+    const autoLines = calcAdaptiveLines(currentFontSize);
+    toast(`🔄 Auto: ${autoLines} baris`);
+    bookRebuildPages();
+    document.getElementById('book-calib-modal')?.remove();
+  };
 }
 
 function bookCalibAdj(d){
@@ -5427,17 +5501,15 @@ function measureLineHeight(fontSize, fontClass) {
 
 // FUNGSI 2: Hitung berapa baris yang muat di layar
 // (mengukur langsung, bukan pakai rumus)
-function calcAdaptiveLines(fontSize) {
-  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
-  const fontClass = fontModes[fontModeIndex]?.cls || '';
-  const lineH = measureLineHeight(fontSize || currentFontSize, fontClass);
-  // Header (54px) + Footer (60px) + padding atas-bawah (40px) + buffer (10px)
-  const usedH = 54 + 60 + 40 + 10;
-  const avail = window.innerHeight - usedH;
-  const lines = Math.floor(avail / lineH);
-  return Math.max(4, Math.min(80, lines));
-}
 
+function calcAdaptiveLines(fontSize) {
+  // Selalu pakai manual override jika ada
+  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
+  // Fallback kalkulasi sederhana
+  const lineH = (fontSize || currentFontSize) * 1.85;
+  const avail = window.innerHeight - 164;
+  return Math.max(4, Math.min(80, Math.floor(avail / lineH)));
+}
 // FUNGSI 3: Potong teks ke halaman
 // (memotong di baris kosong terdekat agar tidak terpotong di tengah kalimat)
 function splitToPages(text, linesPerPage) {
@@ -5563,18 +5635,20 @@ function openBookMode(text, title){
 }
 
 /** Rebuild halaman saat font berubah (pertahankan posisi proporsional) */
+
 function bookRebuildPages(){
   if(!bookPages.length) return;
-  // Ambil teks asli dari semua halaman
-  const fullText = bookPages.join('\n\n').replace(/\n{3,}/g, '\n\n');
+  // Gabung semua teks kembali
+  const fullText = bookPages.join('\n');
   const oldTotal = bookPages.length;
   const oldIdx   = bookPageIdx;
+  // Potong ulang dengan pengaturan baru
   bookPages = splitToPages(fullText, calcAdaptiveLines(currentFontSize));
   // Jaga posisi proporsional
   bookPageIdx = Math.round((oldIdx / Math.max(1, oldTotal-1)) * Math.max(1, bookPages.length-1));
   bookPageIdx = Math.max(0, Math.min(bookPages.length-1, bookPageIdx));
   bookRender();
-}
+}   
 
 function bookRender(){
   const content   = document.getElementById('book-content');
