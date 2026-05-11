@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 200.12 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 200.211 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5264,8 +5264,8 @@ function updateFontSizeDisp(){
 // BOOK MODE — v3 (keyboard + real-time font + adaptive lines)
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
-let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;   
-
+// let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '20') || 20;   
+let BOOK_LINES_OVERRIDE = 20;
 /**
  * Hitung berapa baris yang muat dalam 1 halaman
  * berdasarkan tinggi area tampil dan ukuran font.
@@ -5291,7 +5291,8 @@ function openBookCalibModal(){
   const old = document.getElementById('book-calib-modal');
   if(old){ old.remove(); return; }
   
-  const lines = BOOK_LINES_OVERRIDE > 0 ? BOOK_LINES_OVERRIDE : calcAdaptiveLines(currentFontSize);
+  // const lines = BOOK_LINES_OVERRIDE > 0 ? BOOK_LINES_OVERRIDE : calcAdaptiveLines(currentFontSize);
+  const Lines = BOOK_LINES_OVERRIDE; 
   const modal = document.createElement('div');
   modal.id = 'book-calib-modal';
   modal.style.cssText = `
@@ -5498,35 +5499,36 @@ function measureLineHeight(fontSize, fontClass) {
 // FUNGSI 2: Hitung berapa baris yang muat di layar
 // (mengukur langsung, bukan pakai rumus)
 
+
 function calcAdaptiveLines(fontSize) {
-  // Selalu pakai manual override jika ada
-  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
-  // Fallback kalkulasi sederhana
-  const lineH = (fontSize || currentFontSize) * 1.85;
-  const avail = window.innerHeight - 164;
-  return Math.max(4, Math.min(80, Math.floor(avail / lineH)));
-}
+  return BOOK_LINES_OVERRIDE;
+}   
 // FUNGSI 3: Potong teks ke halaman
 // (memotong di baris kosong terdekat agar tidak terpotong di tengah kalimat)
+
 function splitToPages(text, linesPerPage) {
-  linesPerPage = linesPerPage || calcAdaptiveLines(currentFontSize);
+  // linesPerPage SELALU dari BOOK_LINES_OVERRIDE — abaikan argumen lain
+  linesPerPage = BOOK_LINES_OVERRIDE;
+ 
   const lines = text.split('\n');
   const pages = [];
   let cur = [];
+ 
   for (let i = 0; i < lines.length; i++) {
     cur.push(lines[i]);
+ 
+    // Tepat di baris ke-linesPerPage → potong, tidak lebih
     if (cur.length >= linesPerPage) {
-      // Cari baris kosong terdekat dari belakang untuk potong bersih
-      let cutAt = cur.length;
-      const minCut = Math.floor(linesPerPage * 0.65);
-      for (let j = cur.length - 1; j >= minCut; j--) {
-        if (cur[j].trim() === '') { cutAt = j + 1; break; }
-      }
-      pages.push(cur.slice(0, cutAt).join('\n'));
-      cur = cur.slice(cutAt);
+      pages.push(cur.join('\n'));
+      cur = [];
     }
   }
-  if (cur.length) pages.push(cur.join('\n'));
+ 
+  // Sisa baris yang belum penuh → halaman terakhir
+  if (cur.length > 0) {
+    pages.push(cur.join('\n'));
+  }
+ 
   return pages.filter(p => p.trim());
 }   
 function openBookMode(text, title){
@@ -5632,19 +5634,29 @@ function openBookMode(text, title){
 
 /** Rebuild halaman saat font berubah (pertahankan posisi proporsional) */
 
-function bookRebuildPages(){
-  if(!bookPages.length) return;
-  // Gabung semua teks kembali
+function bookRebuildPages() {
+  if (!bookPages.length) return;
+ 
+  // Gabung semua halaman kembali ke teks penuh
   const fullText = bookPages.join('\n');
   const oldTotal = bookPages.length;
   const oldIdx   = bookPageIdx;
-  // Potong ulang dengan pengaturan baru
-  bookPages = splitToPages(fullText, calcAdaptiveLines(currentFontSize));
-  // Jaga posisi proporsional
-  bookPageIdx = Math.round((oldIdx / Math.max(1, oldTotal-1)) * Math.max(1, bookPages.length-1));
-  bookPageIdx = Math.max(0, Math.min(bookPages.length-1, bookPageIdx));
+ 
+  // Potong ulang — splitToPages sudah pakai BOOK_LINES_OVERRIDE langsung
+  bookPages = splitToPages(fullText);
+ 
+  // Pertahankan posisi halaman secara proporsional
+  if (bookPages.length > 1) {
+    bookPageIdx = Math.round(
+      (oldIdx / Math.max(1, oldTotal - 1)) * Math.max(1, bookPages.length - 1)
+    );
+  } else {
+    bookPageIdx = 0;
+  }
+  bookPageIdx = Math.max(0, Math.min(bookPages.length - 1, bookPageIdx));
+ 
   bookRender();
-}   
+}
 
 function bookRender(){
   const content   = document.getElementById('book-content');
