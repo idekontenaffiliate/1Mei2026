@@ -4963,7 +4963,6 @@ function renderUmurAnalysisHtml(targetPct){
         position:relative;">
         <div style="height:100%;width:${Math.min(100,barPct)}%;
           background:${color};border-radius:4px;transition:width .5s;"></div>
-        // Garis target
         <div style="position:absolute;top:0;bottom:0;left:${targetPct}%;
           width:2px;background:rgba(245,158,11,.8);"></div>
       </div>
@@ -5297,7 +5296,7 @@ function splitToPages(text, linesPerPage){
 // ── KONFIGURASI BOOK MODE (bisa diubah manual) ──────────────────
 // Kalau calcAdaptiveLines masih meleset, set BOOK_LINES_OVERRIDE > 0
 // Contoh: BOOK_LINES_OVERRIDE = 12 → paksa 12 baris per halaman
-let BOOK_LINES_OVERRIDE = 0;  // 0 = pakai auto
+// let BOOK_LINES_OVERRIDE = 0;  // 0 = pakai auto
 
 // Koreksi per font: faktor pengali line-height efektif
 const FONT_LH_FACTOR = {
@@ -5405,6 +5404,32 @@ function bookCalibReset(){
   toast('🔄 Kembali ke auto');
   bookRebuildPages();
   document.getElementById('book-calib-modal')?.remove();
+}   
+
+/**
+ * Override fsFontBtnDown agar saat di Book Mode
+ * langsung rebuild halaman (adaptive lines update).
+ * Fungsi ini menggantikan fsFontBtnDown yang sudah ada.
+ */
+// NOTE: fsFontBtnDown sudah ada, kita patch dengan wrapper.
+// Tambahkan baris berikut SETELAH definisi fsFontBtnDown asli,
+// atau ganti seluruh fsFontBtnDown dengan versi ini:
+function fsFontBtnDown(d){
+  fsAdjustFont(d);
+  updateFontSizeDisp();
+  // Jika Book Mode aktif, rebuild halaman adaptif
+  if(document.getElementById('book-fullscreen')){
+    bookRebuildPages();
+  }
+  _fontPressTimer = setTimeout(() => {
+    _fontPressInterval = setInterval(() => {
+      fsAdjustFont(d);
+      updateFontSizeDisp();
+      if(document.getElementById('book-fullscreen')){
+        bookRebuildPages();
+      }
+    }, 100);
+  }, 420);
 }   
 function openBookMode(text, title){
   if(!text) return;
@@ -5584,31 +5609,7 @@ function closeBookMode(){
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
 }
 
-/**
- * Override fsFontBtnDown agar saat di Book Mode
- * langsung rebuild halaman (adaptive lines update).
- * Fungsi ini menggantikan fsFontBtnDown yang sudah ada.
- */
-// NOTE: fsFontBtnDown sudah ada, kita patch dengan wrapper.
-// Tambahkan baris berikut SETELAH definisi fsFontBtnDown asli,
-// atau ganti seluruh fsFontBtnDown dengan versi ini:
-function fsFontBtnDown(d){
-  fsAdjustFont(d);
-  updateFontSizeDisp();
-  // Jika Book Mode aktif, rebuild halaman adaptif
-  if(document.getElementById('book-fullscreen')){
-    bookRebuildPages();
-  }
-  _fontPressTimer = setTimeout(() => {
-    _fontPressInterval = setInterval(() => {
-      fsAdjustFont(d);
-      updateFontSizeDisp();
-      if(document.getElementById('book-fullscreen')){
-        bookRebuildPages();
-      }
-    }, 100);
-  }, 420);
-}
+
 // ══════════════════════════════════════════════════
 // DASHBOARD FULLSCREEN
 // ══════════════════════════════════════════════════
