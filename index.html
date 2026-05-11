@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">masih nanya, apa 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">tambah apa supaya 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -1593,7 +1593,7 @@ function openKidungDetail(k){
     ${hasBas||hasNot?'<button class="btn-action accent" onclick="copyText(\'kidung-copy-2\')">📋 Lengkap</button>':''}
     ${hasPdf?'<button class="btn-action red" onclick="openPdf(\''+escHtml(k['pdf']||k['pdf_link']||'')+'\',\''+escHtml(k['judul kidung']||'')+'\')">📄 PDF</button>':''}
     <button class="btn-action" onclick="openLyricFullscreenFromDom()" title="Fullscreen gulir">⛶ Gulir</button>
-    <button class="btn-action accent" onclick="openBookMode(window._currentKidungLyric, window._currentKidungJudul)" title="Fullscreen mode buku">📖 Book</button>
+    <button class="btn-action accent" onclick="openBookMode(window._currentKidungLyric, window._currentKidungJudul)" title="Fullscreen mode buku">📖 ReadBook</button>
   </div>
 
   <div id="kidung-copy-1" style="display:none;">${k['no kidung']}. ${k['judul kidung']||''}\n\n${lyricText}</div>
@@ -5249,15 +5249,7 @@ let bookPages=[],bookPageIdx=0,bookTitle='';
  * berdasarkan tinggi area tampil dan ukuran font.
  * Rumus: tinggi_area / (fontSize * lineHeight)
  */
-function calcAdaptiveLines(fontSize){
-  // lineHeight di book mode = 1.8em
-  const lineHeightPx = (fontSize || currentFontSize) * 1.8;
-  // Tinggi area konten = tinggi layar - header (54) - footer (60) - padding (40)
-  const availH = window.innerHeight - 54 - 60 - 40;
-  const lines = Math.floor(availH / lineHeightPx);
-  // Minimal 5 baris, maksimal 60 baris
-  return Math.max(5, Math.min(60, lines));
-}
+
 
 function splitToPages(text, linesPerPage){
   linesPerPage = linesPerPage || calcAdaptiveLines(currentFontSize);
@@ -5279,7 +5271,13 @@ function splitToPages(text, linesPerPage){
   if(cur.length) pages.push(cur.join('\n'));
   return pages.filter(p => p.trim());
 }
-
+function calcAdaptiveLines(fontSize) {
+  const lineHeightPx = (fontSize || 12) * 1.8;
+  const availH = window.innerHeight - 54 - 60 - 40;
+  const lines = Math.floor(availH / lineHeightPx);
+  return Math.max(5, Math.min(60, lines));
+  // Hasil untuk layar 580px font 12px: 19 baris
+}
 function openBookMode(text, title){
   if(!text) return;
   bookTitle = title || 'Lirik';
