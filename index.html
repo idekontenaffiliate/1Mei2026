@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">sekarang 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5276,8 +5276,6 @@ let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') |
 
 // ── KONFIGURASI BOOK MODE (bisa diubah manual) ──────────────────
 // Kalau calcAdaptiveLines masih meleset, set BOOK_LINES_OVERRIDE > 0
-// Contoh: BOOK_LINES_OVERRIDE = 12 → paksa 12 baris per halaman
-// let BOOK_LINES_OVERRIDE = 0;  // 0 = pakai auto
 
 // Koreksi per font: faktor pengali line-height efektif
 const FONT_LH_FACTOR = {
@@ -5288,7 +5286,6 @@ const FONT_LH_FACTOR = {
   'font-bold2'   : 1.80,
   'font-thin'    : 1.80,
 };
-
 
 function openBookCalibModal(){
   const old = document.getElementById('book-calib-modal');
