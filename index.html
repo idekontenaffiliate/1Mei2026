@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">tambah apa supaya 100 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">masih nanya supaya 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -1509,7 +1509,29 @@ function applySavedFontMode(){const saved=localStorage.getItem('fontMode');if(sa
 // ══════════════════════════════════════════════════
 function openLyricFullscreen(text){if(!text)return;const old=document.getElementById('fullscreen-lyric');if(old)old.remove();const div=document.createElement('div');div.id='fullscreen-lyric';div.innerHTML=`<button class="fs-back" onclick="closeLyricFullscreen()">← Kembali</button><div class="fs-controls"><button class="fs-ctrl-btn" onclick="fsAdjustFont(-2)">A−</button><button class="fs-ctrl-btn" onclick="fsAdjustFont(2)">A+</button><button class="fs-ctrl-btn" onclick="toggleFontModeFS()">🔤</button><button class="fs-ctrl-btn" onclick="closeLyricFullscreen()">✕ Keluar</button></div><div class="fs-content" id="fs-content-inner">${escHtml(text)}</div>`;document.body.appendChild(div);const fsc=div.querySelector('.fs-content');if(fsc){fsc.style.fontSize=currentFontSize+'px';fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}if(div.requestFullscreen)div.requestFullscreen().catch(()=>{});}
 function fsAdjustFont(d){currentFontSize=Math.max(8,Math.min(250,currentFontSize+d));const fsc=document.getElementById('fs-content-inner');if(fsc)fsc.style.fontSize=currentFontSize+'px';}
-function toggleFontModeFS(){fontModeIndex=(fontModeIndex+1)%fontModes.length;localStorage.setItem('fontMode',fontModeIndex);const fsc=document.getElementById('fs-content-inner');if(fsc){fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}toast(`Font: ${fontModes[fontModeIndex].label}`);}
+// function toggleFontModeFS(){fontModeIndex=(fontModeIndex+1)%fontModes.length;localStorage.setItem('fontMode',fontModeIndex);const fsc=document.getElementById('fs-content-inner');if(fsc){fontModes.forEach(f=>fsc.classList.remove(f.cls));fsc.classList.add(fontModes[fontModeIndex].cls);}toast(`Font: ${fontModes[fontModeIndex].label}`);}
+function toggleFontModeFS(){
+  fontModeIndex = (fontModeIndex+1) % fontModes.length;
+  localStorage.setItem('fontMode', fontModeIndex);
+  
+  // Update fs-content (mode fullscreen biasa)
+  const fsc = document.getElementById('fs-content-inner');
+  if(fsc){
+    fontModes.forEach(f => fsc.classList.remove(f.cls));
+    fsc.classList.add(fontModes[fontModeIndex].cls);
+  }
+  
+  // ✅ Update book-content (BookMode) — ini yang hilang sebelumnya
+  const bc = document.getElementById('book-content');
+  if(bc){
+    fontModes.forEach(f => bc.classList.remove(f.cls));
+    bc.classList.add(fontModes[fontModeIndex].cls);
+    // Rebuild pages karena line-height tiap font berbeda
+    bookRebuildPages();
+  }
+  
+  toast(`Font: ${fontModes[fontModeIndex].label}`);
+}
 function openLyricFullscreenFromDom(){const el=document.querySelector('.lyric-box .scalable-text');if(!el)return;openLyricFullscreen(el.innerText);}
 function closeLyricFullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const el=document.getElementById('fullscreen-lyric');if(el)el.remove();}
 
@@ -5243,6 +5265,7 @@ function updateFontSizeDisp(){
 // BOOK MODE — v3 (keyboard + real-time font + adaptive lines)
 // ══════════════════════════════════════════════════
 let bookPages=[],bookPageIdx=0,bookTitle='';
+let BOOK_LINES_OVERRIDE = parseInt(localStorage.getItem('book_lines_override') || '0') || 0;   
 
 /**
  * Hitung berapa baris yang muat dalam 1 halaman
@@ -5271,13 +5294,118 @@ function splitToPages(text, linesPerPage){
   if(cur.length) pages.push(cur.join('\n'));
   return pages.filter(p => p.trim());
 }
+// ── KONFIGURASI BOOK MODE (bisa diubah manual) ──────────────────
+// Kalau calcAdaptiveLines masih meleset, set BOOK_LINES_OVERRIDE > 0
+// Contoh: BOOK_LINES_OVERRIDE = 12 → paksa 12 baris per halaman
+let BOOK_LINES_OVERRIDE = 0;  // 0 = pakai auto
+
+// Koreksi per font: faktor pengali line-height efektif
+const FONT_LH_FACTOR = {
+  'font-normal'  : 1.80,
+  'font-courier' : 1.60,
+  'font-verdana' : 1.90,
+  'font-times'   : 1.75,
+  'font-bold2'   : 1.80,
+  'font-thin'    : 1.80,
+};
+
 function calcAdaptiveLines(fontSize) {
-  const lineHeightPx = (fontSize || 12) * 1.8;
-  const availH = window.innerHeight - 54 - 60 - 40;
+  if (BOOK_LINES_OVERRIDE > 0) return BOOK_LINES_OVERRIDE;
+  const currentFontClass = fontModes[fontModeIndex]?.cls || 'font-normal';
+  const lhFactor = FONT_LH_FACTOR[currentFontClass] || 1.8;
+  const lineHeightPx = (fontSize || currentFontSize) * lhFactor;
+  // Kurangi: header(54) + footer(60) + padding atas-bawah(40) + buffer(10)
+  const availH = window.innerHeight - 54 - 60 - 40 - 10;
   const lines = Math.floor(availH / lineHeightPx);
   return Math.max(5, Math.min(60, lines));
-  // Hasil untuk layar 580px font 12px: 19 baris
 }
+function openBookCalibModal(){
+  const old = document.getElementById('book-calib-modal');
+  if(old){ old.remove(); return; }
+  
+  const lines = BOOK_LINES_OVERRIDE > 0 ? BOOK_LINES_OVERRIDE : calcAdaptiveLines(currentFontSize);
+  const modal = document.createElement('div');
+  modal.id = 'book-calib-modal';
+  modal.style.cssText = `
+    position:fixed;top:60px;right:10px;z-index:10001;
+    background:var(--surface);border:1px solid var(--accent);border-radius:12px;
+    padding:14px;width:240px;box-shadow:0 8px 24px rgba(0,0,0,.5);`;
+  
+  modal.innerHTML = `
+    <div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
+      ⚙️ Kalibrasi Baris/Halaman
+    </div>
+    <div style="font-size:.7rem;color:var(--text3);margin-bottom:8px;">
+      Auto: ${calcAdaptiveLines(currentFontSize)} baris<br>
+      Layar: ${window.innerHeight}px · Font: ${currentFontSize}px
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <button onclick="bookCalibAdj(-1)" style="width:32px;height:32px;border-radius:8px;
+        border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:1rem;">−</button>
+      <span id="book-calib-val" style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;
+        font-size:1.1rem;font-weight:700;color:var(--text);">${lines}</span>
+      <button onclick="bookCalibAdj(1)" style="width:32px;height:32px;border-radius:8px;
+        border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:1rem;">+</button>
+    </div>
+    <div style="font-size:.65rem;color:var(--text3);margin-bottom:10px;">
+      Override manual (0 = pakai auto)
+    </div>
+    <div style="display:flex;gap:5px;">
+      <button onclick="bookCalibApply()" style="flex:1;padding:7px;background:var(--accent);
+        color:#fff;border:none;border-radius:8px;font-size:.78rem;cursor:pointer;font-weight:700;">
+        ✅ Terapkan
+      </button>
+      <button onclick="bookCalibReset()" style="flex:1;padding:7px;background:var(--surface2);
+        color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:.78rem;cursor:pointer;">
+        🔄 Auto
+      </button>
+    </div>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+      <div style="font-size:.65rem;color:var(--text3);font-weight:700;">PRESET CEPAT:</div>
+      ${[8,10,12,14,16,18,20].map(n=>`
+        <button onclick="bookCalibSet(${n})"
+          style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+          background:${BOOK_LINES_OVERRIDE===n?'var(--accent)':'var(--surface2)'};
+          color:${BOOK_LINES_OVERRIDE===n?'#fff':'var(--text2)'};
+          font-size:.72rem;cursor:pointer;text-align:left;">
+          ${n} baris ${n<=10?'(font besar)':n<=14?'(font sedang)':'(font kecil)'}
+        </button>`).join('')}
+    </div>`;
+  
+  document.getElementById('book-fullscreen')?.appendChild(modal);
+}
+
+function bookCalibAdj(d){
+  const el = document.getElementById('book-calib-val'); if(!el) return;
+  const cur = parseInt(el.textContent) || calcAdaptiveLines(currentFontSize);
+  el.textContent = Math.max(3, Math.min(50, cur + d));
+}
+
+function bookCalibSet(n){
+  const el = document.getElementById('book-calib-val'); if(!el) return;
+  el.textContent = n;
+  bookCalibApply();
+}
+
+function bookCalibApply(){
+  const el = document.getElementById('book-calib-val'); if(!el) return;
+  BOOK_LINES_OVERRIDE = parseInt(el.textContent) || 0;
+  // Simpan ke localStorage agar konsisten antar sesi
+  localStorage.setItem('book_lines_override', BOOK_LINES_OVERRIDE);
+  toast(`✅ ${BOOK_LINES_OVERRIDE} baris/halaman diterapkan`);
+  bookRebuildPages();
+  document.getElementById('book-calib-modal')?.remove();
+}
+
+function bookCalibReset(){
+  BOOK_LINES_OVERRIDE = 0;
+  localStorage.removeItem('book_lines_override');
+  const el = document.getElementById('book-calib-val');
+  if(el) el.textContent = calcAdaptiveLines(currentFontSize);
+  toast('🔄 Kembali ke auto');
+  bookRebuildPages();
+  document.getElementById('book-calib-modal')?.remove();
+}   
 function openBookMode(text, title){
   if(!text) return;
   bookTitle = title || 'Lirik';
@@ -5301,6 +5429,7 @@ function openBookMode(text, title){
         <button class="fs-ctrl-btn" id="book-fup1" onpointerdown="fsFontBtnDown(1)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A+</button>
         <button class="fs-ctrl-btn" id="book-fup5" onpointerdown="fsFontBtnDown(5)" onpointerup="fontBtnUp()" onpointerleave="fontBtnUp()" style="user-select:none;">A++</button>
         <button class="fs-ctrl-btn" onclick="toggleFontModeFS()">🔤</button>
+        <button class="fs-ctrl-btn" onclick="openBookCalibModal()" title="Kalibrasi baris per halaman">⚙️</button>
         <button class="fs-ctrl-btn" onclick="closeBookMode()">✕</button>
       </div>
     </div>
