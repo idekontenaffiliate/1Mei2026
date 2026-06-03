@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 41 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 42 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -4895,7 +4895,23 @@ function applyPjFilter() {
   renderPjResult();
 }
 
-
+function normGps(val) {
+  if(val === null || val === undefined) return '';
+  const s = String(val).trim();
+  if(!s) return '';
+  // Jika sudah pakai titik dan tidak ada koma sebagai desimal → OK
+  // Deteksi: ada koma yang bukan pemisah ribuan
+  // Format Sheets ID: "-7,288473" atau "112,752823"
+  // Hanya 1 koma dan tidak ada titik → koma = desimal
+  const commaCount = (s.match(/,/g)||[]).length;
+  const dotCount   = (s.match(/\./g)||[]).length;
+  if(commaCount === 1 && dotCount === 0) {
+    return s.replace(',', '.');
+  }
+  // Sudah benar (ada titik) → buang koma jika ada (pemisah ribuan)
+  return s.replace(/,/g, '');
+}
+   
 function parsePjTgl(tgl) {
   if(!tgl) return '';
   const s = String(tgl).trim();
@@ -5067,12 +5083,18 @@ function showPjForm(existingData) {
   const today = new Date().toISOString().split('T')[0];
   const defaultNama = currentUser?.username || '';
 
+  // Normalisasi GPS dari server (Sheets pakai koma desimal)
+  const formLat = normGps(r.gps_lat);
+  const formLng = normGps(r.gps_lng);
+  const formRaw = r.gps_raw || (formLat && formLng ? `${formLat}, ${formLng}` : '');
+  const hasGpsForm = !!(formLat && formLng);
+
   showModal(`
     <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:14px;">
       ${isEdit ? '✏️ Edit' : '➕ Tambah'} Data Penjengukan
     </h2>
 
-    <!-- Nama & Connect Jemaat -->
+    <!-- Identitas -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">👤 Identitas</div>
       <div class="ptny-field"><label>Nama *</label>
@@ -5087,7 +5109,7 @@ function showPjForm(existingData) {
           </select>
         </div>
         <div class="ptny-field"><label>Umur</label>
-          <input type="number" id="pj-umur" class="k-input" value="${r.umur||''}" placeholder="Umur (tahun)" min="0" max="120" style="width:100%;">
+          <input type="number" id="pj-umur" class="k-input" value="${escHtml(String(r.umur||''))}" placeholder="Umur (tahun)" min="0" max="120" style="width:100%;">
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -5121,22 +5143,28 @@ function showPjForm(existingData) {
           ${PJ_GOLONGAN.map(g=>`<option ${(r.golongan_alamat||'Surabaya')===g?'selected':''}>${g}</option>`).join('')}
         </select>
       </div>
-      <!-- GPS -->
+      <!-- GPS — SATU input raw saja, lat/lng tersembunyi -->
       <div class="ptny-field"><label>GPS Koordinat</label>
         <div style="display:flex;gap:6px;">
-          <input type="text" id="pj-gps-raw" class="k-input" value="${escHtml(r.gps_raw||'')}" placeholder="-7.257472, 112.752090" style="flex:1;" oninput="parseGpsInput(this.value)">
+          <input type="text" id="pj-gps-raw" class="k-input"
+            value="${escHtml(formRaw)}"
+            placeholder="-7.257472, 112.752090" style="flex:1;"
+            oninput="parseGpsInput(this.value)">
           <button onclick="getMyGPS()" class="btn-action accent" style="padding:9px 12px;flex-shrink:0;" title="Ambil lokasi saat ini">📍 GPS</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-          <input type="text" id="pj-gps-lat" class="k-input" value="${escHtml(String(r.gps_lat||'').trim())}" placeholder="Lat: -7.257..." readonly style="font-size:.75rem;">
-          <input type="text" id="pj-gps-lng" class="k-input" value="${escHtml(String(r.gps_lng||'').trim())}" placeholder="Lng: 112.75..." readonly style="font-size:.75rem;">
-          <input type="text" id="pj-gps-raw" class="k-input" value="${escHtml(String(r.gps_raw||'').trim())}" placeholder="Raw: 17.257..." readonly style="font-size:.75rem;">
+          <input type="text" id="pj-gps-lat" class="k-input"
+            value="${escHtml(formLat)}"
+            placeholder="Lat: -7.257..." readonly style="font-size:.75rem;background:var(--surface2);">
+          <input type="text" id="pj-gps-lng" class="k-input"
+            value="${escHtml(formLng)}"
+            placeholder="Lng: 112.75..." readonly style="font-size:.75rem;background:var(--surface2);">
         </div>
-        <div id="pj-gps-links" style="${r.gps_lat?'':'display:none;'}margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-          <a id="pj-gmaps-link" href="${r.gps_lat?`https://maps.google.com/?q=${r.gps_lat},${r.gps_lng}`:''}" target="_blank" rel="noopener">
+        <div id="pj-gps-links" style="${hasGpsForm?'':'display:none;'}margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+          <a id="pj-gmaps-link" href="${hasGpsForm?`https://maps.google.com/?q=${formLat},${formLng}`:''}" target="_blank" rel="noopener">
             <button class="btn-action" style="font-size:.72rem;padding:5px 10px;">🗺️ Google Maps</button>
           </a>
-          <a id="pj-waze-link" href="${r.gps_lat?`https://waze.com/ul?ll=${r.gps_lat},${r.gps_lng}&navigate=yes`:''}" target="_blank" rel="noopener">
+          <a id="pj-waze-link" href="${hasGpsForm?`https://waze.com/ul?ll=${formLat},${formLng}&navigate=yes`:''}" target="_blank" rel="noopener">
             <button class="btn-action" style="font-size:.72rem;padding:5px 10px;">🚗 Waze</button>
           </a>
         </div>
@@ -5159,7 +5187,7 @@ function showPjForm(existingData) {
       </div>
     </div>
 
-    <!-- Bahan & Penjengukan -->
+    <!-- Penjengukan -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📖 Penjengukan</div>
       <div class="ptny-field"><label>Bahan Penjengukan</label>
@@ -5303,9 +5331,9 @@ async function submitPjForm() {
     keterangan: document.getElementById('pj-ket')?.value||'',
     nama_jemaat_connect: document.getElementById('pj-jemaat-connect')?.value||'',
     no_efataid_connect: document.getElementById('pj-efataid-connect')?.value||'',
-    gps_lat: document.getElementById('pj-gps-lat')?.value||'',
-    gps_lng: document.getElementById('pj-gps-lng')?.value||'',
-    gps_raw: document.getElementById('pj-gps-raw')?.value||'',
+    gps_lat: normGps(document.getElementById('pj-gps-lat')?.value||''),
+    gps_lng: normGps(document.getElementById('pj-gps-lng')?.value||''),
+    gps_raw: document.getElementById('pj-gps-raw')?.value||'', 
     link_foto_pribadi: document.getElementById('pj-foto-pribadi')?.value||'',
     link_foto_rumah: document.getElementById('pj-foto-rumah')?.value||'',
     link_foto_baptis: document.getElementById('pj-foto-baptis')?.value||'',
@@ -5368,9 +5396,10 @@ function openPjDetail(r) {
   const foto=fmtImg(r.link_foto_pribadi||'')||pjFotoUrl(r);
   const fotoRumah=fmtImg(r.link_foto_rumah||'');
   const fotoBaptis=fmtImg(r.link_foto_baptis||'');
-  const hasGps = !!(String(r.gps_lat||'').trim() && String(r.gps_lng||'').trim());
-  const gpsLat  = String(r.gps_lat||'').trim();
-  const gpsLng  = String(r.gps_lng||'').trim(); 
+ 
+  const gpsLat  = normGps(r.gps_lat);
+  const gpsLng  = normGps(r.gps_lng);
+  const hasGps  = !!(gpsLat && gpsLng); 
   const canEdit=isAdminUser();
 
   const kondisiRow=(label,val)=>{const c=PJ_KONDISI_COLOR[val]||'var(--text3)';return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:.8rem;"><span style="color:var(--text3);">${label}</span><span style="color:${c};font-weight:600;">⬤ ${val||'-'}</span></div>`;};
@@ -5457,35 +5486,42 @@ Ket: ${r.keterangan||'-'}</div>
   `);
   logHistory('Penjengukan', 'lihat detail', r.nama || '-');
 }
-
-
-  
+   
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
-  
-  // Cari data dulu dari state yang ada
-  let r = pjState.allData.find(x => x.id === id);
-  
-  if(r) {
-    closeModal();
-    setTimeout(() => showPjForm(r), 50);
-    logHistory('Penjengukan', 'edit', r.nama || '-');
-    return;
+
+  const tryOpen = (data) => {
+    const r = data.find(x => x.id === id);
+    if(!r) return toast('⚠️ Data tidak ditemukan (ID: ' + id + ')');
+    // Tutup modal detail dulu, lalu buka form setelah DOM bersih
+    const modalEl = document.getElementById('itemModal');
+    if(modalEl) {
+      modalEl.querySelectorAll('audio,video').forEach(a=>a.pause());
+      modalEl.style.display = 'none';
+      document.getElementById('modalBody').innerHTML = '';
+    }
+    // Buka form baru setelah reflow
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        showPjForm(r);
+        logHistory('Penjengukan', 'edit', r.nama || '-');
+      });
+    });
+  };
+
+  // Cari dari state lokal dulu
+  if(pjState.allData && pjState.allData.length) {
+    const r = pjState.allData.find(x => x.id === id);
+    if(r) { tryOpen(pjState.allData); return; }
   }
-  
-  // Jika tidak ketemu di state, load ulang dari server
+
+  // Fallback: load dari server
   toast('⏳ Memuat data...');
   fetch(APPS_SCRIPT_PENJENGUKAN + '?action=get_penjengukan&t=' + Date.now())
     .then(res => res.json())
     .then(result => {
       pjState.allData = result.data || [];
-      r = pjState.allData.find(x => x.id === id);
-      if(!r) return toast('⚠️ Data tidak ditemukan');
-      closeModal();
-      setTimeout(() => {
-        showPjForm(r);
-        logHistory('Penjengukan', 'edit', r.nama || '-');
-      }, 50);
+      tryOpen(pjState.allData);
     })
     .catch(e => toast('⚠️ Gagal memuat: ' + e.message));
 }   
