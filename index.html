@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 37 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 38 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -552,7 +552,8 @@ const URLS={
   Alkitab:"https://docs.google.com/spreadsheets/d/e/2PACX-1vR1xjDc2jxwE4vRMZ5I9Otpdfghi_4CRudOCJ6_FGBdHVfu_cuRcIwPbnhRDVXw244tenfW1EN1qHuF/pub?output=csv",
   Absensi_KTM :"https://docs.google.com/spreadsheets/d/e/2PACX-1vRvMd7u7EoLBPMWvMjoHCuenc0sMRX-YvSZs6cr9_EX1aYF4tBV_7LCtPAxtGjxPXy5jmmFk9W7Cj1b/pub?output=csv", 
   Absensi_sidang :"https://docs.google.com/spreadsheets/d/e/2PACX-1vT60wezdHOka1KA5bbmtX9vI6EbyoF6Bx02xO0Hl2FTDrKkEJh3CvCUaDDaewXq2RFTjqz0AlA41S8Q/pub?output=csv" ,
-  Penjengukan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiUxK_tOhbUw_UJ7tXvRFjvMpEh4XMIlZ6ShXg6SuRDdgjjKy7wBEldKwQ_MAfR0-FL-GEb22ezKrU/pub?output=csv"
+  Penjengukan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiUxK_tOhbUw_UJ7tXvRFjvMpEh4XMIlZ6ShXg6SuRDdgjjKy7wBEldKwQ_MAfR0-FL-GEb22ezKrU/pub?output=csv",
+  History :"https://docs.google.com/spreadsheets/d/e/2PACX-1vTYWBseHC1Bmj1L4XWJpcvOk0t-ZJyYiQAC_Tq3QO1zuJP7r8WlhSwEXlGQxna83DRgNmEnGeqM2qbp/pub?output=csv"
 
 };
 
@@ -565,7 +566,7 @@ const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjW
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
 const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzM-aJghZebEsPGtIDzKNSqC1tMFYNOI7MARjEhS4R518pfo2Yox93c515e1dQnYcwBwA/exec";
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbwhICspAhv6OCm_mK5RgmQPys3KXgDV6bRr_XwnnINvHq2d4w3Yom_9UuCYOpxB1f2_qw/exec";
-
+const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/GANTI_ID_HISTORY_SCRIPT/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -729,12 +730,12 @@ function attemptLogin(){
   document.getElementById('header-sub').textContent=found.level||found.tipe||'user';
   Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
   setupNavigation();
-  logHistory('login','masuk aplikasi');
+  logHistory('login', 'masuk aplikasi', `level: ${found.level||found.tipe||'-'}`); 
 }
 function doLogout(){
   if(!confirm('Yakin ingin keluar?'))return;
   // Wrap dalam try-catch agar error state reset tidak hentikan proses logout
-  try{logHistory('logout','keluar aplikasi');}catch(e){}
+  try { logHistory('logout', 'keluar aplikasi', `session ended`); } catch(e) {} 
   currentUser=null;
   try{
     db={};
@@ -822,8 +823,13 @@ function loadModule(name,el){
     Papa.parse(url,{download:true,header:true,complete:res=>{db[name]=res.data;dispatchRender(name);}});
   }else dispatchRender(name);
 }
+
 function dispatchRender(name){
-  const n=name.toLowerCase().trim();
+  const n = name.toLowerCase().trim();
+  // Log setiap perpindahan menu (kecuali yang sudah log sendiri)
+  const noAutoLog = ['penjengukan','admin'];
+  if(!noAutoLog.includes(n)) logHistory(name, 'buka menu');
+
   if(n==='dashboard')renderDashboard();
   else if(n==='kidung')renderKidung();
   else if(n==='alkitab')renderAlkitab();
@@ -835,12 +841,12 @@ function dispatchRender(name){
   else if(n==='pertanyaan')renderPertanyaan();
   else if(n==='hasil pertanyaan')renderHasilPertanyaan();
   else if(n==='admin')renderAdmin();
-  else if(n==='absensi ktm') renderAbsensiKTM();   
-  else if(n==='absensi sidang') renderAbsensiSidang();   
-  else if(n==='laporan absensi') renderLaporanAbsensi();   
-  else if(n==='penjengukan') renderPenjengukan();   
+  else if(n==='absensi ktm') renderAbsensiKTM();
+  else if(n==='absensi sidang') renderAbsensiSidang();
+  else if(n==='laporan absensi') renderLaporanAbsensi();
+  else if(n==='penjengukan') renderPenjengukan();
   else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
-}
+}   
 
 // ══════════════════════════════════════════════════
 // INFO MODAL
@@ -4831,6 +4837,7 @@ function renderPenjengukan() {
     <div id="pj-result"></div>
     <div id="pj-pagination" class="pagination"></div>`;
 
+  logHistory('Penjengukan', 'buka menu');
   loadPenjengukan();
 }   
 
@@ -5314,6 +5321,7 @@ async function submitPjForm() {
     const result=await resp.json();
     if(result.status==='ok'){
       toast('✅ Data penjengukan tersimpan!');
+      logHistory('Penjengukan', isEdit ? 'edit-simpan' : 'tambah-baru', nama); 
       if(statusEl) statusEl.textContent='✅ Tersimpan!';
       closeModal();
       setTimeout(loadPenjengukan, 800);
@@ -5437,7 +5445,7 @@ function openPjDetail(r) {
       </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}')" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
+      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}');closeModal();" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
       ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
@@ -5450,10 +5458,26 @@ Tgl Jenguk: ${r.tanggal_penjengukan||'-'} oleh ${r.nama_penjenguk||'-'}
 GPS: ${r.gps_raw||'-'}
 Ket: ${r.keterangan||'-'}</div>
   `);
-  logHistory('penjengukan','lihat detail: '+r.nama);
+  logHistory('Penjengukan', 'lihat detail', r.nama || '-');
 }
 
-
+function editPjById(id) {
+  if(!id) return toast('⚠️ ID tidak valid');
+  const r = pjState.allData.find(x => x.id === id);
+  if(!r) {
+    // Coba load ulang jika tidak ketemu
+    toast('⏳ Memuat data...');
+    loadPenjengukan().then(() => {
+      const r2 = pjState.allData.find(x => x.id === id);
+      if(!r2) return toast('⚠️ Data tidak ditemukan');
+      showPjForm(r2);
+      logHistory('Penjengukan', 'edit', r2.nama || '-');
+    });
+    return;
+  }
+  showPjForm(r);
+  logHistory('Penjengukan', 'edit', r.nama || '-');
+}
 async function hapusPj(id, nama) {
   if(!id) return;
   if(!confirm(`Sembunyikan data penjengukan "${nama}"?\n\nData tidak dihapus, hanya disembunyikan.`)) return;
@@ -6045,18 +6069,234 @@ function copyLaporanText(){
 // ══════════════════════════════════════════════════
 // ADMIN
 // ══════════════════════════════════════════════════
+
 function renderAdmin(){
-  const tiypes=(currentUser?.tipe||'');
-  if(!tiypes.toLowerCase().includes('admin')){document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔒</div><p>Akses Ditolak</p></div>`;return;}
-  const content=document.getElementById('app-content');
-  content.innerHTML=`
-    <div class="section-header"><span class="section-title">Dashboard Admin</span></div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <button class="btn-action accent" onclick="loadQuizResults()" style="padding:12px;">📊 Lihat Hasil Quiz</button>
-      <button class="btn-action" onclick="loadHistoryLog()" style="padding:12px;">📋 Log Aktivitas</button>
+  const tipe = (currentUser?.tipe||'');
+  if(!tipe.toLowerCase().includes('admin')){
+    document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔒</div><p>Akses Ditolak</p></div>`;
+    return;
+  }
+  const content = document.getElementById('app-content');
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">🔑 Dashboard Admin</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <button class="btn-action accent" onclick="loadAdminHistory()" style="padding:12px;font-weight:700;">
+        📋 Log Aktivitas Semua User (dari Server)
+      </button>
+      <button class="btn-action" onclick="loadQuizResults()" style="padding:12px;">
+        📊 Lihat Hasil Quiz
+      </button>
+      <button class="btn-action" onclick="loadHistoryLogLocal()" style="padding:12px;">
+        💾 Log Lokal (Browser ini)
+      </button>
     </div>
-    <div id="admin-results" style="margin-top:14px;"></div>`;
+
+    <!-- Filter History -->
+    <div id="admin-history-filter" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">🔍 Filter Log</div>
+      <div class="filter-group">
+        <input type="text" id="hist-f-user" class="k-input" placeholder="Filter username..." oninput="filterAdminHistory()">
+        <select id="hist-f-menu" class="k-input" onchange="filterAdminHistory()">
+          <option value="">Semua Menu</option>
+          <option>Dashboard</option><option>Kidung</option><option>Alkitab</option>
+          <option>Acara</option><option>Kegiatan</option><option>Jemaat</option>
+          <option>Pertanyaan</option><option>Hasil Pertanyaan</option>
+          <option>Absensi KTM</option><option>Absensi Sidang</option>
+          <option>Laporan Absensi</option><option>Penjengukan</option>
+          <option>Admin</option><option>login</option><option>logout</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <input type="date" id="hist-f-tgl-awal" class="k-input" onchange="filterAdminHistory()" placeholder="Tgl awal">
+        <input type="date" id="hist-f-tgl-akhir" class="k-input" onchange="filterAdminHistory()" placeholder="Tgl akhir">
+        <input type="text" id="hist-f-ip" class="k-input" placeholder="Filter IP..." oninput="filterAdminHistory()">
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        <button onclick="filterAdminHistory()" class="btn-action accent" style="font-size:.78rem;padding:7px 14px;">🔍 Filter</button>
+        <button onclick="resetHistFilter()" class="btn-action" style="font-size:.78rem;padding:7px 14px;">🗑 Reset</button>
+        <button onclick="exportHistoryCsv()" class="btn-action green" style="font-size:.78rem;padding:7px 14px;">📥 Export CSV</button>
+        <span id="hist-count-info" style="font-size:.72rem;color:var(--text3);align-self:center;"></span>
+      </div>
+    </div>
+
+    <div id="admin-results" style="margin-top:4px;"></div>`;
 }
+
+// ── Data history dari server (global untuk filter)
+let _adminHistData = [];
+
+async function loadAdminHistory() {
+  const filterDiv = document.getElementById('admin-history-filter');
+  if(filterDiv) filterDiv.style.display = 'block';
+  const el = document.getElementById('admin-results');
+  if(el) el.innerHTML = '<div class="loading-shimmer"></div><div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat log dari server...</div>';
+
+  if(!APPS_SCRIPT_HISTORY || APPS_SCRIPT_HISTORY.includes('GANTI')) {
+    if(el) el.innerHTML = `<div class="empty-state"><div class="icon">⚙️</div>
+      <p>APPS_SCRIPT_HISTORY belum diisi.<br>
+      <span style="font-size:.72rem;color:var(--text3);">Isi konstanta APPS_SCRIPT_HISTORY di kode.</span></p></div>`;
+    return;
+  }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_HISTORY + '?action=get_history&limit=500&t=' + Date.now());
+    const result = await resp.json();
+    _adminHistData = result.data || [];
+    renderAdminHistTable(_adminHistData);
+    toast(`✅ ${_adminHistData.length} log dimuat`);
+  } catch(e) {
+    if(el) el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+function filterAdminHistory() {
+  const q     = (document.getElementById('hist-f-user')?.value || '').toLowerCase();
+  const menu  = document.getElementById('hist-f-menu')?.value || '';
+  const ip    = (document.getElementById('hist-f-ip')?.value || '').toLowerCase();
+  const tglA  = document.getElementById('hist-f-tgl-awal')?.value || '';
+  const tglB  = document.getElementById('hist-f-tgl-akhir')?.value || '';
+
+  let filtered = _adminHistData.filter(r => {
+    if(q && !(r.username||'').toLowerCase().includes(q)) return false;
+    if(menu && r.menu !== menu) return false;
+    if(ip && !(r.ip||'').toLowerCase().includes(ip)) return false;
+    if(tglA || tglB) {
+      const d = r.timestamp_iso ? r.timestamp_iso.split('T')[0] : '';
+      if(tglA && d < tglA) return false;
+      if(tglB && d > tglB) return false;
+    }
+    return true;
+  });
+
+  const infoEl = document.getElementById('hist-count-info');
+  if(infoEl) infoEl.textContent = `${filtered.length} dari ${_adminHistData.length} log`;
+
+  renderAdminHistTable(filtered);
+}
+
+function resetHistFilter() {
+  ['hist-f-user','hist-f-ip','hist-f-tgl-awal','hist-f-tgl-akhir'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const sel = document.getElementById('hist-f-menu'); if(sel) sel.value = '';
+  filterAdminHistory();
+}
+
+function renderAdminHistTable(data) {
+  const el = document.getElementById('admin-results');
+  if(!el) return;
+  if(!data.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Tidak ada log.</p></div>`;
+    return;
+  }
+
+  const menuColor = {
+    login:'var(--green)',logout:'var(--red)',
+    Penjengukan:'var(--accent)',Jemaat:'var(--accent2)',
+    'Absensi KTM':'var(--yellow)','Absensi Sidang':'var(--yellow)',
+    Dashboard:'var(--accent3)',
+  };
+
+  // Statistik ringkas
+  const userSet = new Set(data.map(r => r.username));
+  const menuCount = {};
+  data.forEach(r => { menuCount[r.menu] = (menuCount[r.menu] || 0) + 1; });
+  const topMenus = Object.entries(menuCount).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  el.innerHTML = `
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+      <div class="dash-card" style="padding:10px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--accent);">${data.length}</div>
+        <div style="font-size:.62rem;color:var(--text3);">Total Log</div>
+      </div>
+      <div class="dash-card" style="padding:10px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--green);">${userSet.size}</div>
+        <div style="font-size:.62rem;color:var(--text3);">User Aktif</div>
+      </div>
+      <div class="dash-card" style="padding:10px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--yellow);">${topMenus[0]?topMenus[0][0]:'-'}</div>
+        <div style="font-size:.62rem;color:var(--text3);">Menu Terpopuler</div>
+      </div>
+    </div>
+
+    <!-- Tabel log -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
+        <thead>
+          <tr style="background:var(--surface2);">
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);white-space:nowrap;">WAKTU</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">USER</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">LEVEL</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">MENU</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">AKSI</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">DETAIL</th>
+            <th style="padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:.63rem;color:var(--text3);">IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.slice(0, 200).map(r => {
+            const mc = menuColor[r.menu] || 'var(--text2)';
+            const aksiColor = r.aksi === 'login' ? 'var(--green)' : r.aksi === 'logout' ? 'var(--red)' : 'var(--text2)';
+            return `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 9px;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">
+                ${escHtml(r.tanggal||'-')}<br>${escHtml(r.waktu||'-')}
+              </td>
+              <td style="padding:6px 9px;font-weight:700;color:var(--text);">${escHtml(r.username||'-')}</td>
+              <td style="padding:6px 9px;font-size:.7rem;color:var(--text3);">${escHtml((r.level||'-').split(',')[0].trim())}</td>
+              <td style="padding:6px 9px;">
+                <span style="background:${mc}18;color:${mc};font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:5px;">
+                  ${escHtml(r.menu||'-')}
+                </span>
+              </td>
+              <td style="padding:6px 9px;color:${aksiColor};font-size:.72rem;">${escHtml(r.aksi||'-')}</td>
+              <td style="padding:6px 9px;color:var(--text3);font-size:.7rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.detail||'')}">
+                ${escHtml(r.detail||'-')}
+              </td>
+              <td style="padding:6px 9px;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">${escHtml(r.ip||'-')}</td>
+            </tr>`;
+          }).join('')}
+          ${data.length > 200 ? `<tr><td colspan="7" style="text-align:center;padding:10px;font-size:.75rem;color:var(--text3);">... ${data.length - 200} log lainnya (gunakan filter atau export CSV)</td></tr>` : ''}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function loadHistoryLogLocal() {
+  const filterDiv = document.getElementById('admin-history-filter');
+  if(filterDiv) filterDiv.style.display = 'none';
+  const history = JSON.parse(localStorage.getItem('activity_log') || '[]');
+  const el = document.getElementById('admin-results');
+  if(!history.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Belum ada log lokal.</p></div>`;
+    return;
+  }
+  _adminHistData = history.slice().reverse(); // terbaru dulu
+  el.innerHTML = `<div style="font-size:.78rem;color:var(--yellow);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+    ⚠️ Ini log lokal browser ini saja (${history.length} entri). Klik "Log dari Server" untuk melihat semua user.
+  </div>`;
+  renderAdminHistTable(_adminHistData);
+  toast(`✅ ${history.length} log lokal ditampilkan`);
+}
+
+function exportHistoryCsv() {
+  if(!_adminHistData.length) return toast('⚠️ Tidak ada data untuk diekspor');
+  const headers = ['tanggal','waktu','username','level','menu','aksi','detail','ip','no_efataid'];
+  const rows = _adminHistData.map(r =>
+    headers.map(h => `"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')
+  );
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `history_log_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✅ CSV diunduh!');
+}   
 async function loadQuizResults(){
   if(APPS_SCRIPT_URL.includes('GANTI')){document.getElementById('admin-results').innerHTML=`<div class="empty-state"><div class="icon">⚙️</div><p>URL Apps Script belum diisi</p></div>`;return;}
   document.getElementById('admin-results').innerHTML='<div class="loading-shimmer"></div>';
@@ -6075,15 +6315,51 @@ function loadHistoryLog(){
   el.innerHTML=`<div class="section-header"><span class="section-title">Log</span><span class="section-count">${history.length}</span></div>${history.slice(-60).reverse().map(h=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 11px;margin-bottom:5px;font-size:.8rem;"><span class="tag">${h.menu||'?'}</span><strong style="margin-left:5px;">${escHtml(h.action||'')}</strong><div style="color:var(--text3);margin-top:2px;font-family:'JetBrains Mono',monospace;font-size:.68rem;">${h.user||'?'} · ${new Date(h.waktu).toLocaleString('id')}</div></div>`).join('')}`;
 }
 
-// HISTORY LOG
-async function logHistory(menu,action){
-  let ip='?';
-  try{const r=await fetch('https://api.ipify.org?format=json');const d=await r.json();ip=d.ip;}catch(e){}
-  const entry={user:currentUser?.username||'anon',menu,action,waktu:new Date().toISOString(),ip};
-  const ex=JSON.parse(localStorage.getItem('activity_log')||'[]');ex.push(entry);if(ex.length>500)ex.splice(0,ex.length-500);localStorage.setItem('activity_log',JSON.stringify(ex));
-  if(!APPS_SCRIPT_URL.includes('GANTI')){fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'history',...entry})}).catch(()=>{});}
-}
+// ══════════════════════════════════════════════════
+// HISTORY LOG — kirim ke server & localStorage
+// ══════════════════════════════════════════════════
+async function logHistory(menu, aksi, detail) {
+  const entry = {
+    username  : currentUser?.username  || 'anon',
+    level     : currentUser?.level     || currentUser?.tipe || '-',
+    no_efataid: currentUser?.no_EfataID || currentUser?.no_Efataid || currentUser?.No_EfataID || '-',
+    menu      : menu  || '-',
+    aksi      : aksi  || '-',
+    detail    : detail || '',
+    waktu     : new Date().toLocaleString('id-ID'),
+    timestamp : new Date().toISOString(),
+    ip        : '-',
+  };
 
+  // Ambil IP dari service publik (async, tidak blocking)
+  try {
+    const ipResp = await fetch('https://api.ipify.org?format=json');
+    const ipData = await ipResp.json();
+    entry.ip = ipData.ip || '-';
+  } catch(e) { /* ignore */ }
+
+  // Simpan lokal
+  const localLog = JSON.parse(localStorage.getItem('activity_log') || '[]');
+  localLog.push(entry);
+  if (localLog.length > 1000) localLog.splice(0, localLog.length - 1000);
+  localStorage.setItem('activity_log', JSON.stringify(localLog));
+
+  // Kirim ke server history (fire and forget)
+  if (APPS_SCRIPT_HISTORY && !APPS_SCRIPT_HISTORY.includes('GANTI')) {
+    const params = new URLSearchParams({
+      action    : 'tambah',
+      username  : entry.username,
+      level     : entry.level,
+      no_efataid: entry.no_efataid,
+      menu      : entry.menu,
+      aksi      : entry.aksi,
+      detail    : entry.detail,
+      ip        : entry.ip,
+      user_agent: navigator.userAgent.slice(0, 150),
+    });
+    fetch(APPS_SCRIPT_HISTORY + '?' + params.toString()).catch(() => {});
+  }
+}
 // tambahan
    // ══════════════════════════════════════════════════
 // FONT LONG PRESS
