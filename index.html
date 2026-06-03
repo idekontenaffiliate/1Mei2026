@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 40 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 41 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5128,8 +5128,9 @@ function showPjForm(existingData) {
           <button onclick="getMyGPS()" class="btn-action accent" style="padding:9px 12px;flex-shrink:0;" title="Ambil lokasi saat ini">📍 GPS</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-          <input type="text" id="pj-gps-lat" class="k-input" value="${escHtml(r.gps_lat||'')}" placeholder="Lat: -7.257..." readonly style="font-size:.75rem;">
-          <input type="text" id="pj-gps-lng" class="k-input" value="${escHtml(r.gps_lng||'')}" placeholder="Lng: 112.75..." readonly style="font-size:.75rem;">
+          <input type="text" id="pj-gps-lat" class="k-input" value="${escHtml(String(r.gps_lat||'').trim())}" placeholder="Lat: -7.257..." readonly style="font-size:.75rem;">
+          <input type="text" id="pj-gps-lng" class="k-input" value="${escHtml(String(r.gps_lng||'').trim())}" placeholder="Lng: 112.75..." readonly style="font-size:.75rem;">
+          <input type="text" id="pj-gps-raw" class="k-input" value="${escHtml(String(r.gps_raw||'').trim())}" placeholder="Raw: 17.257..." readonly style="font-size:.75rem;">
         </div>
         <div id="pj-gps-links" style="${r.gps_lat?'':'display:none;'}margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
           <a id="pj-gmaps-link" href="${r.gps_lat?`https://maps.google.com/?q=${r.gps_lat},${r.gps_lng}`:''}" target="_blank" rel="noopener">
@@ -5367,7 +5368,9 @@ function openPjDetail(r) {
   const foto=fmtImg(r.link_foto_pribadi||'')||pjFotoUrl(r);
   const fotoRumah=fmtImg(r.link_foto_rumah||'');
   const fotoBaptis=fmtImg(r.link_foto_baptis||'');
-  const hasGps=r.gps_lat&&r.gps_lng;
+  const hasGps = !!(String(r.gps_lat||'').trim() && String(r.gps_lng||'').trim());
+  const gpsLat  = String(r.gps_lat||'').trim();
+  const gpsLng  = String(r.gps_lng||'').trim(); 
   const canEdit=isAdminUser();
 
   const kondisiRow=(label,val)=>{const c=PJ_KONDISI_COLOR[val]||'var(--text3)';return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:.8rem;"><span style="color:var(--text3);">${label}</span><span style="color:${c};font-weight:600;">⬤ ${val||'-'}</span></div>`;};
@@ -5396,22 +5399,22 @@ function openPjDetail(r) {
 
     ${hasGps ? `
   <div style="margin-bottom:10px;">
-    <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">📍 Lokasi GPS · ${escHtml(r.gps_raw||r.gps_lat+', '+r.gps_lng)}</div>
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">📍 Lokasi GPS · ${escHtml(r.gps_raw||gpsLat+', '+gpsLng)}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-      <a href="https://maps.google.com/?q=${r.gps_lat},${r.gps_lng}" target="_blank" rel="noopener" style="flex:1;">
+      <a href="https://maps.google.com/?q=${gpsLat},${gpsLng}" target="_blank" rel="noopener" style="flex:1;">
         <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🗺️ Google Maps</button>
       </a>
-      <a href="https://waze.com/ul?ll=${r.gps_lat},${r.gps_lng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
+      <a href="https://waze.com/ul?ll=${gpsLat},${gpsLng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
         <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🚗 Waze</button>
       </a>
-      <button onclick="openPjMapsView('${r.gps_lat}','${r.gps_lng}','${escHtml(r.nama||'')}')" class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">
+      <button onclick="openPjMapsView('${gpsLat}','${gpsLng}','${escHtml(r.nama||'')}')" class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">
         🌍 View Maps
       </button>
     </div>
     <!-- Mini embed maps -->
     <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:200px;background:var(--surface2);">
       <iframe
-        src="https://maps.google.com/maps?q=${r.gps_lat},${r.gps_lng}&z=16&output=embed"
+        src="https://maps.google.com/maps?q=${gpsLat},${gpsLng}&z=16&output=embed"
         style="width:100%;height:100%;border:none;"
         loading="lazy"
         allowfullscreen>
@@ -5439,7 +5442,7 @@ function openPjDetail(r) {
       </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="closeModal();setTimeout(()=>editPjById('${escHtml(r.id||'')}'),150);" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
+      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}')" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
       ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
@@ -5456,26 +5459,35 @@ Ket: ${r.keterangan||'-'}</div>
 }
 
 
+  
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
   
-  // Pastikan modal detail sudah tertutup
-  const modalEl = document.getElementById('itemModal');
-  if(modalEl) modalEl.style.display = 'none';
+  // Cari data dulu dari state yang ada
+  let r = pjState.allData.find(x => x.id === id);
   
-  const r = pjState.allData.find(x => x.id === id);
-  if(!r) {
-    toast('⏳ Memuat data...');
-    loadPenjengukan().then(() => {
-      const r2 = pjState.allData.find(x => x.id === id);
-      if(!r2) return toast('⚠️ Data tidak ditemukan');
-      showPjForm(r2);
-      logHistory('Penjengukan', 'edit', r2.nama || '-');
-    });
+  if(r) {
+    closeModal();
+    setTimeout(() => showPjForm(r), 50);
+    logHistory('Penjengukan', 'edit', r.nama || '-');
     return;
   }
-  showPjForm(r);
-  logHistory('Penjengukan', 'edit', r.nama || '-');
+  
+  // Jika tidak ketemu di state, load ulang dari server
+  toast('⏳ Memuat data...');
+  fetch(APPS_SCRIPT_PENJENGUKAN + '?action=get_penjengukan&t=' + Date.now())
+    .then(res => res.json())
+    .then(result => {
+      pjState.allData = result.data || [];
+      r = pjState.allData.find(x => x.id === id);
+      if(!r) return toast('⚠️ Data tidak ditemukan');
+      closeModal();
+      setTimeout(() => {
+        showPjForm(r);
+        logHistory('Penjengukan', 'edit', r.nama || '-');
+      }, 50);
+    })
+    .catch(e => toast('⚠️ Gagal memuat: ' + e.message));
 }   
 async function hapusPj(id, nama) {
   if(!id) return;
