@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 35 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 36 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -552,7 +552,7 @@ const URLS={
   Alkitab:"https://docs.google.com/spreadsheets/d/e/2PACX-1vR1xjDc2jxwE4vRMZ5I9Otpdfghi_4CRudOCJ6_FGBdHVfu_cuRcIwPbnhRDVXw244tenfW1EN1qHuF/pub?output=csv",
   Absensi_KTM :"https://docs.google.com/spreadsheets/d/e/2PACX-1vRvMd7u7EoLBPMWvMjoHCuenc0sMRX-YvSZs6cr9_EX1aYF4tBV_7LCtPAxtGjxPXy5jmmFk9W7Cj1b/pub?output=csv", 
   Absensi_sidang :"https://docs.google.com/spreadsheets/d/e/2PACX-1vT60wezdHOka1KA5bbmtX9vI6EbyoF6Bx02xO0Hl2FTDrKkEJh3CvCUaDDaewXq2RFTjqz0AlA41S8Q/pub?output=csv" ,
-  Penjengukan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiUxK_tOhbUw_UJ7tXvRFjvMpEh4XMIlZ6ShXg6SuRDdgjjKy7wBEldKwQ_MAfR0-FL-GEb22ezKrU/pub?output=csv"
+  Penjengukan: "https://script.google.com/macros/s/AKfycbwhICspAhv6OCm_mK5RgmQPys3KXgDV6bRr_XwnnINvHq2d4w3Yom_9UuCYOpxB1f2_qw/exec"
 
 };
 
@@ -860,6 +860,7 @@ function openInfoModal(){
     Jemaat:'👥 Menampilkan data jemaat yang hadir dan profil lengkap.',
     Pertanyaan:'❔ Menulis dan melihat pertanyaan selama acara berlangsung.',
     'Hasil Pertanyaan':'📋 Melihat dan menjawab semua pertanyaan yang masuk.',
+     Penjengukan : 'buat untuk penjengukan',
     Admin:'🔑 Panel admin untuk melihat hasil dan log aktivitas.',
   };
 
@@ -4887,14 +4888,31 @@ function applyPjFilter() {
   renderPjResult();
 }
 
+
 function parsePjTgl(tgl) {
   if(!tgl) return '';
-  const s = String(tgl);
+  const s = String(tgl).trim();
+  // ISO format: 2026-06-02T17:00:00.000Z → ambil tanggal saja
+  const isoM = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(isoM) return `${isoM[1]}-${isoM[2]}-${isoM[3]}`;
   // dd/mm/yyyy → yyyy-mm-dd
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
   return s;
-}
+}   
+function formatPjTglDisplay(tgl) {
+  if(!tgl) return '-';
+  const s = String(tgl).trim();
+  // ISO: 2026-06-02T... → dd/mm/yyyy
+  const isoM = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(isoM) return `${isoM[3]}/${isoM[2]}/${isoM[1]}`;
+  // yyyy-mm-dd → dd/mm/yyyy
+  const ym = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(ym) return `${ym[3]}/${ym[2]}/${ym[1]}`;
+  // Sudah dd/mm/yyyy
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) return s;
+  return s;
+}   
 
 function setPjView(mode) {
   pjState.viewMode = mode;
@@ -4963,7 +4981,7 @@ function renderPjGrid(el, data) {
           <span style="font-size:.62rem;background:rgba(59,130,246,.15);color:var(--accent);padding:1px 5px;border-radius:3px;">${escHtml(r.jenis_kaum||'-')}</span>
           <span style="font-size:.62rem;background:rgba(139,92,246,.15);color:var(--accent3);padding:1px 5px;border-radius:3px;">${escHtml(r.golongan_alamat||'-')}</span>
         </div>
-        <div style="font-size:.68rem;color:var(--text3);">📅 ${escHtml(r.tanggal_penjengukan||'-')}</div>
+        <div style="font-size:.68rem;color:var(--text3);">📅 ${escHtml(formatPjTglDisplay(r.tanggal_penjengukan)||'-')}</div>
         <div style="font-size:.68rem;color:var(--text3);">👤 ${escHtml(r.nama_penjenguk||'-')}</div>
         <div style="margin-top:5px;display:flex;gap:4px;align-items:center;">
           <span style="font-size:.6rem;color:${kColor};">⬤</span>
@@ -4988,7 +5006,8 @@ function renderPjFoto(el, data) {
       </div>
       <div style="padding:5px 7px;background:var(--surface);">
         <div style="font-size:.7rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.nama||'-')}</div>
-        <div style="font-size:.6rem;color:var(--text3);">${escHtml(r.tanggal_penjengukan||'-')}</div>
+        <div style="font-size:.6rem;color:var(--text3);">${escHtml(formatPjTglDisplay(r.tanggal_penjengukan)||'-')}</div>
+
       </div>`;
     card.onclick = () => openPjDetail(r);
     grid.appendChild(card);
@@ -5008,7 +5027,7 @@ function renderPjText(el, allFiltered, pageData) {
     lines.push(`   Alamat : ${r.alamat||'-'} [${r.golongan_alamat||'-'}]`);
     lines.push(`   Kaum   : ${r.jenis_kaum||'-'} | Baptis: ${r.sudah_baptis||'-'} | Bahan: ${r.bahan_penjengukan||'-'}`);
     lines.push(`   Kondisi: Kel ${r.kondisi_keluarga||'-'} | Eko ${r.kondisi_ekonomi||'-'} | Rohani ${r.kondisi_kerohanian||'-'} | Ling ${r.kondisi_lingkungan||'-'}`);
-    lines.push(`   Jenguk : ${r.tanggal_penjengukan||'-'} oleh ${r.nama_penjenguk||'-'}`);
+    lines.push(`   Jenguk : ${formatPjTglDisplay(r.tanggal_penjengukan)||'-'} oleh ${r.nama_penjenguk||'-'}`); 
     if(r.keterangan) lines.push(`   Ket    : ${r.keterangan}`);
     lines.push('');
   });
@@ -5208,23 +5227,31 @@ function getMyGPS() {
   },err=>toast('⚠️ Gagal ambil GPS: '+err.message));
 }
 
+
 function pjSearchJemaat(q) {
-  const suggest=document.getElementById('pj-jemaat-suggest'); if(!suggest) return;
-  if(!q||q.length<2){suggest.style.display='none';return;}
-  const matches=(db.Jemaat||[]).filter(j=>(j['Nama Lengkap']||'').toLowerCase().includes(q.toLowerCase())||(j['Nama Panggilan']||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
-  if(!matches.length){suggest.style.display='none';return;}
-  suggest.style.display='block';
-  suggest.innerHTML=matches.map(j=>{
-    const ef=j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'';
-    const nm=j['Nama Lengkap']||'-';const pan=j['Nama Panggilan']||'';
-    return`<div onclick="pjSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}','${escHtml(j.Gender||'')}')"
+  const suggest = document.getElementById('pj-jemaat-suggest'); if(!suggest) return;
+  if(!q || q.length < 2){ suggest.style.display='none'; return; }
+  const matches = (db.Jemaat||[]).filter(j =>
+    (j['Nama Lengkap']||'').toLowerCase().includes(q.toLowerCase()) ||
+    (j['Nama Panggilan']||'').toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+  if(!matches.length){ suggest.style.display='none'; return; }
+  suggest.style.display = 'block';
+  suggest.innerHTML = matches.map(j => {
+    const ef   = j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'';
+    const nm   = j['Nama Lengkap']||'-';
+    const pan  = j['Nama Panggilan']||'';
+    const usia = j['Usia']||j['usia']||'';
+    // Kirim usia sebagai parameter ke-5
+    return `<div onclick="pjSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}','${escHtml(j.Gender||'')}','${escHtml(usia)}')"
       style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-      <strong>${escHtml(pan||nm)}</strong><br>
-      <span style="font-size:.7rem;color:var(--text3);">${escHtml(nm)} · ${ef}</span>
+      <strong>${escHtml(pan||nm)}</strong>
+      ${usia ? `<span style="font-size:.7rem;color:var(--accent3);"> · ${usia} th</span>` : ''}
+      <br><span style="font-size:.7rem;color:var(--text3);">${escHtml(nm)} · ${ef||'-'}</span>
     </div>`;
   }).join('');
-}
+}   
 function pjSelectJemaat(nama, pan, ef, gender) {
   const namaEl=document.getElementById('pj-nama');
   const cnEl=document.getElementById('pj-jemaat-connect');
@@ -5232,11 +5259,13 @@ function pjSelectJemaat(nama, pan, ef, gender) {
   const gEl=document.getElementById('pj-gender');
   const infoEl=document.getElementById('pj-connect-info');
   const sug=document.getElementById('pj-jemaat-suggest');
+  const umurEl  = document.getElementById('pj-umur');
   if(namaEl) namaEl.value=pan||nama;
   if(cnEl) cnEl.value=nama;
   if(efEl) efEl.value=ef;
   if(gEl&&gender) gEl.value=gender;
-  if(infoEl){infoEl.style.display='block';infoEl.textContent=`🔗 Terhubung: ${nama} (${ef})`;}
+  if(umurEl && usia) umurEl.value = usia;   // ← isi umur otomatis
+  if(infoEl){ infoEl.style.display='block'; infoEl.textContent=`🔗 Terhubung: ${nama} (${ef})${usia?' · '+usia+' th':''}`; }
   if(sug) sug.style.display='none';
 }
 
@@ -5296,7 +5325,42 @@ async function submitPjForm() {
     toast('⚠️ Error: '+e.message);
     if(statusEl) statusEl.textContent='❌ '+e.message;
   }
-}   
+} 
+function openPjMapsView(lat, lng, nama) {
+  const old = document.getElementById('pj-maps-fullscreen');
+  if(old) old.remove();
+  const div = document.createElement('div');
+  div.id = 'pj-maps-fullscreen';
+  div.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+      background:var(--header-bg);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;">
+      <div style="font-weight:700;font-size:.88rem;">🌍 ${escHtml(nama)} · ${lat}, ${lng}</div>
+      <div style="display:flex;gap:5px;">
+        <a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" rel="noopener">
+          <button class="btn-action accent" style="font-size:.78rem;padding:6px 12px;">🗺️ Buka Maps</button>
+        </a>
+        <a href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" rel="noopener">
+          <button class="btn-action" style="font-size:.78rem;padding:6px 12px;">🚗 Waze</button>
+        </a>
+        <button onclick="document.getElementById('pj-maps-fullscreen').remove()"
+          class="icon-btn logout" style="font-size:.9rem;">✕</button>
+      </div>
+    </div>
+    <iframe
+      src="https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed"
+      style="flex:1;width:100%;border:none;"
+      allowfullscreen loading="lazy">
+    </iframe>`;
+  document.body.appendChild(div);
+}
+function editPjById(id) {
+  const r = pjState.allData.find(x => x.id === id);
+  if(!r) return toast('⚠️ Data tidak ditemukan');
+  closeModal();
+  setTimeout(() => showPjForm(r), 100);
+}
+   
 function openPjDetail(r) {
   const foto=fmtImg(r.link_foto_pribadi||'')||pjFotoUrl(r);
   const fotoRumah=fmtImg(r.link_foto_rumah||'');
@@ -5322,20 +5386,38 @@ function openPjDetail(r) {
     <div class="info-grid" style="margin-bottom:10px;">
       <div class="info-item"><div class="info-item-label">Golongan</div><div class="info-item-value">${escHtml(r.golongan_alamat||'-')}</div></div>
       <div class="info-item"><div class="info-item-label">Bahan</div><div class="info-item-value">${escHtml(r.bahan_penjengukan||'-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div><div class="info-item-value">${escHtml(r.tanggal_penjengukan||'-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div><div class="info-item-value">${escHtml(formatPjTglDisplay(r.tanggal_penjengukan)||'-')}</div></div>
       <div class="info-item"><div class="info-item-label">Penjenguk</div><div class="info-item-value">${escHtml(r.nama_penjenguk||'-')}</div></div>
     </div>
 
     ${r.alamat?`<div class="info-item" style="margin-bottom:10px;"><div class="info-item-label">📍 Alamat</div><div class="info-item-value" style="white-space:normal;">${escHtml(r.alamat)}</div></div>`:''}
 
-    ${hasGps?`<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+    ${hasGps ? `
+  <div style="margin-bottom:10px;">
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">📍 Lokasi GPS · ${escHtml(r.gps_raw||r.gps_lat+', '+r.gps_lng)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
       <a href="https://maps.google.com/?q=${r.gps_lat},${r.gps_lng}" target="_blank" rel="noopener" style="flex:1;">
         <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🗺️ Google Maps</button>
       </a>
       <a href="https://waze.com/ul?ll=${r.gps_lat},${r.gps_lng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
         <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🚗 Waze</button>
       </a>
-    </div>`:''}
+      <button onclick="openPjMapsView('${r.gps_lat}','${r.gps_lng}','${escHtml(r.nama||'')}')" class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">
+        🌍 View Maps
+      </button>
+    </div>
+    <!-- Mini embed maps -->
+    <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:200px;background:var(--surface2);">
+      <iframe
+        src="https://maps.google.com/maps?q=${r.gps_lat},${r.gps_lng}&z=16&output=embed"
+        style="width:100%;height:100%;border:none;"
+        loading="lazy"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </div>` : ''}
+
+  
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;">
       ${kondisiRow('Lingkungan Rumah',r.kondisi_lingkungan)}
@@ -5355,7 +5437,7 @@ function openPjDetail(r) {
       </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="showPjForm(${JSON.stringify(r).replace(/'/g,"&apos;")})" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
+      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}')" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
       ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
@@ -5371,18 +5453,22 @@ Ket: ${r.keterangan||'-'}</div>
   logHistory('penjengukan','lihat detail: '+r.nama);
 }
 
+
 async function hapusPj(id, nama) {
   if(!id) return;
-  if(!confirm(`Hapus data penjengukan "${nama}"?`)) return;
+  if(!confirm(`Sembunyikan data penjengukan "${nama}"?\n\nData tidak dihapus, hanya disembunyikan.`)) return;
   try {
-    const fd=new URLSearchParams({action:'hapus_penjengukan',id,dicatat_oleh:currentUser?.username||''});
-    const resp=await fetch(APPS_SCRIPT_PENJENGUKAN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:fd.toString()});
-    const r=await resp.json();
-    if(r.status==='ok'){toast('✅ Data dihapus');setTimeout(loadPenjengukan,600);}
-    else toast('❌ '+(r.message||'Gagal'));
-  } catch(e){toast('⚠️ '+e.message);}
+    const fd = new URLSearchParams({ action:'hapus_penjengukan', id, dicatat_oleh:currentUser?.username||'' });
+    const resp = await fetch(APPS_SCRIPT_PENJENGUKAN, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:fd.toString()
+    });
+    const r = await resp.json();
+    if(r.status === 'ok') {
+      toast('✅ Data disembunyikan (flag hapus)');
+      setTimeout(loadPenjengukan, 600);
+    } else toast('❌ '+(r.message||'Gagal'));
+  } catch(e) { toast('⚠️ '+e.message); }
 }
-
    
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  PATCH 3 — Laporan Summary Semua Absensi (fungsi baru)      ║
