@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 38 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 39 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5259,7 +5259,7 @@ function pjSearchJemaat(q) {
     </div>`;
   }).join('');
 }   
-function pjSelectJemaat(nama, pan, ef, gender) {
+function pjSelectJemaat(nama, pan, ef, gender, usia) {
   const namaEl=document.getElementById('pj-nama');
   const cnEl=document.getElementById('pj-jemaat-connect');
   const efEl=document.getElementById('pj-efataid-connect');
@@ -5362,13 +5362,7 @@ function openPjMapsView(lat, lng, nama) {
     </iframe>`;
   document.body.appendChild(div);
 }
-function editPjById(id) {
-  const r = pjState.allData.find(x => x.id === id);
-  if(!r) return toast('⚠️ Data tidak ditemukan');
-  closeModal();
-  setTimeout(() => showPjForm(r), 100);
-}
-   
+
 function openPjDetail(r) {
   const foto=fmtImg(r.link_foto_pribadi||'')||pjFotoUrl(r);
   const fotoRumah=fmtImg(r.link_foto_rumah||'');
@@ -5445,7 +5439,7 @@ function openPjDetail(r) {
       </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}');closeModal();" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
+      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}');" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
       ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
