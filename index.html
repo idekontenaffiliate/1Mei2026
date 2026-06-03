@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 39 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 40 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5439,7 +5439,7 @@ function openPjDetail(r) {
       </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}');" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
+      ${canEdit?`<button onclick="closeModal();setTimeout(()=>editPjById('${escHtml(r.id||'')}'),150);" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
       ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
@@ -5455,11 +5455,16 @@ Ket: ${r.keterangan||'-'}</div>
   logHistory('Penjengukan', 'lihat detail', r.nama || '-');
 }
 
+
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
+  
+  // Pastikan modal detail sudah tertutup
+  const modalEl = document.getElementById('itemModal');
+  if(modalEl) modalEl.style.display = 'none';
+  
   const r = pjState.allData.find(x => x.id === id);
   if(!r) {
-    // Coba load ulang jika tidak ketemu
     toast('⏳ Memuat data...');
     loadPenjengukan().then(() => {
       const r2 = pjState.allData.find(x => x.id === id);
@@ -5471,7 +5476,7 @@ function editPjById(id) {
   }
   showPjForm(r);
   logHistory('Penjengukan', 'edit', r.nama || '-');
-}
+}   
 async function hapusPj(id, nama) {
   if(!id) return;
   if(!confirm(`Sembunyikan data penjengukan "${nama}"?\n\nData tidak dihapus, hanya disembunyikan.`)) return;
