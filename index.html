@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 49 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 50 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -4851,59 +4851,86 @@ function renderPenjengukan() {
 
 async function loadPenjengukan() {
   const el = document.getElementById('pj-result');
-  if(el) el.innerHTML = '<div class="loading-shimmer"></div>';
+  if (el) el.innerHTML = '<div class="loading-shimmer"></div>';
   try {
-    const resp = await fetch(APPS_SCRIPT_PENJENGUKAN + '?action=get_penjengukan&t=' + Date.now());
+    const resp   = await fetch(APPS_SCRIPT_PENJENGUKAN + '?action=get_penjengukan&t=' + Date.now());
     const result = await resp.json();
-    pjState.allData = result.data || [];
+ 
+    // Normalisasi: pastikan semua field adalah string agar .trim() aman
+    pjState.allData = (result.data || []).map(r => {
+      const safe = {};
+      Object.keys(r).forEach(k => {
+        const v = r[k];
+        // Biarkan angka umur tetap number, sisanya string
+        if (k === 'umur') {
+          safe[k] = v === '' || v === null || v === undefined ? '' : v;
+        } else {
+          safe[k] = (v === null || v === undefined) ? '' : String(v);
+        }
+      });
+      return safe;
+    });
+ 
     pjState.page = 1;
     applyPjFilter();
     toast(`✅ ${pjState.allData.length} data penjengukan dimuat`);
   } catch(e) {
-    if(el) el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${e.message}</p></div>`;
+    if (el) el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${e.message}</p></div>`;
   }
-}
+}   
 
 function applyPjFilter() {
   let data = [...pjState.allData];
-  const s = pjState;
-  if(s.search) { const q=s.search.toLowerCase(); data=data.filter(r=>(r.nama||'').toLowerCase().includes(q)||(r.alamat||'').toLowerCase().includes(q)||(r.nama_penjenguk||'').toLowerCase().includes(q)); }
-  if(s.filterGender) data=data.filter(r=>r.gender===s.filterGender);
-  if(s.filterKaum) data=data.filter(r=>r.jenis_kaum===s.filterKaum);
-  if(s.filterGolongan) data=data.filter(r=>r.golongan_alamat===s.filterGolongan);
-  if(s.filterBaptis) data=data.filter(r=>r.sudah_baptis===s.filterBaptis);
-  if(s.filterBahan) data=data.filter(r=>(r.bahan_penjengukan||'').includes(s.filterBahan));
-  if(s.filterKondisiRohani) data=data.filter(r=>r.kondisi_kerohanian===s.filterKondisiRohani);
-  if(s.filterKondisiKeluarga) data=data.filter(r=>r.kondisi_keluarga===s.filterKondisiKeluarga);
-  if(s.filterKondisiEkonomi) data=data.filter(r=>r.kondisi_ekonomi===s.filterKondisiEkonomi);
-  if(s.filterKondisiLingkungan) data=data.filter(r=>r.kondisi_lingkungan===s.filterKondisiLingkungan);
-  if(s.filterPenjenguk) { const q=s.filterPenjenguk.toLowerCase(); data=data.filter(r=>(r.nama_penjenguk||'').toLowerCase().includes(q)); }
-  if(s.filterTglAwal) data=data.filter(r=>{ const d=parsePjTgl(r.tanggal_penjengukan); return d>=s.filterTglAwal; });
-  if(s.filterTglAkhir) data=data.filter(r=>{ const d=parsePjTgl(r.tanggal_penjengukan); return d<=s.filterTglAkhir; });
-
+  const s  = pjState;
+ 
+  if (s.search) {
+    const q = s.search.toLowerCase();
+    data = data.filter(r =>
+      String(r.nama          || '').toLowerCase().includes(q) ||
+      String(r.alamat        || '').toLowerCase().includes(q) ||
+      String(r.nama_penjenguk|| '').toLowerCase().includes(q)
+    );
+  }
+  if (s.filterGender)           data = data.filter(r => String(r.gender            || '') === s.filterGender);
+  if (s.filterKaum)             data = data.filter(r => String(r.jenis_kaum        || '') === s.filterKaum);
+  if (s.filterGolongan)         data = data.filter(r => String(r.golongan_alamat   || '') === s.filterGolongan);
+  if (s.filterBaptis)           data = data.filter(r => String(r.sudah_baptis      || '') === s.filterBaptis);
+  if (s.filterBahan)            data = data.filter(r => String(r.bahan_penjengukan || '').includes(s.filterBahan));
+  if (s.filterKondisiRohani)    data = data.filter(r => String(r.kondisi_kerohanian|| '') === s.filterKondisiRohani);
+  if (s.filterKondisiKeluarga)  data = data.filter(r => String(r.kondisi_keluarga  || '') === s.filterKondisiKeluarga);
+  if (s.filterKondisiEkonomi)   data = data.filter(r => String(r.kondisi_ekonomi   || '') === s.filterKondisiEkonomi);
+  if (s.filterKondisiLingkungan)data = data.filter(r => String(r.kondisi_lingkungan|| '') === s.filterKondisiLingkungan);
+  if (s.filterPenjenguk) {
+    const q = s.filterPenjenguk.toLowerCase();
+    data = data.filter(r => String(r.nama_penjenguk || '').toLowerCase().includes(q));
+  }
+  if (s.filterTglAwal)  data = data.filter(r => parsePjTgl(String(r.tanggal_penjengukan || '')) >= s.filterTglAwal);
+  if (s.filterTglAkhir) data = data.filter(r => parsePjTgl(String(r.tanggal_penjengukan || '')) <= s.filterTglAkhir);
+ 
   // Sort
-  data.sort((a,b)=>{
-    if(s.sortBy==='tgl_desc') return parsePjTgl(b.tanggal_penjengukan).localeCompare(parsePjTgl(a.tanggal_penjengukan));
-    if(s.sortBy==='tgl_asc')  return parsePjTgl(a.tanggal_penjengukan).localeCompare(parsePjTgl(b.tanggal_penjengukan));
-    if(s.sortBy==='nama_az')  return (a.nama||'').localeCompare(b.nama||'');
-    if(s.sortBy==='nama_za')  return (b.nama||'').localeCompare(a.nama||'');
+  data.sort((a, b) => {
+    const tA = parsePjTgl(String(a.tanggal_penjengukan || ''));
+    const tB = parsePjTgl(String(b.tanggal_penjengukan || ''));
+    if (s.sortBy === 'tgl_desc') return tB.localeCompare(tA);
+    if (s.sortBy === 'tgl_asc')  return tA.localeCompare(tB);
+    if (s.sortBy === 'nama_az')  return String(a.nama || '').localeCompare(String(b.nama || ''));
+    if (s.sortBy === 'nama_za')  return String(b.nama || '').localeCompare(String(a.nama || ''));
     return 0;
   });
-
+ 
   pjState.filtered = data;
-
+ 
   // Stats
-  const baptis = data.filter(r=>r.sudah_baptis==='Ya').length;
-  const penjengukSet = new Set(data.map(r=>r.nama_penjenguk).filter(Boolean));
-  const setStat = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  setStat('pj-stat-total', pjState.allData.length);
-  setStat('pj-stat-filter', data.length);
-  setStat('pj-stat-baptis', baptis);
-  setStat('pj-stat-penjenguk', penjengukSet.size);
-
+  const baptis      = data.filter(r => String(r.sudah_baptis || '') === 'Ya').length;
+  const penjengukSet = new Set(data.map(r => String(r.nama_penjenguk || '')).filter(Boolean));
+  const setStat = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setStat('pj-stat-total',    pjState.allData.length);
+  setStat('pj-stat-filter',   data.length);
+  setStat('pj-stat-baptis',   baptis);
+  setStat('pj-stat-penjenguk',penjengukSet.size);
+ 
   renderPjResult();
 }
-
 
 function normGps(val) {
   if(val === null || val === undefined) return '';
@@ -4984,38 +5011,43 @@ const PJ_KONDISI_COLOR = {Baik:'var(--green)',Sedang:'var(--yellow)',Buruk:'var(
 // Tambahkan fallback ke db.Jemaat via no_efataid_connect
 // Ganti seluruh fungsi pjFotoUrl yang lama dengan ini:
 // ─────────────────────────────────────────────────────────────────────
+
 function pjFotoUrl(r) {
   // 1. Cek link_foto_pribadi di record penjengukan sendiri
-  if (r.link_foto_pribadi && r.link_foto_pribadi.trim()) {
-    return fmtImg(r.link_foto_pribadi);
-  }
-
+  const lf = String(r.link_foto_pribadi || '').trim();
+  if (lf) return fmtImg(lf);
+ 
   // 2. Cari di db.Jemaat via no_efataid_connect
-  if (r.no_efataid_connect && db.Jemaat) {
-    const ef = r.no_efataid_connect.trim();
+  const efConn = String(r.no_efataid_connect || '').trim();
+  if (efConn && db.Jemaat) {
     const found = db.Jemaat.find(j =>
-      (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === ef
+      String(j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === efConn
     );
     if (found) {
       const fotoJemaat = fmtImg(
         found['Link Foto'] || found['link foto'] || found['link_foto'] ||
-        found['Foto'] || found['foto'] || ''
+        found['Foto']      || found['foto']      || ''
       );
       if (fotoJemaat) return fotoJemaat;
     }
   }
-
-  // 3. Avatar dummy berdasarkan gender
-  const seed = (r.nama || 'x').replace(/\s/g, '');
-  if (r.gender === 'Wanita') {
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=W_${seed}`
-         + `&top[]=longHair,longHairBigHair,longHairBob,longHairBun,longHairCurly,longHairStraight`
-         + `&backgroundColor=fce4ec,f8bbd0`;
+ 
+  // 3. Avatar dummy — gender dari field r.gender (isi: "Pria" atau "Wanita")
+  const seed   = encodeURIComponent((r.nama || 'x').replace(/\s/g, '').slice(0, 20));
+  const gender = String(r.gender || '').trim();
+ 
+  if (gender === 'Wanita') {
+    // Perempuan: rambut panjang, background pink
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=W${seed}`
+         + `&top=longHair`
+         + `&backgroundColor=fce4ec`;
   }
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=M_${seed}`
-       + `&top[]=shortHairDreads01,shortHairFrizzle,shortHairShortCurly,shortHairShortFlat,shortHairSides`
-       + `&backgroundColor=e3f2fd,bbdefb`;
-}   
+  // Default / Pria: rambut pendek, background biru
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=M${seed}`
+       + `&top=shortHairShortFlat`
+       + `&backgroundColor=e3f2fd`;
+}
+    
 
 // ─────────────────────────────────────────────────────────────────────
 // PATCH 8: renderPjGrid — tampilkan foto seperti di menu Jemaat
@@ -5365,35 +5397,36 @@ function getMyGPS() {
 // PATCH 7: pjSearchJemaat — tambah field link foto yang benar
 // Ganti fungsi pjSearchJemaat yang lama:
 // ─────────────────────────────────────────────────────────────────────
+
 function pjSearchJemaat(q) {
   const suggest = document.getElementById('pj-jemaat-suggest');
   if (!suggest) return;
   if (!q || q.length < 2) { suggest.style.display = 'none'; return; }
-
+ 
   const matches = (db.Jemaat || []).filter(j =>
-    (j['Nama Lengkap']  || '').toLowerCase().includes(q.toLowerCase()) ||
-    (j['Nama Panggilan']|| '').toLowerCase().includes(q.toLowerCase())
+    (j['Nama Lengkap']   || '').toLowerCase().includes(q.toLowerCase()) ||
+    (j['Nama Panggilan'] || '').toLowerCase().includes(q.toLowerCase())
   ).slice(0, 8);
-
+ 
   if (!matches.length) { suggest.style.display = 'none'; return; }
   suggest.style.display = 'block';
-
+ 
   suggest.innerHTML = matches.map(j => {
-    const ef       = j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '';
-    const nm       = j['Nama Lengkap'] || '-';
-    const pan      = j['Nama Panggilan'] || '';
-    const usia     = j['Usia'] || j['usia'] || '';
-    const alamat   = j['Alamat'] || j['alamat'] || j['Alamat Lengkap'] || '';
-    const tglBaptis = (j['Tanggal Baptis'] || '').trim();
+    const ef        = String(j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim();
+    const nm        = j['Nama Lengkap'] || '-';
+    const pan       = j['Nama Panggilan'] || '';
+    const usia      = String(j['Usia'] || j['usia'] || '').trim();
+    const alamat    = j['Alamat'] || j['alamat'] || j['Alamat Lengkap'] || '';
+    const tglBaptis = String(j['Tanggal Baptis'] || '').trim();
     const sudahBaptis = (tglBaptis && tglBaptis !== '-' && !tglBaptis.startsWith('00')) ? 'Ya' : 'Tidak';
-
-    // Ambil link foto — coba semua variasi nama kolom
-    const linkFoto = j['Link Foto'] || j['link foto'] || j['link_foto'] ||
-                     j['Foto']      || j['foto']      || '';
-
-    const args = [nm, pan, ef, j.Gender || '', usia, sudahBaptis, alamat, tglBaptis, linkFoto]
-      .map(v => `'${escHtml(String(v).replace(/'/g, "\\'"))}'`).join(',');
-
+    const linkFoto  = j['Link Foto'] || j['link foto'] || j['link_foto'] ||
+                      j['Foto']      || j['foto']      || '';
+ 
+    // Gunakan encodeURIComponent untuk menghindari masalah karakter khusus
+    // dalam onclick argument
+    const argsArr = [nm, pan, ef, j.Gender || '', usia, sudahBaptis, alamat, tglBaptis, linkFoto];
+    const args = argsArr.map(v => `'${escHtml(String(v).replace(/'/g, "\\'").replace(/\n/g, ' '))}'`).join(',');
+ 
     return `<div onclick="pjSelectJemaat(${args})"
       style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
       onmouseover="this.style.background='var(--surface2)'"
@@ -5409,8 +5442,18 @@ function pjSearchJemaat(q) {
     </div>`;
   }).join('');
 }
-
 function pjSelectJemaat(nama, pan, ef, gender, usia, baptis, alamat, tglBaptis, linkFoto) {
+  // Pastikan semua argumen string
+  nama      = String(nama      || '');
+  pan       = String(pan       || '');
+  ef        = String(ef        || '');
+  gender    = String(gender    || '');
+  usia      = String(usia      || '');
+  baptis    = String(baptis    || '');
+  alamat    = String(alamat    || '');
+  tglBaptis = String(tglBaptis || '');
+  linkFoto  = String(linkFoto  || '');
+ 
   const namaEl      = document.getElementById('pj-nama');
   const cnEl        = document.getElementById('pj-jemaat-connect');
   const efEl        = document.getElementById('pj-efataid-connect');
@@ -5422,36 +5465,27 @@ function pjSelectJemaat(nama, pan, ef, gender, usia, baptis, alamat, tglBaptis, 
   const fotoEl      = document.getElementById('pj-foto-pribadi');
   const infoEl      = document.getElementById('pj-connect-info');
   const sug         = document.getElementById('pj-jemaat-suggest');
-
+ 
   if (namaEl)    namaEl.value   = pan || nama;
   if (cnEl)      cnEl.value     = nama;
   if (efEl)      efEl.value     = ef;
-  if (gEl && gender)   gEl.value   = gender;
-  if (umurEl && usia)  umurEl.value = usia;
-  if (baptisEl && baptis) baptisEl.value = baptis;
-  if (alamatEl && alamat && !alamatEl.value) alamatEl.value = alamat;
-
-  // Fix tanggal baptis: isi langsung tanpa konversi format
-  if (tglBaptisEl && tglBaptis && tglBaptis.trim()) {
-    tglBaptisEl.value = tglBaptis.trim();
-  }
-
-  // Isi foto dari jemaat jika belum diisi
-  if (fotoEl && linkFoto && !fotoEl.value) {
-    fotoEl.value = linkFoto;
-  }
-
+  if (gEl && gender)   { gEl.value = gender; }
+  if (umurEl && usia)  { umurEl.value = usia; }
+  if (baptisEl && baptis) { baptisEl.value = baptis; }
+  if (alamatEl && alamat && !alamatEl.value) { alamatEl.value = alamat; }
+  if (tglBaptisEl && tglBaptis) { tglBaptisEl.value = tglBaptis; }
+  if (fotoEl && linkFoto && !fotoEl.value) { fotoEl.value = linkFoto; }
+ 
   if (infoEl) {
     infoEl.style.display = 'block';
     infoEl.textContent = `🔗 ${nama} (${ef})`
-      + (usia     ? ` · ${usia} th`       : '')
-      + (baptis   ? ` · Baptis: ${baptis}`: '')
-      + (tglBaptis ? ` (${tglBaptis})`    : '')
-      + (linkFoto  ? ' · 📷 ada foto'     : '');
+      + (usia      ? ` · ${usia} th`       : '')
+      + (baptis    ? ` · Baptis: ${baptis}` : '')
+      + (tglBaptis ? ` (${tglBaptis})`     : '')
+      + (linkFoto  ? ' · 📷 ada foto'      : '');
   }
   if (sug) sug.style.display = 'none';
-}
-   
+}   
 async function submitPjForm() {
   const statusEl=document.getElementById('pj-form-status');
   const nama=(document.getElementById('pj-nama')?.value||'').trim();
@@ -5548,17 +5582,15 @@ function openPjMapsView(lat, lng, nama) {
 let _currentPjRow = null; // variabel global untuk edit
 
 function openPjDetail(r) {
-  _currentPjRow = r; // simpan referensi langsung
-
-  const foto      = fmtImg(r.link_foto_pribadi || '') || pjFotoUrl(r);
-  const fotoRumah = fmtImg(r.link_foto_rumah   || '');
-  const fotoBaptis= fmtImg(r.link_foto_baptis  || '');
-
-  const gpsLat = normGps(r.gps_lat);
-  const gpsLng = normGps(r.gps_lng);
-  const hasGps = !!(gpsLat && gpsLng);
-  const canEdit= isAdminUser();
-
+  // PENTING: simpan SEBELUM apapun
+  _currentPjRow = r;
+ 
+  const foto       = fmtImg(String(r.link_foto_pribadi || '')) || pjFotoUrl(r);
+  const gpsLat     = normGps(String(r.gps_lat || ''));
+  const gpsLng     = normGps(String(r.gps_lng || ''));
+  const hasGps     = !!(gpsLat && gpsLng);
+  const canEdit    = isAdminUser();
+ 
   const kondisiRow = (label, val) => {
     const c = PJ_KONDISI_COLOR[val] || 'var(--text3)';
     return `<div style="display:flex;justify-content:space-between;padding:4px 0;
@@ -5567,13 +5599,13 @@ function openPjDetail(r) {
       <span style="color:${c};font-weight:600;">⬤ ${val || '-'}</span>
     </div>`;
   };
-
-  // Cari foto dari jemaat jika ada efataid connect
+ 
+  // Foto dari jemaat via no_efataid_connect
   let fotoJemaatHtml = '';
-  if (r.no_efataid_connect && db.Jemaat) {
-    const ef = r.no_efataid_connect.trim();
+  const efConn = String(r.no_efataid_connect || '').trim();
+  if (efConn && db.Jemaat) {
     const jd = db.Jemaat.find(j =>
-      (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === ef
+      String(j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === efConn
     );
     if (jd) {
       const fj = fmtImg(jd['Link Foto'] || jd['link foto'] || jd['link_foto'] || '');
@@ -5582,52 +5614,66 @@ function openPjDetail(r) {
           <div style="margin-bottom:8px;">
             <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:4px;">📷 Foto dari Data Jemaat</div>
             <img src="${fj}" style="width:100%;max-height:200px;object-fit:cover;border-radius:9px;cursor:pointer;"
-              onclick="openImgViewer(['${fj}'],0,'Foto Jemaat — ${escHtml(r.nama || '')}')">
+              onclick="openImgViewer(['${fj}'],0,'Foto Jemaat — ${escHtml(String(r.nama || ''))}')">
           </div>`;
       }
     }
   }
-
+ 
+  const fotoRumahUrl  = fmtImg(String(r.link_foto_rumah  || ''));
+  const fotoBaptisUrl = fmtImg(String(r.link_foto_baptis || ''));
+ 
   showModal(`
     <!-- Tombol back di paling atas -->
     <div style="display:flex;gap:7px;margin-bottom:14px;">
-      <button onclick="closeModal()" class="btn-action" style="flex:1;padding:9px;font-size:.82rem;">← Kembali ke Daftar</button>
-      ${canEdit ? `<button onclick="editCurrentPjRow()" class="btn-action accent" style="flex:1;padding:9px;font-size:.82rem;">✏️ Edit Data</button>` : ''}
+      <button onclick="closeModal()" class="btn-action"
+        style="flex:1;padding:9px;font-size:.82rem;">← Kembali ke Daftar</button>
+      ${canEdit ? `<button onclick="editCurrentPjRow()"
+        class="btn-action accent" style="flex:1;padding:9px;font-size:.82rem;">✏️ Edit Data</button>` : ''}
     </div>
-
+ 
     <div style="text-align:center;margin-bottom:14px;">
-      <img src="${foto}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);cursor:pointer;"
-        onclick="openImgViewer(['${foto}'],0,'${escHtml(r.nama || '')}')">
-      <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-top:8px;">${escHtml(r.nama || '-')}</div>
+      <img src="${foto}"
+        style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);cursor:pointer;"
+        onclick="openImgViewer(['${foto}'],0,'${escHtml(String(r.nama || ''))}')">
+      <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-top:8px;">
+        ${escHtml(String(r.nama || '-'))}
+      </div>
       <div style="display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-top:5px;">
-        <span class="tag">${r.gender || '-'}</span>
-        <span class="tag purple">${r.jenis_kaum || '-'}</span>
-        ${r.sudah_baptis === 'Ya'
+        <span class="tag">${escHtml(String(r.gender || '-'))}</span>
+        <span class="tag purple">${escHtml(String(r.jenis_kaum || '-'))}</span>
+        ${String(r.sudah_baptis || '') === 'Ya'
           ? '<span class="tag green">✓ Baptis</span>'
           : '<span class="tag red">✗ Belum Baptis</span>'}
         ${r.umur ? `<span class="tag">${r.umur} th</span>` : ''}
       </div>
-      ${r.tanggal_baptis && r.tanggal_baptis.trim()
-        ? `<div style="font-size:.72rem;color:var(--green);margin-top:4px;">📅 Tgl Baptis: ${escHtml(r.tanggal_baptis)}</div>`
+      ${String(r.tanggal_baptis || '').trim()
+        ? `<div style="font-size:.72rem;color:var(--green);margin-top:4px;">
+            📅 Tgl Baptis: ${escHtml(String(r.tanggal_baptis))}
+           </div>`
         : ''}
     </div>
-
+ 
     <div class="info-grid" style="margin-bottom:10px;">
-      <div class="info-item"><div class="info-item-label">Golongan</div><div class="info-item-value">${escHtml(r.golongan_alamat || '-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Bahan</div><div class="info-item-value">${escHtml(r.bahan_penjengukan || '-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div><div class="info-item-value">${escHtml(formatPjTglDisplay(r.tanggal_penjengukan) || '-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Penjenguk</div><div class="info-item-value">${escHtml(r.nama_penjenguk || '-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Golongan</div>
+        <div class="info-item-value">${escHtml(String(r.golongan_alamat || '-'))}</div></div>
+      <div class="info-item"><div class="info-item-label">Bahan</div>
+        <div class="info-item-value">${escHtml(String(r.bahan_penjengukan || '-'))}</div></div>
+      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div>
+        <div class="info-item-value">${escHtml(formatPjTglDisplay(String(r.tanggal_penjengukan || '')) || '-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Penjenguk</div>
+        <div class="info-item-value">${escHtml(String(r.nama_penjenguk || '-'))}</div></div>
     </div>
-
-    ${r.alamat ? `<div class="info-item" style="margin-bottom:10px;">
+ 
+    ${String(r.alamat || '') ? `<div class="info-item" style="margin-bottom:10px;">
       <div class="info-item-label">📍 Alamat</div>
-      <div class="info-item-value" style="white-space:normal;">${escHtml(r.alamat)}</div>
+      <div class="info-item-value" style="white-space:normal;">${escHtml(String(r.alamat))}</div>
     </div>` : ''}
-
+ 
     ${hasGps ? `
     <div style="margin-bottom:10px;">
       <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">
-        📍 GPS · ${escHtml(r.gps_raw || gpsLat + ', ' + gpsLng)}
+        📍 GPS · ${escHtml(String(r.gps_raw || gpsLat + ', ' + gpsLng))}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
         <a href="https://maps.google.com/?q=${gpsLat},${gpsLng}" target="_blank" rel="noopener" style="flex:1;">
@@ -5636,30 +5682,33 @@ function openPjDetail(r) {
         <a href="https://waze.com/ul?ll=${gpsLat},${gpsLng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
           <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🚗 Waze</button>
         </a>
-        <button onclick="openPjMapsView('${gpsLat}','${gpsLng}','${escHtml(r.nama || '')}')"
+        <button onclick="openPjMapsView('${gpsLat}','${gpsLng}','${escHtml(String(r.nama || ''))}');closeModal();"
           class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">🌍 View Maps</button>
       </div>
-      <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:180px;background:var(--surface2);">
+      <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:180px;">
         <iframe src="https://maps.google.com/maps?q=${gpsLat},${gpsLng}&z=16&output=embed"
           style="width:100%;height:100%;border:none;" loading="lazy" allowfullscreen></iframe>
       </div>
     </div>` : ''}
-
+ 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;">
-      ${kondisiRow('Lingkungan Rumah', r.kondisi_lingkungan)}
-      ${kondisiRow('Kerohanian',       r.kondisi_kerohanian)}
-      ${kondisiRow('Keluarga',         r.kondisi_keluarga)}
-      ${kondisiRow('Ekonomi',          r.kondisi_ekonomi)}
+      ${kondisiRow('Lingkungan Rumah', String(r.kondisi_lingkungan || ''))}
+      ${kondisiRow('Kerohanian',       String(r.kondisi_kerohanian || ''))}
+      ${kondisiRow('Keluarga',         String(r.kondisi_keluarga   || ''))}
+      ${kondisiRow('Ekonomi',          String(r.kondisi_ekonomi    || ''))}
     </div>
-
-    ${r.keterangan ? `<div style="background:var(--surface2);border-radius:9px;padding:10px;margin-bottom:10px;font-size:.82rem;white-space:pre-wrap;">${escHtml(r.keterangan)}</div>` : ''}
-    ${r.nama_jemaat_connect ? `<div style="font-size:.78rem;color:var(--accent);margin-bottom:10px;">
-      🔗 Jemaat: ${escHtml(r.nama_jemaat_connect)} ${r.no_efataid_connect ? '(' + r.no_efataid_connect + ')' : ''}
+ 
+    ${String(r.keterangan || '') ? `<div style="background:var(--surface2);border-radius:9px;padding:10px;margin-bottom:10px;font-size:.82rem;white-space:pre-wrap;">${escHtml(String(r.keterangan))}</div>` : ''}
+ 
+    ${efConn ? `<div style="font-size:.78rem;color:var(--accent);margin-bottom:10px;">
+      🔗 Jemaat: ${escHtml(String(r.nama_jemaat_connect || ''))} (${efConn})
     </div>` : ''}
-
+ 
     ${fotoJemaatHtml}
-
-    ${[['Foto Pribadi', r.link_foto_pribadi], ['Foto Rumah', r.link_foto_rumah], ['Foto Baptis', r.link_foto_baptis]]
+ 
+    ${[[' Foto Pribadi', String(r.link_foto_pribadi || '')],
+       ['Foto Rumah',    String(r.link_foto_rumah   || '')],
+       ['Foto Baptis',   String(r.link_foto_baptis  || '')]]
       .filter(x => x[1])
       .map(([label, url]) => `
         <div style="margin-bottom:8px;">
@@ -5667,14 +5716,15 @@ function openPjDetail(r) {
           <img src="${fmtImg(url)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:9px;cursor:pointer;"
             onclick="openImgViewer(['${fmtImg(url)}'],0,'${escHtml(label)}')">
         </div>`).join('')}
-
+ 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
       ${canEdit ? `<button onclick="editCurrentPjRow()" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>` : ''}
-      ${canEdit ? `<button onclick="hapusPj('${escHtml(r.id || '')}','${escHtml(r.nama || '')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>` : ''}
+      ${canEdit ? `<button onclick="hapusPj('${escHtml(String(r.id || ''))}','${escHtml(String(r.nama || ''))}');closeModal();"
+        class="btn-action red" style="padding:10px;">🗑 Hapus</button>` : ''}
       <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))"
         class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
-
+ 
     <div id="pj-copy-text" style="display:none;">Nama: ${r.nama || '-'}
 Alamat: ${r.alamat || '-'} [${r.golongan_alamat || '-'}]
 Kaum: ${r.jenis_kaum || '-'} | Baptis: ${r.sudah_baptis || '-'}${r.tanggal_baptis ? ' (' + r.tanggal_baptis + ')' : ''}
@@ -5683,11 +5733,13 @@ Bahan: ${r.bahan_penjengukan || '-'}
 Tgl Jenguk: ${r.tanggal_penjengukan || '-'} oleh ${r.nama_penjenguk || '-'}
 GPS: ${r.gps_raw || '-'}
 Ket: ${r.keterangan || '-'}</div>
-
+ 
     <div style="height:80px;"></div>
   `);
-  logHistory('Penjengukan', 'lihat detail', r.nama || '-');
+ 
+  logHistory('Penjengukan', 'lihat detail', String(r.nama || '-'));
 }
+   
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
   const tryOpen = (data) => {
@@ -5733,19 +5785,26 @@ async function hapusPj(id, nama) {
 // PATCH 3: editCurrentPjRow (fungsi baru, tambahkan ke script)
 // Menggantikan editPjById — langsung pakai _currentPjRow
 // ─────────────────────────────────────────────────────────────────────
-function editCurrentPjRow() {
-  if (!_currentPjRow) return toast('⚠️ Data tidak ditemukan');
+
+ function editCurrentPjRow() {
+  if (!_currentPjRow) {
+    toast('⚠️ Data tidak ditemukan. Silakan buka detail dulu.');
+    return;
+  }
   const r = _currentPjRow;
-  // Tutup modal detail dulu
+ 
+  // Tutup modal detail terlebih dahulu
   const modalEl = document.getElementById('itemModal');
   if (modalEl) {
     modalEl.querySelectorAll('audio,video').forEach(a => a.pause());
     modalEl.style.display = 'none';
     document.getElementById('modalBody').innerHTML = '';
   }
+ 
+  // Buka form edit dengan delay kecil agar DOM bersih
   setTimeout(() => showPjForm(r), 150);
-  logHistory('Penjengukan', 'edit', r.nama || '-');
-}
+  logHistory('Penjengukan', 'edit', String(r.nama || '-'));
+}  
    
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  PATCH 3 — Laporan Summary Semua Absensi (fungsi baru)      ║
