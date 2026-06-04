@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 48 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 49 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -565,7 +565,7 @@ const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lw
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
 const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzM-aJghZebEsPGtIDzKNSqC1tMFYNOI7MARjEhS4R518pfo2Yox93c515e1dQnYcwBwA/exec";
-const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbw30Sz_LulgmBrdQPiiZX32bZiP-Ge4mJ-EZZydyw7wauaXniWjd_zvu4gb7ue-iKax5Q/exec";
+const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycby7BXX0S8YiczKHVjjWfLgXuPFAAf3UzZ7KYHRoUqE8fy-3Ob5joL3Haw46opCK0dSTyA/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
@@ -4979,58 +4979,94 @@ function renderPjResult() {
 }
 const PJ_KONDISI_COLOR = {Baik:'var(--green)',Sedang:'var(--yellow)',Buruk:'var(--red)'};
    
-function pjFotoUrl(r){
-  if(r.link_foto_pribadi && r.link_foto_pribadi.trim()) return fmtImg(r.link_foto_pribadi);
-  const seed = (r.nama||'x').replace(/\s/g,'');
-  if(r.gender === 'Wanita'){
-    // style 'female' — top selalu rambut panjang
+// ─────────────────────────────────────────────────────────────────────
+// PATCH 1: pjFotoUrl
+// Tambahkan fallback ke db.Jemaat via no_efataid_connect
+// Ganti seluruh fungsi pjFotoUrl yang lama dengan ini:
+// ─────────────────────────────────────────────────────────────────────
+function pjFotoUrl(r) {
+  // 1. Cek link_foto_pribadi di record penjengukan sendiri
+  if (r.link_foto_pribadi && r.link_foto_pribadi.trim()) {
+    return fmtImg(r.link_foto_pribadi);
+  }
+
+  // 2. Cari di db.Jemaat via no_efataid_connect
+  if (r.no_efataid_connect && db.Jemaat) {
+    const ef = r.no_efataid_connect.trim();
+    const found = db.Jemaat.find(j =>
+      (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === ef
+    );
+    if (found) {
+      const fotoJemaat = fmtImg(
+        found['Link Foto'] || found['link foto'] || found['link_foto'] ||
+        found['Foto'] || found['foto'] || ''
+      );
+      if (fotoJemaat) return fotoJemaat;
+    }
+  }
+
+  // 3. Avatar dummy berdasarkan gender
+  const seed = (r.nama || 'x').replace(/\s/g, '');
+  if (r.gender === 'Wanita') {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=W_${seed}`
          + `&top[]=longHair,longHairBigHair,longHairBob,longHairBun,longHairCurly,longHairStraight`
-         + `&backgroundColor=fce4ec,f8bbd0`
-         + `&accessories[]=kurt,prescription01,prescription02`
-         + `&clothesColor=FF488E,FC909F,F4D150`;
+         + `&backgroundColor=fce4ec,f8bbd0`;
   }
-  // Pria — top selalu rambut pendek / botak
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=M_${seed}`
-       + `&top[]=shortHairDreads01,shortHairDreads02,shortHairFrizzle,shortHairShortCurly,shortHairShortFlat,shortHairSides`
-       + `&backgroundColor=e3f2fd,bbdefb`
-       + `&clothesColor=3C4F5C,65C9FF,5199E4`;
-}
+       + `&top[]=shortHairDreads01,shortHairFrizzle,shortHairShortCurly,shortHairShortFlat,shortHairSides`
+       + `&backgroundColor=e3f2fd,bbdefb`;
+}   
+
+// ─────────────────────────────────────────────────────────────────────
+// PATCH 8: renderPjGrid — tampilkan foto seperti di menu Jemaat
+// Ganti fungsi renderPjGrid yang lama:
+// ─────────────────────────────────────────────────────────────────────
 function renderPjGrid(el, data) {
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;" id="pj-grid"></div>`;
   const grid = document.getElementById('pj-grid');
-  data.forEach((r,i) => {
+
+  data.forEach((r, i) => {
     const card = document.createElement('div');
     card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .2s;';
-    card.onmouseenter=()=>{card.style.transform='translateY(-2px)';card.style.borderColor='var(--accent)';};
-    card.onmouseleave=()=>{card.style.transform='';card.style.borderColor='var(--border)';};
-    const kColor=PJ_KONDISI_COLOR[r.kondisi_keluarga]||'var(--text3)';
-    const baptisBadge=r.sudah_baptis==='Ya'?`<span style="background:rgba(16,185,129,.2);color:var(--green);font-size:.6rem;padding:2px 5px;border-radius:4px;font-weight:700;">✓ Baptis</span>`:'';
-    card.innerHTML=`
+    card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.borderColor = 'var(--accent)'; };
+    card.onmouseleave = () => { card.style.transform = '';                  card.style.borderColor = 'var(--border)'; };
+
+    const kColor     = PJ_KONDISI_COLOR[r.kondisi_keluarga] || 'var(--text3)';
+    const baptisBadge= r.sudah_baptis === 'Ya'
+      ? `<span style="background:rgba(16,185,129,.2);color:var(--green);font-size:.6rem;padding:2px 5px;border-radius:4px;font-weight:700;">✓ Baptis</span>`
+      : '';
+
+    // Dapatkan URL foto (sama seperti pjFotoUrl tapi bisa pakai img lazy)
+    const fotoUrl = pjFotoUrl(r);
+
+    card.innerHTML = `
       <div style="position:relative;width:100%;padding-top:75%;background:var(--surface2);overflow:hidden;">
-        <img src="${pjFotoUrl(r)}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" loading="lazy">
+        <img src="${fotoUrl}"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;"
+          loading="lazy"
+          onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(r.nama || 'x')}'">
         <div style="position:absolute;top:6px;right:6px;">${baptisBadge}</div>
-        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));padding:8px 8px 4px;">
-          <div style="font-size:.78rem;font-weight:700;color:#fff;">${escHtml(r.nama||'-')}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;
+          background:linear-gradient(transparent,rgba(0,0,0,.7));padding:8px 8px 4px;">
+          <div style="font-size:.78rem;font-weight:700;color:#fff;">${escHtml(r.nama || '-')}</div>
         </div>
       </div>
       <div style="padding:9px 10px;">
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px;">
-          <span style="font-size:.62rem;background:rgba(59,130,246,.15);color:var(--accent);padding:1px 5px;border-radius:3px;">${escHtml(r.jenis_kaum||'-')}</span>
-          <span style="font-size:.62rem;background:rgba(139,92,246,.15);color:var(--accent3);padding:1px 5px;border-radius:3px;">${escHtml(r.golongan_alamat||'-')}</span>
+          <span style="font-size:.62rem;background:rgba(59,130,246,.15);color:var(--accent);padding:1px 5px;border-radius:3px;">${escHtml(r.jenis_kaum || '-')}</span>
+          <span style="font-size:.62rem;background:rgba(139,92,246,.15);color:var(--accent3);padding:1px 5px;border-radius:3px;">${escHtml(r.golongan_alamat || '-')}</span>
         </div>
-        <div style="font-size:.68rem;color:var(--text3);">📅 ${escHtml(formatPjTglDisplay(r.tanggal_penjengukan)||'-')}</div>
-        <div style="font-size:.68rem;color:var(--text3);">👤 ${escHtml(r.nama_penjenguk||'-')}</div>
+        <div style="font-size:.68rem;color:var(--text3);">📅 ${escHtml(formatPjTglDisplay(r.tanggal_penjengukan) || '-')}</div>
+        <div style="font-size:.68rem;color:var(--text3);">👤 ${escHtml(r.nama_penjenguk || '-')}</div>
         <div style="margin-top:5px;display:flex;gap:4px;align-items:center;">
           <span style="font-size:.6rem;color:${kColor};">⬤</span>
-          <span style="font-size:.62rem;color:var(--text3);">Kel: ${r.kondisi_keluarga||'-'}</span>
+          <span style="font-size:.62rem;color:var(--text3);">Kel: ${r.kondisi_keluarga || '-'}</span>
         </div>
       </div>`;
     card.onclick = () => openPjDetail(r);
     grid.appendChild(card);
   });
 }
-
 function renderPjFoto(el, data) {
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;"></div>`;
   const grid = el.querySelector('div');
@@ -5093,80 +5129,98 @@ function renderPjText(el, allFiltered, pageData) {
     <div id="pj-teks-nama" style="display:none;">${escHtml(namaList)}</div>`;
 }
 
+ 
+// ═══════════════════════════════════════════════════════════════════════
+// showPjForm LENGKAP — ganti SELURUH fungsi showPjForm di index.html
+// Perubahan: + tombol Batal, + fix tanggal_baptis, + fix foto dari jemaat
+// ═══════════════════════════════════════════════════════════════════════
 function showPjForm(existingData) {
   const isEdit = !!existingData;
-  const r = existingData || {};
-  const today = new Date().toISOString().split('T')[0];
+  const r      = existingData || {};
+  const today  = new Date().toISOString().split('T')[0];
   const defaultNama = currentUser?.username || '';
 
-  // Normalisasi GPS dari server (Sheets menyimpan koma desimal)
   const formLat = normGps(r.gps_lat);
   const formLng = normGps(r.gps_lng);
   const formRaw = r.gps_raw || (formLat && formLng ? `${formLat}, ${formLng}` : '');
   const hasGpsForm = !!(formLat && formLng);
 
   showModal(`
+    <!-- ── TOMBOL BATAL — paling atas ── -->
+    <div style="display:flex;gap:7px;margin-bottom:14px;">
+      <button onclick="closeModal()" class="btn-action"
+        style="flex:1;padding:10px;font-size:.85rem;border-color:var(--text3);color:var(--text3);">
+        ← Batal / Kembali
+      </button>
+    </div>
+
     <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:14px;">
       ${isEdit ? '✏️ Edit' : '➕ Tambah'} Data Penjengukan
     </h2>
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">👤 Identitas</div>
+
       <div class="ptny-field"><label>Nama *</label>
-        <input type="text" id="pj-nama" class="k-input" value="${escHtml(r.nama||'')}" placeholder="Nama lengkap..." oninput="pjSearchJemaat(this.value)" style="width:100%;">
+        <input type="text" id="pj-nama" class="k-input"
+          value="${escHtml(r.nama || '')}"
+          placeholder="Nama lengkap..."
+          oninput="pjSearchJemaat(this.value)"
+          style="width:100%;">
         <div id="pj-jemaat-suggest" style="display:none;background:var(--surface);border:1px solid var(--accent);border-radius:8px;margin-top:4px;max-height:150px;overflow-y:auto;"></div>
       </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="ptny-field"><label>Gender</label>
           <select id="pj-gender" class="k-input" style="width:100%;">
-            <option ${(r.gender||'Pria')==='Pria'?'selected':''}>Pria</option>
-            <option ${r.gender==='Wanita'?'selected':''}>Wanita</option>
+            <option ${(r.gender || 'Pria') === 'Pria' ? 'selected' : ''}>Pria</option>
+            <option ${r.gender === 'Wanita' ? 'selected' : ''}>Wanita</option>
           </select>
         </div>
         <div class="ptny-field"><label>Umur</label>
-          <input type="number" id="pj-umur" class="k-input" value="${escHtml(String(r.umur||''))}" placeholder="Umur (tahun)" min="0" max="120" style="width:100%;">
+          <input type="number" id="pj-umur" class="k-input"
+            value="${escHtml(String(r.umur || ''))}"
+            placeholder="Umur (tahun)" min="0" max="120" style="width:100%;">
         </div>
       </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="ptny-field"><label>Jenis Kaum</label>
           <select id="pj-kaum" class="k-input" style="width:100%;">
-            ${PJ_KAUM.map(k=>`<option ${(r.jenis_kaum||'Kaum Saleh')===k?'selected':''}>${k}</option>`).join('')}
+            ${PJ_KAUM.map(k => `<option ${(r.jenis_kaum || 'Kaum Saleh') === k ? 'selected' : ''}>${k}</option>`).join('')}
           </select>
         </div>
         <div class="ptny-field"><label>Sudah Baptis</label>
           <select id="pj-baptis" class="k-input" style="width:100%;">
-            <option ${(r.sudah_baptis||'Tidak')==='Tidak'?'selected':''}>Tidak</option>
-            <option ${r.sudah_baptis==='Ya'?'selected':''}>Ya</option>
+            <option ${(r.sudah_baptis || 'Tidak') === 'Tidak' ? 'selected' : ''}>Tidak</option>
+            <option ${r.sudah_baptis === 'Ya' ? 'selected' : ''}>Ya</option>
           </select>
         </div>
       </div>
 
-
-      <!-- Tanggal Baptis -->
-      <div class="ptny-field"><label>Tanggal Baptis</label>
+      <!-- Tanggal Baptis — input teks bebas (dd/mm/yyyy atau dd-mm-yyyy) -->
+      <div class="ptny-field"><label>Tanggal Baptis (dd/mm/yyyy)</label>
         <input type="text" id="pj-tgl-baptis" class="k-input"
-          value="${escHtml(r.tanggal_baptis||'')}"
-          placeholder="dd-mm-yyyy atau dd/mm/yyyy..."
+          value="${escHtml(r.tanggal_baptis || '')}"
+          placeholder="Contoh: 25/12/2020"
           style="width:100%;">
       </div>
 
-
-      
-      <div id="pj-connect-info" style="${r.nama_jemaat_connect?'':'display:none;'}background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:8px;margin-top:4px;font-size:.78rem;color:var(--accent);">
-        🔗 Terhubung: ${escHtml(r.nama_jemaat_connect||'')} ${r.no_efataid_connect?'('+r.no_efataid_connect+')':''}
+      <div id="pj-connect-info" style="${r.nama_jemaat_connect ? '' : 'display:none;'}background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:8px;margin-top:4px;font-size:.78rem;color:var(--accent);">
+        🔗 Terhubung: ${escHtml(r.nama_jemaat_connect || '')} ${r.no_efataid_connect ? '(' + r.no_efataid_connect + ')' : ''}
       </div>
-      <input type="hidden" id="pj-jemaat-connect" value="${escHtml(r.nama_jemaat_connect||'')}">
-      <input type="hidden" id="pj-efataid-connect" value="${escHtml(r.no_efataid_connect||'')}">
+      <input type="hidden" id="pj-jemaat-connect" value="${escHtml(r.nama_jemaat_connect || '')}">
+      <input type="hidden" id="pj-efataid-connect" value="${escHtml(r.no_efataid_connect || '')}">
     </div>
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">🏠 Alamat</div>
       <div class="ptny-field"><label>Alamat Lengkap</label>
-        <textarea id="pj-alamat" rows="2" class="k-input" style="width:100%;resize:vertical;">${escHtml(r.alamat||'')}</textarea>
+        <textarea id="pj-alamat" rows="2" class="k-input" style="width:100%;resize:vertical;">${escHtml(r.alamat || '')}</textarea>
       </div>
       <div class="ptny-field"><label>Golongan Alamat</label>
         <select id="pj-golongan" class="k-input" style="width:100%;">
-          ${PJ_GOLONGAN.map(g=>`<option ${(r.golongan_alamat||'Surabaya')===g?'selected':''}>${g}</option>`).join('')}
+          ${PJ_GOLONGAN.map(g => `<option ${(r.golongan_alamat || 'Surabaya') === g ? 'selected' : ''}>${g}</option>`).join('')}
         </select>
       </div>
       <div class="ptny-field">
@@ -5177,25 +5231,22 @@ function showPjForm(existingData) {
             placeholder="-7.257472, 112.752090"
             style="flex:1;"
             oninput="parseGpsInput(this.value)">
-          <button onclick="getMyGPS()" class="btn-action accent" style="padding:9px 12px;flex-shrink:0;" title="Ambil lokasi saat ini">📍 GPS</button>
+          <button onclick="getMyGPS()" class="btn-action accent"
+            style="padding:9px 12px;flex-shrink:0;" title="Ambil lokasi saat ini">📍 GPS</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
           <input type="text" id="pj-gps-lat" class="k-input"
-            value="${escHtml(formLat)}"
-            placeholder="Lat: -7.257..."
-            readonly
+            value="${escHtml(formLat)}" placeholder="Lat: -7.257..." readonly
             style="font-size:.75rem;background:var(--surface2);">
           <input type="text" id="pj-gps-lng" class="k-input"
-            value="${escHtml(formLng)}"
-            placeholder="Lng: 112.75..."
-            readonly
+            value="${escHtml(formLng)}" placeholder="Lng: 112.75..." readonly
             style="font-size:.75rem;background:var(--surface2);">
         </div>
-        <div id="pj-gps-links" style="${hasGpsForm?'':'display:none;'}margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-          <a id="pj-gmaps-link" href="${hasGpsForm?`https://maps.google.com/?q=${formLat},${formLng}`:''}" target="_blank" rel="noopener">
+        <div id="pj-gps-links" style="${hasGpsForm ? '' : 'display:none;'}margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+          <a id="pj-gmaps-link" href="${hasGpsForm ? `https://maps.google.com/?q=${formLat},${formLng}` : ''}" target="_blank" rel="noopener">
             <button class="btn-action" style="font-size:.72rem;padding:5px 10px;">🗺️ Google Maps</button>
           </a>
-          <a id="pj-waze-link" href="${hasGpsForm?`https://waze.com/ul?ll=${formLat},${formLng}&navigate=yes`:''}" target="_blank" rel="noopener">
+          <a id="pj-waze-link" href="${hasGpsForm ? `https://waze.com/ul?ll=${formLat},${formLng}&navigate=yes` : ''}" target="_blank" rel="noopener">
             <button class="btn-action" style="font-size:.72rem;padding:5px 10px;">🚗 Waze</button>
           </a>
         </div>
@@ -5205,17 +5256,17 @@ function showPjForm(existingData) {
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📊 Kondisi</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-       ${[
-  ['pj-kond-ling',   'Lingkungan Rumah', r.kondisi_lingkungan,  PJ_KONDISI_LING],
-  ['pj-kond-rohani', 'Kerohanian',       r.kondisi_kerohanian,  PJ_KONDISI_ROHANI],
-  ['pj-kond-kel',    'Keluarga',         r.kondisi_keluarga,    PJ_KONDISI_KEL],
-  ['pj-kond-eko',    'Ekonomi',          r.kondisi_ekonomi,     PJ_KONDISI_EKO]
-].map(([id,label,val,opts])=>`
-  <div class="ptny-field"><label>${label}</label>
-    <select id="${id}" class="k-input" style="width:100%;">
-      ${opts.map(k=>`<option ${(val||opts[0])===k?'selected':''}>${k}</option>`).join('')}
-    </select>
-  </div>`).join('')}  
+        ${[
+          ['pj-kond-ling',   'Lingkungan Rumah', r.kondisi_lingkungan,  PJ_KONDISI_LING],
+          ['pj-kond-rohani', 'Kerohanian',       r.kondisi_kerohanian,  PJ_KONDISI_ROHANI],
+          ['pj-kond-kel',    'Keluarga',         r.kondisi_keluarga,    PJ_KONDISI_KEL],
+          ['pj-kond-eko',    'Ekonomi',          r.kondisi_ekonomi,     PJ_KONDISI_EKO],
+        ].map(([id, label, val, opts]) => `
+          <div class="ptny-field"><label>${label}</label>
+            <select id="${id}" class="k-input" style="width:100%;">
+              ${opts.map(k => `<option ${(val || opts[0]) === k ? 'selected' : ''}>${k}</option>`).join('')}
+            </select>
+          </div>`).join('')}
       </div>
     </div>
 
@@ -5223,39 +5274,56 @@ function showPjForm(existingData) {
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📖 Penjengukan</div>
       <div class="ptny-field"><label>Bahan Penjengukan</label>
         <select id="pj-bahan" class="k-input" style="width:100%;">
-          ${PJ_BAHAN.map(b=>`<option ${(r.bahan_penjengukan||'Natural')===b?'selected':''}>${b}</option>`).join('')}
+          ${PJ_BAHAN.map(b => `<option ${(r.bahan_penjengukan || 'Natural') === b ? 'selected' : ''}>${b}</option>`).join('')}
         </select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="ptny-field"><label>Nama Penjenguk</label>
-          <input type="text" id="pj-penjenguk" class="k-input" value="${escHtml(r.nama_penjenguk||defaultNama)}" style="width:100%;">
+          <input type="text" id="pj-penjenguk" class="k-input"
+            value="${escHtml(r.nama_penjenguk || defaultNama)}" style="width:100%;">
         </div>
         <div class="ptny-field"><label>Tanggal Jenguk</label>
-          <input type="date" id="pj-tgl" class="k-input" value="${r.tanggal_penjengukan?parsePjTgl(r.tanggal_penjengukan):today}" style="width:100%;">
+          <input type="date" id="pj-tgl" class="k-input"
+            value="${r.tanggal_penjengukan ? parsePjTgl(r.tanggal_penjengukan) : today}" style="width:100%;">
         </div>
       </div>
       <div class="ptny-field"><label>Keterangan</label>
-        <textarea id="pj-ket" rows="3" class="k-input" placeholder="Catatan penjengukan..." style="width:100%;resize:vertical;">${escHtml(r.keterangan||'')}</textarea>
+        <textarea id="pj-ket" rows="3" class="k-input"
+          placeholder="Catatan penjengukan..."
+          style="width:100%;resize:vertical;">${escHtml(r.keterangan || '')}</textarea>
       </div>
     </div>
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📷 Foto & Link</div>
-      ${[['pj-foto-pribadi','Link Foto Pribadi',r.link_foto_pribadi],
-         ['pj-foto-rumah','Link Foto Rumah',r.link_foto_rumah],
-         ['pj-foto-baptis','Link Foto Surat Baptis',r.link_foto_baptis]].map(([id,label,val])=>`
+      ${[
+        ['pj-foto-pribadi', 'Link Foto Pribadi',       r.link_foto_pribadi],
+        ['pj-foto-rumah',   'Link Foto Rumah',          r.link_foto_rumah],
+        ['pj-foto-baptis',  'Link Foto Surat Baptis',   r.link_foto_baptis],
+      ].map(([id, label, val]) => `
         <div class="ptny-field"><label>${label}</label>
-          <input type="text" id="${id}" class="k-input" value="${escHtml(val||'')}" placeholder="Link Google Drive..." style="width:100%;">
+          <input type="text" id="${id}" class="k-input"
+            value="${escHtml(val || '')}"
+            placeholder="Link Google Drive..."
+            style="width:100%;">
         </div>`).join('')}
     </div>
 
-    <input type="hidden" id="pj-edit-id" value="${escHtml(r.id||'')}">
-    <button onclick="submitPjForm()" class="ptny-submit-btn" style="width:100%;padding:14px;margin-top:4px;">
-      ${isEdit ? '💾 Simpan Perubahan' : '📤 Simpan Data Penjengukan'}
-    </button>
+    <input type="hidden" id="pj-edit-id" value="${escHtml(r.id || '')}">
+
+    <div style="display:flex;gap:7px;">
+      <button onclick="closeModal()" class="btn-action"
+        style="flex:0 0 auto;padding:14px 18px;border-color:var(--text3);color:var(--text3);">
+        ← Batal
+      </button>
+      <button onclick="submitPjForm()" class="ptny-submit-btn" style="flex:1;padding:14px;">
+        ${isEdit ? '💾 Simpan Perubahan' : '📤 Simpan Data Penjengukan'}
+      </button>
+    </div>
     <div id="pj-form-status" style="margin-top:8px;font-size:.8rem;text-align:center;color:var(--text3);"></div>
   `);
-}   
+}
+   
 function parseGpsInput(val) {
   if(!val) return;
   const m = val.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
@@ -5293,42 +5361,54 @@ function getMyGPS() {
   },err=>toast('⚠️ Gagal ambil GPS: '+err.message));
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// PATCH 7: pjSearchJemaat — tambah field link foto yang benar
+// Ganti fungsi pjSearchJemaat yang lama:
+// ─────────────────────────────────────────────────────────────────────
 function pjSearchJemaat(q) {
-  const suggest = document.getElementById('pj-jemaat-suggest'); if(!suggest) return;
-  if(!q || q.length < 2){ suggest.style.display='none'; return; }
-  const matches = (db.Jemaat||[]).filter(j =>
-    (j['Nama Lengkap']||'').toLowerCase().includes(q.toLowerCase()) ||
-    (j['Nama Panggilan']||'').toLowerCase().includes(q.toLowerCase())
-  ).slice(0, 8);
-  if(!matches.length){ suggest.style.display='none'; return; }
-  suggest.style.display = 'block';
-  suggest.innerHTML = matches.map(j => {
-    const ef       = j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'';
-    const nm       = j['Nama Lengkap']||'-';
-    const pan      = j['Nama Panggilan']||'';
-    const usia     = j['Usia']||j['usia']||'';
-    const alamat   = j['Alamat']||j['alamat']||j['Alamat Lengkap']||j['alamat_lengkap']||'';
-    const tglBaptis = (j['Tanggal Baptis']||'').trim();
-    const sudahBaptis = (tglBaptis && tglBaptis !== '-'
-      && !tglBaptis.startsWith('00')) ? 'Ya' : 'Tidak';
-    // ✅ Ambil link foto dari jemaat
-    const linkFoto = j['Link Foto']||j['link foto']||j['link_foto']||j['Foto']||'';
+  const suggest = document.getElementById('pj-jemaat-suggest');
+  if (!suggest) return;
+  if (!q || q.length < 2) { suggest.style.display = 'none'; return; }
 
-    // Encode semua parameter agar aman dari karakter khusus
-    const args = [nm,pan,ef,j.Gender||'',usia,sudahBaptis,alamat,tglBaptis,linkFoto]
-      .map(v => `'${escHtml(String(v).replace(/'/g,"\\'"))}'`).join(',');
+  const matches = (db.Jemaat || []).filter(j =>
+    (j['Nama Lengkap']  || '').toLowerCase().includes(q.toLowerCase()) ||
+    (j['Nama Panggilan']|| '').toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+
+  if (!matches.length) { suggest.style.display = 'none'; return; }
+  suggest.style.display = 'block';
+
+  suggest.innerHTML = matches.map(j => {
+    const ef       = j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '';
+    const nm       = j['Nama Lengkap'] || '-';
+    const pan      = j['Nama Panggilan'] || '';
+    const usia     = j['Usia'] || j['usia'] || '';
+    const alamat   = j['Alamat'] || j['alamat'] || j['Alamat Lengkap'] || '';
+    const tglBaptis = (j['Tanggal Baptis'] || '').trim();
+    const sudahBaptis = (tglBaptis && tglBaptis !== '-' && !tglBaptis.startsWith('00')) ? 'Ya' : 'Tidak';
+
+    // Ambil link foto — coba semua variasi nama kolom
+    const linkFoto = j['Link Foto'] || j['link foto'] || j['link_foto'] ||
+                     j['Foto']      || j['foto']      || '';
+
+    const args = [nm, pan, ef, j.Gender || '', usia, sudahBaptis, alamat, tglBaptis, linkFoto]
+      .map(v => `'${escHtml(String(v).replace(/'/g, "\\'"))}'`).join(',');
 
     return `<div onclick="pjSelectJemaat(${args})"
       style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-      <strong>${escHtml(pan||nm)}</strong>
-      ${usia?`<span style="font-size:.7rem;color:var(--accent3);"> · ${usia} th</span>`:''}
-      ${sudahBaptis==='Ya'?'<span style="font-size:.65rem;color:var(--green);"> · ✓ Baptis</span>':''}
-      ${linkFoto?'<span style="font-size:.65rem;color:var(--accent2);"> · 📷</span>':''}
-      <br><span style="font-size:.7rem;color:var(--text3);">${escHtml(nm)} · ${ef||'-'}${tglBaptis?' · '+tglBaptis:''}</span>
+      onmouseover="this.style.background='var(--surface2)'"
+      onmouseout="this.style.background=''">
+      <strong>${escHtml(pan || nm)}</strong>
+      ${usia ? `<span style="font-size:.7rem;color:var(--accent3);"> · ${usia} th</span>` : ''}
+      ${sudahBaptis === 'Ya' ? '<span style="font-size:.65rem;color:var(--green);"> · ✓ Baptis</span>' : ''}
+      ${linkFoto ? '<span style="font-size:.65rem;color:var(--accent2);"> · 📷</span>' : ''}
+      <br>
+      <span style="font-size:.7rem;color:var(--text3);">
+        ${escHtml(nm)} · ${ef || '-'}${tglBaptis ? ' · ' + tglBaptis : ''}
+      </span>
     </div>`;
   }).join('');
-}   
+}
 
 function pjSelectJemaat(nama, pan, ef, gender, usia, baptis, alamat, tglBaptis, linkFoto) {
   const namaEl      = document.getElementById('pj-nama');
@@ -5343,28 +5423,35 @@ function pjSelectJemaat(nama, pan, ef, gender, usia, baptis, alamat, tglBaptis, 
   const infoEl      = document.getElementById('pj-connect-info');
   const sug         = document.getElementById('pj-jemaat-suggest');
 
-  if(namaEl)    namaEl.value   = pan || nama;
-  if(cnEl)      cnEl.value     = nama;
-  if(efEl)      efEl.value     = ef;
-  if(gEl && gender)   gEl.value   = gender;
-  if(umurEl && usia)  umurEl.value = usia;
-  if(baptisEl && baptis) baptisEl.value = baptis;
-  // Isi alamat hanya jika form masih kosong
-  if(alamatEl && alamat && !alamatEl.value) alamatEl.value = alamat;
-  if(tglBaptisEl && tglBaptis) tglBaptisEl.value = tglBaptis;
-  // ✅ Isi foto dari jemaat hanya jika belum diisi
-  if(fotoEl && linkFoto && !fotoEl.value) fotoEl.value = linkFoto;
-  // Coba match golongan dari gugus jemaat
-  if(infoEl){
-    infoEl.style.display = 'block';
-    infoEl.textContent   = `🔗 ${nama} (${ef})`
-      + (usia ? ` · ${usia} th` : '')
-      + (baptis ? ` · Baptis: ${baptis}` : '')
-      + (tglBaptis ? ` (${tglBaptis})` : '')
-      + (linkFoto ? ' · 📷 ada foto' : '');
+  if (namaEl)    namaEl.value   = pan || nama;
+  if (cnEl)      cnEl.value     = nama;
+  if (efEl)      efEl.value     = ef;
+  if (gEl && gender)   gEl.value   = gender;
+  if (umurEl && usia)  umurEl.value = usia;
+  if (baptisEl && baptis) baptisEl.value = baptis;
+  if (alamatEl && alamat && !alamatEl.value) alamatEl.value = alamat;
+
+  // Fix tanggal baptis: isi langsung tanpa konversi format
+  if (tglBaptisEl && tglBaptis && tglBaptis.trim()) {
+    tglBaptisEl.value = tglBaptis.trim();
   }
-  if(sug) sug.style.display = 'none';
-}   
+
+  // Isi foto dari jemaat jika belum diisi
+  if (fotoEl && linkFoto && !fotoEl.value) {
+    fotoEl.value = linkFoto;
+  }
+
+  if (infoEl) {
+    infoEl.style.display = 'block';
+    infoEl.textContent = `🔗 ${nama} (${ef})`
+      + (usia     ? ` · ${usia} th`       : '')
+      + (baptis   ? ` · Baptis: ${baptis}`: '')
+      + (tglBaptis ? ` (${tglBaptis})`    : '')
+      + (linkFoto  ? ' · 📷 ada foto'     : '');
+  }
+  if (sug) sug.style.display = 'none';
+}
+   
 async function submitPjForm() {
   const statusEl=document.getElementById('pj-form-status');
   const nama=(document.getElementById('pj-nama')?.value||'').trim();
@@ -5453,102 +5540,154 @@ function openPjMapsView(lat, lng, nama) {
   document.body.appendChild(div);
 }
 
-function openPjDetail(r) {
-  const foto=fmtImg(r.link_foto_pribadi||'')||pjFotoUrl(r);
-  const fotoRumah=fmtImg(r.link_foto_rumah||'');
-  const fotoBaptis=fmtImg(r.link_foto_baptis||'');
- 
-  const gpsLat  = normGps(r.gps_lat);
-  const gpsLng  = normGps(r.gps_lng);
-  const hasGps  = !!(gpsLat && gpsLng); 
-  const canEdit=isAdminUser();
+// ─────────────────────────────────────────────────────────────────────
+// PATCH 2: openPjDetail
+// Fix: tambah variabel global _currentPjRow, tombol edit langsung pakai r
+// Ganti SELURUH fungsi openPjDetail yang lama dengan ini:
+// ─────────────────────────────────────────────────────────────────────
+let _currentPjRow = null; // variabel global untuk edit
 
-  const kondisiRow=(label,val)=>{const c=PJ_KONDISI_COLOR[val]||'var(--text3)';return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:.8rem;"><span style="color:var(--text3);">${label}</span><span style="color:${c};font-weight:600;">⬤ ${val||'-'}</span></div>`;};
+function openPjDetail(r) {
+  _currentPjRow = r; // simpan referensi langsung
+
+  const foto      = fmtImg(r.link_foto_pribadi || '') || pjFotoUrl(r);
+  const fotoRumah = fmtImg(r.link_foto_rumah   || '');
+  const fotoBaptis= fmtImg(r.link_foto_baptis  || '');
+
+  const gpsLat = normGps(r.gps_lat);
+  const gpsLng = normGps(r.gps_lng);
+  const hasGps = !!(gpsLat && gpsLng);
+  const canEdit= isAdminUser();
+
+  const kondisiRow = (label, val) => {
+    const c = PJ_KONDISI_COLOR[val] || 'var(--text3)';
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;
+      border-bottom:1px solid var(--border);font-size:.8rem;">
+      <span style="color:var(--text3);">${label}</span>
+      <span style="color:${c};font-weight:600;">⬤ ${val || '-'}</span>
+    </div>`;
+  };
+
+  // Cari foto dari jemaat jika ada efataid connect
+  let fotoJemaatHtml = '';
+  if (r.no_efataid_connect && db.Jemaat) {
+    const ef = r.no_efataid_connect.trim();
+    const jd = db.Jemaat.find(j =>
+      (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim() === ef
+    );
+    if (jd) {
+      const fj = fmtImg(jd['Link Foto'] || jd['link foto'] || jd['link_foto'] || '');
+      if (fj) {
+        fotoJemaatHtml = `
+          <div style="margin-bottom:8px;">
+            <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:4px;">📷 Foto dari Data Jemaat</div>
+            <img src="${fj}" style="width:100%;max-height:200px;object-fit:cover;border-radius:9px;cursor:pointer;"
+              onclick="openImgViewer(['${fj}'],0,'Foto Jemaat — ${escHtml(r.nama || '')}')">
+          </div>`;
+      }
+    }
+  }
 
   showModal(`
+    <!-- Tombol back di paling atas -->
+    <div style="display:flex;gap:7px;margin-bottom:14px;">
+      <button onclick="closeModal()" class="btn-action" style="flex:1;padding:9px;font-size:.82rem;">← Kembali ke Daftar</button>
+      ${canEdit ? `<button onclick="editCurrentPjRow()" class="btn-action accent" style="flex:1;padding:9px;font-size:.82rem;">✏️ Edit Data</button>` : ''}
+    </div>
+
     <div style="text-align:center;margin-bottom:14px;">
       <img src="${foto}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);cursor:pointer;"
-        onclick="openImgViewer(['${foto}'],0,'${escHtml(r.nama||'')}')">
-      <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-top:8px;">${escHtml(r.nama||'-')}</div>
+        onclick="openImgViewer(['${foto}'],0,'${escHtml(r.nama || '')}')">
+      <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-top:8px;">${escHtml(r.nama || '-')}</div>
       <div style="display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-top:5px;">
-        <span class="tag">${r.gender||'-'}</span>
-        <span class="tag purple">${r.jenis_kaum||'-'}</span>
-        ${r.sudah_baptis==='Ya'?'<span class="tag green">✓ Baptis</span>':'<span class="tag red">✗ Belum Baptis</span>'}
-        ${r.umur?`<span class="tag">${r.umur} th</span>`:''}
+        <span class="tag">${r.gender || '-'}</span>
+        <span class="tag purple">${r.jenis_kaum || '-'}</span>
+        ${r.sudah_baptis === 'Ya'
+          ? '<span class="tag green">✓ Baptis</span>'
+          : '<span class="tag red">✗ Belum Baptis</span>'}
+        ${r.umur ? `<span class="tag">${r.umur} th</span>` : ''}
       </div>
+      ${r.tanggal_baptis && r.tanggal_baptis.trim()
+        ? `<div style="font-size:.72rem;color:var(--green);margin-top:4px;">📅 Tgl Baptis: ${escHtml(r.tanggal_baptis)}</div>`
+        : ''}
     </div>
 
     <div class="info-grid" style="margin-bottom:10px;">
-      <div class="info-item"><div class="info-item-label">Golongan</div><div class="info-item-value">${escHtml(r.golongan_alamat||'-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Bahan</div><div class="info-item-value">${escHtml(r.bahan_penjengukan||'-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div><div class="info-item-value">${escHtml(formatPjTglDisplay(r.tanggal_penjengukan)||'-')}</div></div>
-      <div class="info-item"><div class="info-item-label">Penjenguk</div><div class="info-item-value">${escHtml(r.nama_penjenguk||'-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Golongan</div><div class="info-item-value">${escHtml(r.golongan_alamat || '-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Bahan</div><div class="info-item-value">${escHtml(r.bahan_penjengukan || '-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Tgl Jenguk</div><div class="info-item-value">${escHtml(formatPjTglDisplay(r.tanggal_penjengukan) || '-')}</div></div>
+      <div class="info-item"><div class="info-item-label">Penjenguk</div><div class="info-item-value">${escHtml(r.nama_penjenguk || '-')}</div></div>
     </div>
 
-    ${r.alamat?`<div class="info-item" style="margin-bottom:10px;"><div class="info-item-label">📍 Alamat</div><div class="info-item-value" style="white-space:normal;">${escHtml(r.alamat)}</div></div>`:''}
+    ${r.alamat ? `<div class="info-item" style="margin-bottom:10px;">
+      <div class="info-item-label">📍 Alamat</div>
+      <div class="info-item-value" style="white-space:normal;">${escHtml(r.alamat)}</div>
+    </div>` : ''}
 
     ${hasGps ? `
-  <div style="margin-bottom:10px;">
-    <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">📍 Lokasi GPS · ${escHtml(r.gps_raw||gpsLat+', '+gpsLng)}</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-      <a href="https://maps.google.com/?q=${gpsLat},${gpsLng}" target="_blank" rel="noopener" style="flex:1;">
-        <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🗺️ Google Maps</button>
-      </a>
-      <a href="https://waze.com/ul?ll=${gpsLat},${gpsLng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
-        <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🚗 Waze</button>
-      </a>
-      <button onclick="openPjMapsView('${gpsLat}','${gpsLng}','${escHtml(r.nama||'')}')" class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">
-        🌍 View Maps
-      </button>
-    </div>
-    <!-- Mini embed maps -->
-    <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:200px;background:var(--surface2);">
-      <iframe
-        src="https://maps.google.com/maps?q=${gpsLat},${gpsLng}&z=16&output=embed"
-        style="width:100%;height:100%;border:none;"
-        loading="lazy"
-        allowfullscreen>
-      </iframe>
-    </div>
-  </div>` : ''}
-
-  
+    <div style="margin-bottom:10px;">
+      <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:6px;">
+        📍 GPS · ${escHtml(r.gps_raw || gpsLat + ', ' + gpsLng)}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <a href="https://maps.google.com/?q=${gpsLat},${gpsLng}" target="_blank" rel="noopener" style="flex:1;">
+          <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🗺️ Google Maps</button>
+        </a>
+        <a href="https://waze.com/ul?ll=${gpsLat},${gpsLng}&navigate=yes" target="_blank" rel="noopener" style="flex:1;">
+          <button class="btn-action" style="width:100%;padding:9px;font-size:.78rem;">🚗 Waze</button>
+        </a>
+        <button onclick="openPjMapsView('${gpsLat}','${gpsLng}','${escHtml(r.nama || '')}')"
+          class="btn-action accent" style="flex:1;padding:9px;font-size:.78rem;">🌍 View Maps</button>
+      </div>
+      <div style="width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border);height:180px;background:var(--surface2);">
+        <iframe src="https://maps.google.com/maps?q=${gpsLat},${gpsLng}&z=16&output=embed"
+          style="width:100%;height:100%;border:none;" loading="lazy" allowfullscreen></iframe>
+      </div>
+    </div>` : ''}
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;">
-      ${kondisiRow('Lingkungan Rumah',r.kondisi_lingkungan)}
-      ${kondisiRow('Kerohanian',r.kondisi_kerohanian)}
-      ${kondisiRow('Keluarga',r.kondisi_keluarga)}
-      ${kondisiRow('Ekonomi',r.kondisi_ekonomi)}
+      ${kondisiRow('Lingkungan Rumah', r.kondisi_lingkungan)}
+      ${kondisiRow('Kerohanian',       r.kondisi_kerohanian)}
+      ${kondisiRow('Keluarga',         r.kondisi_keluarga)}
+      ${kondisiRow('Ekonomi',          r.kondisi_ekonomi)}
     </div>
 
-    ${r.keterangan?`<div style="background:var(--surface2);border-radius:9px;padding:10px;margin-bottom:10px;font-size:.82rem;white-space:pre-wrap;">${escHtml(r.keterangan)}</div>`:''}
-    ${r.nama_jemaat_connect?`<div style="font-size:.78rem;color:var(--accent);margin-bottom:10px;">🔗 Jemaat: ${escHtml(r.nama_jemaat_connect)} ${r.no_efataid_connect?'('+r.no_efataid_connect+')':''}</div>`:''}
+    ${r.keterangan ? `<div style="background:var(--surface2);border-radius:9px;padding:10px;margin-bottom:10px;font-size:.82rem;white-space:pre-wrap;">${escHtml(r.keterangan)}</div>` : ''}
+    ${r.nama_jemaat_connect ? `<div style="font-size:.78rem;color:var(--accent);margin-bottom:10px;">
+      🔗 Jemaat: ${escHtml(r.nama_jemaat_connect)} ${r.no_efataid_connect ? '(' + r.no_efataid_connect + ')' : ''}
+    </div>` : ''}
 
-    ${[['Foto Pribadi',r.link_foto_pribadi],['Foto Rumah',r.link_foto_rumah],['Foto Baptis',r.link_foto_baptis]].filter(x=>x[1]).map(([label,url])=>`
-      <div style="margin-bottom:8px;">
-        <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:4px;">${label}</div>
-        <img src="${fmtImg(url)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:9px;cursor:pointer;"
-          onclick="openImgViewer(['${fmtImg(url)}'],0,'${escHtml(label)}')">
-      </div>`).join('')}
+    ${fotoJemaatHtml}
+
+    ${[['Foto Pribadi', r.link_foto_pribadi], ['Foto Rumah', r.link_foto_rumah], ['Foto Baptis', r.link_foto_baptis]]
+      .filter(x => x[1])
+      .map(([label, url]) => `
+        <div style="margin-bottom:8px;">
+          <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:4px;">${label}</div>
+          <img src="${fmtImg(url)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:9px;cursor:pointer;"
+            onclick="openImgViewer(['${fmtImg(url)}'],0,'${escHtml(label)}')">
+        </div>`).join('')}
 
     <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-      ${canEdit?`<button onclick="editPjById('${escHtml(r.id||'')}')" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>`:''}
-      ${canEdit?`<button onclick="hapusPj('${escHtml(r.id||'')}','${escHtml(r.nama||'')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>`:''}
-      <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))" class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
+      ${canEdit ? `<button onclick="editCurrentPjRow()" class="btn-action accent" style="flex:1;padding:10px;">✏️ Edit</button>` : ''}
+      ${canEdit ? `<button onclick="hapusPj('${escHtml(r.id || '')}','${escHtml(r.nama || '')}');closeModal();" class="btn-action red" style="padding:10px;">🗑 Hapus</button>` : ''}
+      <button onclick="navigator.clipboard.writeText(document.getElementById('pj-copy-text').innerText).then(()=>toast('✅ Disalin!'))"
+        class="btn-action" style="flex:1;padding:10px;">📋 Copy</button>
     </div>
-    <div id="pj-copy-text" style="display:none;">Nama: ${r.nama||'-'}
-Alamat: ${r.alamat||'-'} [${r.golongan_alamat||'-'}]
-Kaum: ${r.jenis_kaum||'-'} | Baptis: ${r.sudah_baptis||'-'}
-Kondisi: Kel ${r.kondisi_keluarga||'-'} | Eko ${r.kondisi_ekonomi||'-'} | Rohani ${r.kondisi_kerohanian||'-'} | Ling ${r.kondisi_lingkungan||'-'}
-Bahan: ${r.bahan_penjengukan||'-'}
-Tgl Jenguk: ${r.tanggal_penjengukan||'-'} oleh ${r.nama_penjenguk||'-'}
-GPS: ${r.gps_raw||'-'}
-Ket: ${r.keterangan||'-'}</div>
-  <div style="height:200px;"></div> 
+
+    <div id="pj-copy-text" style="display:none;">Nama: ${r.nama || '-'}
+Alamat: ${r.alamat || '-'} [${r.golongan_alamat || '-'}]
+Kaum: ${r.jenis_kaum || '-'} | Baptis: ${r.sudah_baptis || '-'}${r.tanggal_baptis ? ' (' + r.tanggal_baptis + ')' : ''}
+Kondisi: Kel ${r.kondisi_keluarga || '-'} | Eko ${r.kondisi_ekonomi || '-'} | Rohani ${r.kondisi_kerohanian || '-'} | Ling ${r.kondisi_lingkungan || '-'}
+Bahan: ${r.bahan_penjengukan || '-'}
+Tgl Jenguk: ${r.tanggal_penjengukan || '-'} oleh ${r.nama_penjenguk || '-'}
+GPS: ${r.gps_raw || '-'}
+Ket: ${r.keterangan || '-'}</div>
+
+    <div style="height:80px;"></div>
   `);
   logHistory('Penjengukan', 'lihat detail', r.nama || '-');
 }
-
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
   const tryOpen = (data) => {
@@ -5589,6 +5728,23 @@ async function hapusPj(id, nama) {
       setTimeout(loadPenjengukan, 600);
     } else toast('❌ '+(r.message||'Gagal'));
   } catch(e) { toast('⚠️ '+e.message); }
+}
+// ─────────────────────────────────────────────────────────────────────
+// PATCH 3: editCurrentPjRow (fungsi baru, tambahkan ke script)
+// Menggantikan editPjById — langsung pakai _currentPjRow
+// ─────────────────────────────────────────────────────────────────────
+function editCurrentPjRow() {
+  if (!_currentPjRow) return toast('⚠️ Data tidak ditemukan');
+  const r = _currentPjRow;
+  // Tutup modal detail dulu
+  const modalEl = document.getElementById('itemModal');
+  if (modalEl) {
+    modalEl.querySelectorAll('audio,video').forEach(a => a.pause());
+    modalEl.style.display = 'none';
+    document.getElementById('modalBody').innerHTML = '';
+  }
+  setTimeout(() => showPjForm(r), 150);
+  logHistory('Penjengukan', 'edit', r.nama || '-');
 }
    
 // ╔══════════════════════════════════════════════════════════════╗
