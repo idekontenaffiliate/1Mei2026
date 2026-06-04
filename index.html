@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 43 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 44 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -5276,6 +5276,7 @@ function pjSearchJemaat(q) {
     const nm   = j['Nama Lengkap']||'-';
     const pan  = j['Nama Panggilan']||'';
     const usia = j['Usia']||j['usia']||'';
+    const baptis = (j['Tanggal Baptis'] && j['Tanggal Baptis'].trim() && j['Tanggal Baptis'] !== '-' && j['Tanggal Baptis'] !== '00/01/1900') ? 'Ya' : 'Tidak';
     // Kirim usia sebagai parameter ke-5
     return `<div onclick="pjSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}','${escHtml(j.Gender||'')}','${escHtml(usia)}')"
       style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
@@ -5286,22 +5287,29 @@ function pjSearchJemaat(q) {
     </div>`;
   }).join('');
 }   
-function pjSelectJemaat(nama, pan, ef, gender, usia) {
-  const namaEl=document.getElementById('pj-nama');
-  const cnEl=document.getElementById('pj-jemaat-connect');
-  const efEl=document.getElementById('pj-efataid-connect');
-  const gEl=document.getElementById('pj-gender');
-  const infoEl=document.getElementById('pj-connect-info');
-  const sug=document.getElementById('pj-jemaat-suggest');
-  const umurEl  = document.getElementById('pj-umur');
-  if(namaEl) namaEl.value=pan||nama;
-  if(cnEl) cnEl.value=nama;
-  if(efEl) efEl.value=ef;
-  if(gEl&&gender) gEl.value=gender;
-  if(umurEl && usia) umurEl.value = usia;   // ← isi umur otomatis
-  if(infoEl){ infoEl.style.display='block'; infoEl.textContent=`🔗 Terhubung: ${nama} (${ef})${usia?' · '+usia+' th':''}`; }
-  if(sug) sug.style.display='none';
-}
+
+function pjSelectJemaat(nama, pan, ef, gender, usia, baptis) {
+  const namaEl = document.getElementById('pj-nama');
+  const cnEl   = document.getElementById('pj-jemaat-connect');
+  const efEl   = document.getElementById('pj-efataid-connect');
+  const gEl    = document.getElementById('pj-gender');
+  const umurEl = document.getElementById('pj-umur');
+  const baptisEl = document.getElementById('pj-baptis');
+  const infoEl = document.getElementById('pj-connect-info');
+  const sug    = document.getElementById('pj-jemaat-suggest');
+  if(namaEl)   namaEl.value = pan || nama;
+  if(cnEl)     cnEl.value   = nama;
+  if(efEl)     efEl.value   = ef;
+  if(gEl && gender)   gEl.value   = gender;
+  if(umurEl && usia)  umurEl.value = usia;
+  // ✅ Set default baptis dari data jemaat
+  if(baptisEl && baptis) baptisEl.value = baptis;
+  if(infoEl){ 
+    infoEl.style.display = 'block'; 
+    infoEl.textContent = `🔗 Terhubung: ${nama} (${ef})${usia?' · '+usia+' th':''}${baptis?' · Baptis: '+baptis:''}`;
+  }
+  if(sug) sug.style.display = 'none';
+}   
 
 async function submitPjForm() {
   const statusEl=document.getElementById('pj-form-status');
@@ -5481,43 +5489,35 @@ Bahan: ${r.bahan_penjengukan||'-'}
 Tgl Jenguk: ${r.tanggal_penjengukan||'-'} oleh ${r.nama_penjenguk||'-'}
 GPS: ${r.gps_raw||'-'}
 Ket: ${r.keterangan||'-'}</div>
+  <div style="height:100px;"></div> 
   `);
   logHistory('Penjengukan', 'lihat detail', r.nama || '-');
 }
-   
 
 function editPjById(id) {
   if(!id) return toast('⚠️ ID tidak valid');
-
   const tryOpen = (data) => {
     const r = data.find(x => x.id === id);
     if(!r) return toast('⚠️ Data tidak ditemukan (ID: ' + id + ')');
+    // Tutup modal dulu, lalu buka form baru setelah benar-benar tertutup
     const modalEl = document.getElementById('itemModal');
     if(modalEl) {
       modalEl.querySelectorAll('audio,video').forEach(a => a.pause());
       modalEl.style.display = 'none';
       document.getElementById('modalBody').innerHTML = '';
     }
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        showPjForm(r);
-        logHistory('Penjengukan', 'edit', r.nama || '-');
-      });
-    });
+    // Delay sedikit agar DOM reset sempurna sebelum showPjForm
+    setTimeout(() => showPjForm(r), 80);
+    logHistory('Penjengukan', 'edit', r.nama || '-');
   };
-
   if(pjState.allData && pjState.allData.length) {
     const r = pjState.allData.find(x => x.id === id);
     if(r) { tryOpen(pjState.allData); return; }
   }
-
   toast('⏳ Memuat data...');
   fetch(APPS_SCRIPT_PENJENGUKAN + '?action=get_penjengukan&t=' + Date.now())
     .then(res => res.json())
-    .then(result => {
-      pjState.allData = result.data || [];
-      tryOpen(pjState.allData);
-    })
+    .then(result => { pjState.allData = result.data || []; tryOpen(pjState.allData); })
     .catch(e => toast('⚠️ Gagal memuat: ' + e.message));
 }   
 async function hapusPj(id, nama) {
