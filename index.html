@@ -235,7 +235,7 @@ nav button:hover:not(.active){color:var(--text2);}
 
 /* ── MODAL ────────────────────────────────────────────── */
 .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:800;overflow-y:auto;}
-.modal-panel{background:var(--surface);border-top:1px solid var(--border);min-height:100vh;padding:16px 14px 100px;}
+.modal-panel{background:var(--surface);border-top:1px solid var(--border);min-height:100vh;padding:16px 14px 160px;}   
 .modal-close-bar{position:fixed;bottom:0;left:0;width:100%;padding:12px 14px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:7px;z-index:810;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
 .close-btn-main{flex:1;padding:11px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;}
 
@@ -419,7 +419,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 45 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 46 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -565,7 +565,7 @@ const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lw
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
 const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzM-aJghZebEsPGtIDzKNSqC1tMFYNOI7MARjEhS4R518pfo2Yox93c515e1dQnYcwBwA/exec";
-const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbww2avI2l2mRC29cOhlFY-jBCNgsPsRbpXGtpLlzoI7ejb5V3H9Ocwk6tEhxkDO0Uk3aA/exec";
+const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbyLerX3oat3xfOvlE0jqsRY9cRQqdmljyo0mI8b1q_Ca0Fusvc5Tl5o9fnTHIU1lec2GQ/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycby7BXX0S8YiczKHVjjWfLgXuPFAAf3UzZ7KYHRoUqE8fy-3Ob5joL3Haw46opCK0dSTyA/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
@@ -620,6 +620,7 @@ let pjState = {
   filterGolongan: '',
   filterBaptis: '',
   filterBahan: '',
+  filterKondisiRohani: '', 
   filterKondisiKeluarga: '',
   filterKondisiEkonomi: '',
   filterKondisiLingkungan: '',
@@ -637,7 +638,11 @@ const PJ_GOLONGAN = ['Surabaya','Ploso','Sidotopo','Gresikan','Karang Empat',
 const PJ_KAUM = ['Kaum Saleh','Anak-anak','Remaja','Pemuda','Mulia','Tamu'];
 const PJ_BAHAN = ['Natural','JPKOKYN','RHM','Baptisan','Perawatan','Pemulihan',
   'Pernikahan','Kesehatan','Pekerjaan','Keluarga','Lainnya'];
-const PJ_KONDISI = ['Baik','Sedang','Buruk'];
+const PJ_KONDISI_LING  = ['Baik','Ramah','Rindang','Sejuk','Kotor'];
+const PJ_KONDISI_ROHANI= ['Normal','Baik','Sedang','Depresi','Galau','Buruk'];
+const PJ_KONDISI_KEL   = ['Baik','Sedang','Yatim','Tidak Menunjang','Buruk'];
+const PJ_KONDISI_EKO   = ['Baik','Sedang','Buruk'];
+const PJ_KONDISI = ['Baik','Sedang','Buruk']; // fallback   
 const PELAYANAN_OPTIONS=['SPR','Anak','Remaja','Pemuda','Gugus','CGM','AKM','PP','Konsumsi'];
 const IBADAH_OPTIONS=['SPR','Anak','Remaja','Pemuda','Gugus','CGM','AKM','PP','Konsumsi','Antar Jemput'];
 const KELAS_OPTIONS=['KUSUMA PEJUANG - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PELOPOR A - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PELOPOR B - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA PENYERBU - GENTENG (D.H. KUSUMA BANGSA)','KUSUMA SATRIA - GENTENG (D.H. KUSUMA BANGSA)','Pemuda Sabtu Malam','Pemuda Sabtu Malam Laguna','Remaja Minggu Pagi','Remaja Sabtu Malam','G Anak Minggu Pagi','G Pejuang','G Pelopor A','G Pelopor B','G Penyerbu','G Satria','G Remaja Minggu Pagi','G Remaja Sabtu Malam','G Pemuda Sabtu Malam','G SPR Pagi','G SPR Siang'];
@@ -4801,14 +4806,17 @@ function renderPenjengukan() {
         </select>
       </div>
       <div class="filter-group">
+        <select id="pj-f-kel" class="k-input" onchange="pjState.filterKondisiRohani=this.value;applyPjFilter()">
+          <option value="">Kondisi Rohani</option>${PJ_KONDISI_ROHANI.map(k=>`<option>${k}</option>`).join('')}
+        </select>
         <select id="pj-f-kel" class="k-input" onchange="pjState.filterKondisiKeluarga=this.value;applyPjFilter()">
-          <option value="">Kondisi Keluarga</option>${PJ_KONDISI.map(k=>`<option>${k}</option>`).join('')}
+          <option value="">Kondisi Keluarga</option>${PJ_KONDISI_KEL.map(k=>`<option>${k}</option>`).join('')}
         </select>
         <select id="pj-f-eko" class="k-input" onchange="pjState.filterKondisiEkonomi=this.value;applyPjFilter()">
-          <option value="">Kondisi Ekonomi</option>${PJ_KONDISI.map(k=>`<option>${k}</option>`).join('')}
+          <option value="">Kondisi Ekonomi</option>${PJ_KONDISI_EKO.map(k=>`<option>${k}</option>`).join('')}
         </select>
         <select id="pj-f-ling" class="k-input" onchange="pjState.filterKondisiLingkungan=this.value;applyPjFilter()">
-          <option value="">Kondisi Lingkungan</option>${PJ_KONDISI.map(k=>`<option>${k}</option>`).join('')}
+          <option value="">Kondisi Lingkungan</option>${PJ_KONDISI_LING.map(k=>`<option>${k}</option>`).join('')}
         </select>
       </div>
       <div class="filter-group">
@@ -4865,6 +4873,7 @@ function applyPjFilter() {
   if(s.filterGolongan) data=data.filter(r=>r.golongan_alamat===s.filterGolongan);
   if(s.filterBaptis) data=data.filter(r=>r.sudah_baptis===s.filterBaptis);
   if(s.filterBahan) data=data.filter(r=>(r.bahan_penjengukan||'').includes(s.filterBahan));
+  if(s.filterKondisiRohani) data=data.filter(r=>r.kondisi_kerohanian===s.filterKondisiRohani);
   if(s.filterKondisiKeluarga) data=data.filter(r=>r.kondisi_keluarga===s.filterKondisiKeluarga);
   if(s.filterKondisiEkonomi) data=data.filter(r=>r.kondisi_ekonomi===s.filterKondisiEkonomi);
   if(s.filterKondisiLingkungan) data=data.filter(r=>r.kondisi_lingkungan===s.filterKondisiLingkungan);
@@ -4946,7 +4955,7 @@ function setPjView(mode) {
 function resetPjFilter() {
   pjState.search='';pjState.filterGender='';pjState.filterKaum='';
   pjState.filterGolongan='';pjState.filterBaptis='';pjState.filterBahan='';
-  pjState.filterKondisiKeluarga='';pjState.filterKondisiEkonomi='';
+  pjState.filterKondisiRohani='';pjState.filterKondisiKeluarga='';pjState.filterKondisiEkonomi='';
   pjState.filterKondisiLingkungan='';pjState.filterTglAwal='';
   pjState.filterTglAkhir='';pjState.filterPenjenguk='';pjState.page=1;
   ['pj-search','pj-f-tgl-awal','pj-f-tgl-akhir','pj-f-penjenguk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -5122,6 +5131,18 @@ function showPjForm(existingData) {
           </select>
         </div>
       </div>
+
+
+      <!-- Tanggal Baptis -->
+      <div class="ptny-field"><label>Tanggal Baptis</label>
+        <input type="text" id="pj-tgl-baptis" class="k-input"
+          value="${escHtml(r.tanggal_baptis||'')}"
+          placeholder="dd-mm-yyyy atau dd/mm/yyyy..."
+          style="width:100%;">
+      </div>
+
+
+      
       <div id="pj-connect-info" style="${r.nama_jemaat_connect?'':'display:none;'}background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:8px;margin-top:4px;font-size:.78rem;color:var(--accent);">
         🔗 Terhubung: ${escHtml(r.nama_jemaat_connect||'')} ${r.no_efataid_connect?'('+r.no_efataid_connect+')':''}
       </div>
@@ -5175,15 +5196,17 @@ function showPjForm(existingData) {
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📊 Kondisi</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        ${[['pj-kond-ling','Lingkungan Rumah',r.kondisi_lingkungan],
-           ['pj-kond-rohani','Kerohanian',r.kondisi_kerohanian],
-           ['pj-kond-kel','Keluarga',r.kondisi_keluarga],
-           ['pj-kond-eko','Ekonomi',r.kondisi_ekonomi]].map(([id,label,val])=>`
-          <div class="ptny-field"><label>${label}</label>
-            <select id="${id}" class="k-input" style="width:100%;">
-              ${PJ_KONDISI.map(k=>`<option ${(val||'Baik')===k?'selected':''}>${k}</option>`).join('')}
-            </select>
-          </div>`).join('')}
+       ${[
+  ['pj-kond-ling',   'Lingkungan Rumah', r.kondisi_lingkungan,  PJ_KONDISI_LING],
+  ['pj-kond-rohani', 'Kerohanian',       r.kondisi_kerohanian,  PJ_KONDISI_ROHANI],
+  ['pj-kond-kel',    'Keluarga',         r.kondisi_keluarga,    PJ_KONDISI_KEL],
+  ['pj-kond-eko',    'Ekonomi',          r.kondisi_ekonomi,     PJ_KONDISI_EKO]
+].map(([id,label,val,opts])=>`
+  <div class="ptny-field"><label>${label}</label>
+    <select id="${id}" class="k-input" style="width:100%;">
+      ${opts.map(k=>`<option ${(val||opts[0])===k?'selected':''}>${k}</option>`).join('')}
+    </select>
+  </div>`).join('')}  
       </div>
     </div>
 
@@ -5276,41 +5299,51 @@ function pjSearchJemaat(q) {
     const nm   = j['Nama Lengkap']||'-';
     const pan  = j['Nama Panggilan']||'';
     const usia = j['Usia']||j['usia']||'';
-    const baptis = (j['Tanggal Baptis'] && j['Tanggal Baptis'].trim() && j['Tanggal Baptis'] !== '-' && j['Tanggal Baptis'] !== '00/01/1900') ? 'Ya' : 'Tidak';
-    // Kirim usia sebagai parameter ke-5
-    return `<div onclick="pjSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}','${escHtml(j.Gender||'')}','${escHtml(usia)}')"
-      style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-      <strong>${escHtml(pan||nm)}</strong>
-      ${usia ? `<span style="font-size:.7rem;color:var(--accent3);"> · ${usia} th</span>` : ''}
-      <br><span style="font-size:.7rem;color:var(--text3);">${escHtml(nm)} · ${ef||'-'}</span>
-    </div>`;
+    const alamat = j['Alamat']||j['alamat']||j['Alamat Lengkap']||j['alamat_lengkap']||'';
+    const tglBaptis = (j['Tanggal Baptis']||'').trim();
+    const sudahBaptis = (tglBaptis && tglBaptis !== '-' && tglBaptis !== '00/01/1900' && tglBaptis !== '00-01-1900') ? 'Ya' : 'Tidak';
+     // Kirim usia sebagai parameter ke-5
+
+    return `<div onclick="pjSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}','${escHtml(j.Gender||'')}','${escHtml(usia)}','${escHtml(sudahBaptis)}','${escHtml(alamat)}','${escHtml(tglBaptis)}')"
+  style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
+  onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+  <strong>${escHtml(pan||nm)}</strong>
+  ${usia ? `<span style="font-size:.7rem;color:var(--accent3);"> · ${usia} th</span>` : ''}
+  ${sudahBaptis==='Ya'?'<span style="font-size:.65rem;color:var(--green);"> · ✓ Baptis</span>':''}
+  <br><span style="font-size:.7rem;color:var(--text3);">${escHtml(nm)} · ${ef||'-'}${alamat?' · '+alamat.slice(0,30):''}${tglBaptis?' · '+tglBaptis:''}</span>
+</div>`;
+     
   }).join('');
 }   
 
-function pjSelectJemaat(nama, pan, ef, gender, usia, baptis) {
-  const namaEl = document.getElementById('pj-nama');
-  const cnEl   = document.getElementById('pj-jemaat-connect');
-  const efEl   = document.getElementById('pj-efataid-connect');
-  const gEl    = document.getElementById('pj-gender');
-  const umurEl = document.getElementById('pj-umur');
-  const baptisEl = document.getElementById('pj-baptis');
-  const infoEl = document.getElementById('pj-connect-info');
-  const sug    = document.getElementById('pj-jemaat-suggest');
-  if(namaEl)   namaEl.value = pan || nama;
-  if(cnEl)     cnEl.value   = nama;
-  if(efEl)     efEl.value   = ef;
+
+function pjSelectJemaat(nama, pan, ef, gender, usia, baptis, alamat, tglBaptis) {
+  const namaEl     = document.getElementById('pj-nama');
+  const cnEl       = document.getElementById('pj-jemaat-connect');
+  const efEl       = document.getElementById('pj-efataid-connect');
+  const gEl        = document.getElementById('pj-gender');
+  const umurEl     = document.getElementById('pj-umur');
+  const baptisEl   = document.getElementById('pj-baptis');
+  const alamatEl   = document.getElementById('pj-alamat');
+  const tglBaptisEl= document.getElementById('pj-tgl-baptis'); // field baru
+  const infoEl     = document.getElementById('pj-connect-info');
+  const sug        = document.getElementById('pj-jemaat-suggest');
+
+  if(namaEl)   namaEl.value   = pan || nama;
+  if(cnEl)     cnEl.value     = nama;
+  if(efEl)     efEl.value     = ef;
   if(gEl && gender)   gEl.value   = gender;
   if(umurEl && usia)  umurEl.value = usia;
-  // ✅ Set default baptis dari data jemaat
   if(baptisEl && baptis) baptisEl.value = baptis;
+  if(alamatEl && alamat && !alamatEl.value) alamatEl.value = alamat; // isi hanya jika kosong
+  if(tglBaptisEl && tglBaptis) tglBaptisEl.value = tglBaptis;
+  // Coba set golongan berdasarkan gugus jemaat 
   if(infoEl){ 
     infoEl.style.display = 'block'; 
-    infoEl.textContent = `🔗 Terhubung: ${nama} (${ef})${usia?' · '+usia+' th':''}${baptis?' · Baptis: '+baptis:''}`;
+    infoEl.textContent = `🔗 ${nama} (${ef})${usia?' · '+usia+' th':''}${baptis?' · Baptis: '+baptis:''}${tglBaptis?' ('+tglBaptis+')':''}`;
   }
   if(sug) sug.style.display = 'none';
 }   
-
 async function submitPjForm() {
   const statusEl=document.getElementById('pj-form-status');
   const nama=(document.getElementById('pj-nama')?.value||'').trim();
@@ -5329,7 +5362,7 @@ async function submitPjForm() {
     golongan_alamat: document.getElementById('pj-golongan')?.value||'Surabaya',
     jenis_kaum: document.getElementById('pj-kaum')?.value||'Kaum Saleh',
     kondisi_lingkungan: document.getElementById('pj-kond-ling')?.value||'Baik',
-    kondisi_kerohanian: document.getElementById('pj-kond-rohani')?.value||'Baik',
+    kondisi_kerohanian: document.getElementById('pj-kond-rohani')?.value||'Normal',
     kondisi_keluarga: document.getElementById('pj-kond-kel')?.value||'Baik',
     kondisi_ekonomi: document.getElementById('pj-kond-eko')?.value||'Baik',
     bahan_penjengukan: document.getElementById('pj-bahan')?.value||'Natural',
@@ -5346,6 +5379,7 @@ async function submitPjForm() {
     nama_penjenguk: document.getElementById('pj-penjenguk')?.value||currentUser?.username||'',
     tanggal_penjengukan: tgl ? formatDateFromInput(tgl) : '',
     dicatat_oleh: currentUser?.username||'',
+    tanggal_baptis: document.getElementById('pj-tgl-baptis')?.value||'', 
   };
 
   if(statusEl) statusEl.textContent='⏳ Menyimpan...';
@@ -5507,7 +5541,7 @@ function editPjById(id) {
       document.getElementById('modalBody').innerHTML = '';
     }
     // Delay sedikit agar DOM reset sempurna sebelum showPjForm
-    setTimeout(() => showPjForm(r), 80);
+    setTimeout(() => showPjForm(r), 150);
     logHistory('Penjengukan', 'edit', r.nama || '-');
   };
   if(pjState.allData && pjState.allData.length) {
