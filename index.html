@@ -7356,7 +7356,346 @@ function refreshDashboardFS(){
   const dst=document.getElementById('dash-fs-content');
   if(src&&dst){dst.innerHTML=src.innerHTML;toast('✅ Dashboard diperbarui');}
 }
-   
+
+// ═══════════════════════════════════════════════════════════
+// PATCH: Akun Demo + Menu Baru
+// Tambahkan kode ini SEBELUM tag </script> di index.html
+// ═══════════════════════════════════════════════════════════
+
+// ── Override attemptLogin: tambah akun demo hardcoded ──────
+const _origAttemptLogin = attemptLogin;
+attemptLogin = function(){
+  const errEl=document.getElementById('login-error');errEl.style.display='none';
+  const u=document.getElementById('user').value.trim();
+  const p=document.getElementById('pass').value;
+  if(!u||!p)return toast('⚠️ Isi username dan password');
+
+  // ★ AKUN DEMO HARDCODED
+  if(u==='akundemo'&&p==='pastibisamasuk'){
+    currentUser={
+      username:'akundemo',
+      password:'pastibisamasuk',
+      level:'Demo',
+      tipe:'Beranda,Catatan Doa,Kegelisahan,Alkitab,Kata-kata Hari Ini,Pertanyaan,Pengumuman',
+      no_EfataID:'DEMO-001',
+      No_EfataID:'DEMO-001',
+    };
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-app').style.display='flex';
+    document.getElementById('header-title').textContent='akundemo';
+    document.getElementById('header-sub').textContent='Demo';
+    Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
+    if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
+    if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
+    setupNavigation();
+    logHistory('login','masuk aplikasi (demo)','level: Demo');
+    return;
+  }
+
+  // Akun biasa dari database
+  if(!db.Awal||!db.Awal.length)return toast('⏳ Memuat data, harap tunggu...');
+  const found=db.Awal.find(r=>r.username===u&&r.password===p);
+  if(!found){errEl.style.display='block';return;}
+  currentUser=found;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  document.getElementById('header-title').textContent=found.username;
+  document.getElementById('header-sub').textContent=found.level||found.tipe||'user';
+  Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
+  if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
+  if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
+  setupNavigation();
+  logHistory('login','masuk aplikasi','level: '+(found.level||found.tipe||'-'));
+};
+
+// ── Override menuLabel: tambah ikon menu baru ──────────────
+const _origMenuLabel = menuLabel;
+menuLabel = function(n){
+  const icons={
+    Dashboard:'📊',Beranda:'🏠',Kidung:'🎵',Alkitab:'📖',
+    Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',
+    Pertanyaan:'❔','Absensi KTM':'📋','Absensi Sidang':'📋',
+    'Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',
+    Admin:'🔑',
+    'Catatan Doa':'🙏','Kegelisahan':'💭',
+    'Kata-kata Hari Ini':'✨',Pengumuman:'📢'
+  };
+  return(icons[n.trim()]||'•')+' '+n.trim();
+};
+
+// ── Override dispatchRender: tambah routing menu baru ───────
+const _origDispatchRender = dispatchRender;
+dispatchRender = function(name){
+  const n = name.toLowerCase().trim();
+  if(n==='beranda'){renderDashboard();return;}
+  if(n==='catatan doa'){renderCatatanDoa();return;}
+  if(n==='kegelisahan'){renderKegelisahan();return;}
+  if(n==='kata-kata hari ini'){renderKataHariIni();return;}
+  if(n==='pengumuman'){renderPengumuman();return;}
+  // Fallback ke dispatch asli
+  _origDispatchRender(name);
+};
+
+// ══════════════════════════════════════════════════
+// MODUL BARU: Catatan Doa
+// ══════════════════════════════════════════════════
+function renderCatatanDoa(){
+  const content=document.getElementById('app-content');
+  const saved=JSON.parse(localStorage.getItem('catatan_doa_list')||'[]');
+
+  const katColor={
+    Pribadi:'var(--accent)',Keluarga:'var(--green)',Pekerjaan:'var(--yellow)',
+    Kesehatan:'var(--red)',Pelayanan:'var(--accent3)',
+    'Ucapan Syukur':'#fbbf24',Lainnya:'var(--text3)'
+  };
+
+  let listHtml='';
+  if(saved.length){
+    listHtml=saved.slice().reverse().map((d,i)=>{
+      const idx=saved.length-1-i;
+      const c=katColor[d.kategori]||'var(--text3)';
+      const dijawab=d.dijawab
+        ?'<span style="background:rgba(16,185,129,.2);color:var(--green);font-size:.6rem;padding:2px 6px;border-radius:5px;font-weight:700;margin-left:4px;">✓ Dijawab</span>'
+        :'';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;border-left:4px solid ${c};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+          <div><span style="font-weight:700;font-size:.92rem;">${escHtml(d.judul)}</span>${dijawab}
+            <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">
+              <span class="tag" style="background:${c}18;color:${c};">${d.kategori}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">🕐 ${d.waktu}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <button onclick="toggleDoaDijawab(${idx})" style="padding:4px 8px;border-radius:6px;border:1px solid ${d.dijawab?'var(--green)':'var(--border)'};background:${d.dijawab?'rgba(16,185,129,.15)':'var(--surface2)'};color:${d.dijawab?'var(--green)':'var(--text3)'};font-size:.72rem;cursor:pointer;">${d.dijawab?'✅':'☐'}</button>
+            <button onclick="hapusCatatanDoa(${idx})" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:var(--red);font-size:.72rem;cursor:pointer;">🗑</button>
+          </div>
+        </div>
+        <div style="font-size:.85rem;color:var(--text);line-height:1.5;white-space:pre-wrap;background:var(--surface2);border-radius:8px;padding:10px;">${escHtml(d.isi)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    listHtml='<div class="empty-state"><div class="icon">🙏</div><p>Belum ada catatan doa. Mulai tulis doamu!</p></div>';
+  }
+
+  content.innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;">
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:12px;">🙏 Catatan Doa</h2>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;">Tuliskan pergumulan dan doa pribadimu di sini. Data tersimpan di browser kamu.</p>
+      <div class="ptny-field"><label>Judul / Topik Doa</label>
+        <input type="text" id="doa-judul" class="k-input" placeholder="Mis: Kesehatan keluarga..." style="width:100%;"></div>
+      <div class="ptny-field"><label>Isi Doa / Pergumulan</label>
+        <textarea id="doa-isi" rows="4" class="k-input" placeholder="Tuliskan doamu..." style="width:100%;resize:vertical;"></textarea></div>
+      <div class="ptny-field"><label>Kategori</label>
+        <select id="doa-kat" class="k-input" style="width:100%;">
+          <option>Pribadi</option><option>Keluarga</option><option>Pekerjaan</option>
+          <option>Kesehatan</option><option>Pelayanan</option><option>Ucapan Syukur</option><option>Lainnya</option>
+        </select></div>
+      <button onclick="simpanCatatanDoa()" class="ptny-submit-btn" style="margin-top:6px;">💾 Simpan Catatan Doa</button>
+    </div>
+    <div class="section-header"><span class="section-title">📋 Daftar Catatan Doa</span><span class="section-count">${saved.length} catatan</span></div>
+    <div id="doa-list">${listHtml}</div>`;
+}
+
+function simpanCatatanDoa(){
+  const judul=document.getElementById('doa-judul')?.value.trim();
+  const isi=document.getElementById('doa-isi')?.value.trim();
+  const kat=document.getElementById('doa-kat')?.value||'Pribadi';
+  if(!judul||!isi)return toast('⚠️ Isi judul dan doa');
+  const saved=JSON.parse(localStorage.getItem('catatan_doa_list')||'[]');
+  saved.push({judul,isi,kategori:kat,waktu:new Date().toLocaleString('id-ID'),dijawab:false});
+  localStorage.setItem('catatan_doa_list',JSON.stringify(saved));
+  toast('✅ Catatan doa disimpan!');
+  renderCatatanDoa();
+}
+
+function toggleDoaDijawab(idx){
+  const saved=JSON.parse(localStorage.getItem('catatan_doa_list')||'[]');
+  if(saved[idx])saved[idx].dijawab=!saved[idx].dijawab;
+  localStorage.setItem('catatan_doa_list',JSON.stringify(saved));
+  renderCatatanDoa();
+}
+
+function hapusCatatanDoa(idx){
+  if(!confirm('Hapus catatan doa ini?'))return;
+  const saved=JSON.parse(localStorage.getItem('catatan_doa_list')||'[]');
+  saved.splice(idx,1);
+  localStorage.setItem('catatan_doa_list',JSON.stringify(saved));
+  toast('🗑 Catatan dihapus');
+  renderCatatanDoa();
+}
+
+// ══════════════════════════════════════════════════
+// MODUL BARU: Kegelisahan
+// ══════════════════════════════════════════════════
+let _selectedMood='';
+
+function renderKegelisahan(){
+  const content=document.getElementById('app-content');
+  const saved=JSON.parse(localStorage.getItem('kegelisahan_list')||'[]');
+
+  let listHtml='';
+  if(saved.length){
+    listHtml=saved.slice().reverse().map((d,i)=>{
+      const idx=saved.length-1-i;
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:1.1rem;">${d.mood||'💭'}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">${d.waktu}</span>
+            <button onclick="hapusKegelisahan(${idx})" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:var(--red);font-size:.7rem;cursor:pointer;">✕</button>
+          </div>
+        </div>
+        <div style="font-size:.85rem;color:var(--text);line-height:1.6;white-space:pre-wrap;">${escHtml(d.isi)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    listHtml='<div class="empty-state"><div class="icon">💭</div><p>Belum ada catatan. Jangan ragu untuk menulis.</p></div>';
+  }
+
+  content.innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;">
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:6px;">💭 Kegelisahan</h2>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;">Tempat mencurahkan perasaan dan kegelisahanmu. Semuanya aman dan tersimpan di browser pribadimu.</p>
+      <div class="ptny-field"><label>Apa yang sedang kamu rasakan?</label>
+        <textarea id="gelisah-isi" rows="5" class="k-input" placeholder="Ceritakan apa yang membuatmu gelisah..." style="width:100%;resize:vertical;"></textarea></div>
+      <div class="ptny-field"><label>Mood saat ini</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mood-select">
+          <button onclick="selectMood(this,'😰 Cemas')" class="btn-action">😰 Cemas</button>
+          <button onclick="selectMood(this,'😢 Sedih')" class="btn-action">😢 Sedih</button>
+          <button onclick="selectMood(this,'😤 Frustrasi')" class="btn-action">😤 Frustrasi</button>
+          <button onclick="selectMood(this,'😔 Kecewa')" class="btn-action">😔 Kecewa</button>
+          <button onclick="selectMood(this,'🤔 Bingung')" class="btn-action">🤔 Bingung</button>
+          <button onclick="selectMood(this,'😊 Lega')" class="btn-action">😊 Lega</button>
+        </div>
+        <input type="hidden" id="gelisah-mood" value="">
+      </div>
+      <button onclick="simpanKegelisahan()" class="ptny-submit-btn">💾 Simpan Curahan Hati</button>
+    </div>
+    <div class="section-header"><span class="section-title">📖 Riwayat Curahan Hati</span><span class="section-count">${saved.length}</span></div>
+    <div id="gelisah-list">${listHtml}</div>`;
+}
+
+function selectMood(btn,mood){
+  document.querySelectorAll('#mood-select .btn-action').forEach(b=>{
+    b.style.background='var(--surface2)';b.style.color='var(--text)';b.style.borderColor='var(--border)';
+  });
+  btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.borderColor='var(--accent)';
+  _selectedMood=mood;
+  document.getElementById('gelisah-mood').value=mood;
+}
+
+function simpanKegelisahan(){
+  const isi=document.getElementById('gelisah-isi')?.value.trim();
+  if(!isi)return toast('⚠️ Tulis perasaanmu dulu');
+  const mood=_selectedMood||'💭';
+  const saved=JSON.parse(localStorage.getItem('kegelisahan_list')||'[]');
+  saved.push({isi,mood,waktu:new Date().toLocaleString('id-ID')});
+  localStorage.setItem('kegelisahan_list',JSON.stringify(saved));
+  _selectedMood='';
+  toast('✅ Tersimpan!');
+  renderKegelisahan();
+}
+
+function hapusKegelisahan(idx){
+  if(!confirm('Hapus catatan ini?'))return;
+  const saved=JSON.parse(localStorage.getItem('kegelisahan_list')||'[]');
+  saved.splice(idx,1);
+  localStorage.setItem('kegelisahan_list',JSON.stringify(saved));
+  toast('🗑 Dihapus');
+  renderKegelisahan();
+}
+
+// ══════════════════════════════════════════════════
+// MODUL BARU: Kata-kata Hari Ini
+// ══════════════════════════════════════════════════
+function renderKataHariIni(){
+  const content=document.getElementById('app-content');
+  const kataList=[
+    {ayat:'Mazmur 46:2',teks:'Allah itu bagi kita tempat perlindungan dan kekuatan, sebagai penolong dalam kesesakan sangat terbukti.'},
+    {ayat:'Yesaya 41:10',teks:'Janganlah takut, sebab Aku menyertai engkau, janganlah cemas, sebab Aku ini Allahmu; Aku akan meneguhkan, bahkan akan menolong engkau.'},
+    {ayat:'Yeremia 29:11',teks:'Sebab Aku ini mengetahui rancangan-rancangan apa yang ada pada-Ku mengenai kamu, demikianlah firman TUHAN, yaitu rancangan damai sejahtera dan bukan rancangan kecelakaan, untuk memberikan kepadamu hari depan yang penuh harapan.'},
+    {ayat:'Filipi 4:13',teks:'Segala perkara dapat kutanggung di dalam Dia yang memberi kekuatan kepadaku.'},
+    {ayat:'Roma 8:28',teks:'Kita tahu sekarang, bahwa Allah turut bekerja dalam segala sesuatu untuk mendatangkan kebaikan bagi mereka yang mengasihi Dia.'},
+    {ayat:'Amsal 3:5-6',teks:'Percayalah kepada TUHAN dengan segenap hatimu, dan janganlah bersandar kepada pengertianmu sendiri. Akuilah Dia dalam segala lakumu, maka Ia akan meluruskan jalanmu.'},
+    {ayat:'Matius 11:28',teks:'Marilah kepada-Ku, semua yang letih lesu dan berbeban berat, Aku akan memberi kelegaan kepadamu.'},
+    {ayat:'Mazmur 23:1',teks:'TUHAN adalah gembalaku, takkan kekurangan aku.'},
+    {ayat:'Ulangan 31:8',teks:'TUHAN, Dia sendiri yang berjalan di depanmu, Dia sendiri akan menyertai engkau, Dia tidak akan membiarkan engkau dan tidak akan meninggalkan engkau; janganlah takut dan janganlah patah hati.'},
+    {ayat:'Yohanes 14:27',teks:'Damai sejahtera Kutinggalkan bagimu. Damai sejahtera-Ku Kuberikan kepadamu, dan apa yang Kuberikan tidak seperti yang diberikan oleh dunia kepadamu. Janganlah gelisah dan gentar hatimu.'},
+    {ayat:'Mazmur 121:1-2',teks:'Aku melayangkan mataku ke gunung-gunung; dari manakah akan datang pertolonganku? Pertolonganku ialah dari TUHAN, yang menjadikan langit dan bumi.'},
+    {ayat:'2 Korintus 12:9',teks:'Cukuplah kasih karunia-Ku bagimu, sebab justru dalam kelemahanlah kuasa-Ku menjadi sempurna.'},
+    {ayat:'Mazmur 37:5',teks:'Serahkanlah hidupmu kepada TUHAN dan percayalah kepada-Nya, dan Ia akan bertindak.'},
+    {ayat:'Ibrani 13:5',teks:'Aku sekali-kali tidak akan membiarkan engkau dan Aku sekali-kali tidak akan meninggalkan engkau.'},
+  ];
+
+  const today=new Date();
+  const dayOfYear=Math.floor((today-new Date(today.getFullYear(),0,0))/(1000*60*60*24));
+  const kata=kataList[dayOfYear%kataList.length];
+  const days=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dateStr=days[today.getDay()]+', '+today.getDate()+' '+months[today.getMonth()]+' '+today.getFullYear();
+
+  content.innerHTML=`
+    <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--accent);border-radius:20px;padding:28px 22px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:var(--glow);"></div>
+      <div style="font-size:.75rem;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace;">${dateStr}</div>
+      <div style="font-size:2.4rem;margin-bottom:12px;">✨</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:16px;color:var(--text);">Kata-kata Hari Ini</h2>
+      <div style="font-size:1.1rem;line-height:1.7;color:var(--text);font-style:italic;margin-bottom:14px;padding:0 8px;">"${escHtml(kata.teks)}"</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--accent);font-weight:700;">— ${escHtml(kata.ayat)}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+      <button onclick="navigator.clipboard.writeText('${kata.ayat}\\n${kata.teks.replace(/'/g,"\\'")}').then(()=>toast('✅ Ayat disalin!'))" class="btn-action green" style="flex:1;padding:11px;font-size:.85rem;">📋 Salin Ayat</button>
+      <button onclick="renderKataHariIni()" class="btn-action" style="padding:11px;">🔄 Refresh</button>
+    </div>
+    <div style="margin-top:4px;">
+      <div class="section-title" style="margin-bottom:10px;">📖 Kumpulan Ayat Lainnya</div>
+      ${kataList.map((k,i)=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;${i===dayOfYear%kataList.length?'border-color:var(--accent);background:var(--glow);':''}">
+        <div style="font-weight:700;font-size:.82rem;color:var(--accent);margin-bottom:4px;">${escHtml(k.ayat)}</div>
+        <div style="font-size:.82rem;color:var(--text);line-height:1.5;">${escHtml(k.teks)}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// MODUL BARU: Pengumuman (versi demo)
+// ══════════════════════════════════════════════════
+function renderPengumuman(){
+  const content=document.getElementById('app-content');
+  const acara=db.Acara||[];
+  const kegiatan=db.Kegiatan||[];
+
+  let html=`<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:14px;">📢 Pengumuman</h2>`;
+  html+=`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:.82rem;color:var(--yellow);">ℹ️ Ini adalah versi demo. Hubungi Admin untuk akses lengkap.</div>`;
+
+  if(acara.length){
+    html+=`<div class="section-header"><span class="section-title">📅 Jadwal Acara</span><span class="section-count">${acara.length} sesi</span></div>`;
+    html+=acara.slice(0,5).map(a=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:4px;">${escHtml(a['nama acara']||'-')}</div>
+      <div style="font-size:.78rem;color:var(--text3);">🕒 ${escHtml(a.jam||a.waktu||'-')} · 👤 ${escHtml(a.peserta||'-')}</div>
+    </div>`).join('');
+    if(acara.length>5) html+=`<div style="font-size:.78rem;color:var(--text3);text-align:center;padding:8px;">... dan ${acara.length-5} acara lainnya</div>`;
+  }
+
+  if(kegiatan.length){
+    html+=`<div class="section-header" style="margin-top:14px;"><span class="section-title">⚡ Kegiatan</span><span class="section-count">${kegiatan.length}</span></div>`;
+    html+=kegiatan.slice(0,5).map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:3px;">${escHtml(k.nama||'-')}</div>
+      <div style="font-size:.78rem;color:var(--text3);">${escHtml(k.tujuan||'-')}</div>
+    </div>`).join('');
+  }
+
+  if(!acara.length&&!kegiatan.length){
+    html+='<div class="empty-state"><div class="icon">📢</div><p>Belum ada pengumuman saat ini.</p></div>';
+  }
+
+  content.innerHTML=html;
+
+  // Preload data jika belum ada
+  if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderPengumuman();}});
+  if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;renderPengumuman();}});
+}
+
+console.log('✅ Patch demo account loaded: akundemo / pastibisamasuk');   
 </script>
 </body>
 </html>
