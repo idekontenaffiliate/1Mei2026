@@ -1007,41 +1007,7 @@ function loadModule(name,el){
 // ══════════════════════════════════════════════════
 // PATCH 3: dispatchRender — SATU fungsi lengkap
 // ══════════════════════════════════════════════════
-dispatchRender = function(name){
-  const n = name.toLowerCase().trim();
- 
-  // Log kecuali menu yang log sendiri
-  const noAutoLog = ['penjengukan','admin'];
-  if(!noAutoLog.includes(n)) logHistory(name, 'buka menu');
- 
-  // Routing lengkap
-  if(n==='dashboard')              { renderDashboard(); return; }
-  if(n==='beranda')                { renderDashboard(); return; }
-  if(n==='kidung')                 { renderKidung(); return; }
-  if(n==='alkitab')                { renderAlkitab(); return; }
-  if(n==='acara')                  { renderAcara(); return; }
-  if(n==='kegiatan')               { renderKegiatan(); return; }
-  if(n==='jemaat')                 { renderJemaat(); return; }
-  if(n==='link')                   { renderLink(); return; }
-  if(n==='quiz')                   { renderQuiz(); return; }
-  if(n==='pertanyaan')             { renderPertanyaan(); return; }
-  if(n==='hasil pertanyaan')       { renderHasilPertanyaan(); return; }
-  if(n==='admin')                  { renderAdmin(); return; }
-  if(n==='absensi ktm')            { renderAbsensiKTM(); return; }
-  if(n==='absensi sidang')         { renderAbsensiSidang(); return; }
-  if(n==='laporan absensi')        { renderLaporanAbsensi(); return; }
-  if(n==='penjengukan')            { renderPenjengukan(); return; }
-  if(n==='absensi anak')           { renderAbsensiAnak(); return; }
-  if(n==='manajemen kelas')        { renderManajemenKelas(); return; }
-  if(n==='catatan doa')            { renderCatatanDoa(); return; }
-  if(n==='kegelisahan')            { renderKegelisahan(); return; }
-  if(n==='kata-kata hari ini')     { renderKataHariIni(); return; }
-  if(n==='pengumuman')             { renderPengumuman(); return; }
- 
-  // Fallback
-  document.getElementById('app-content').innerHTML =
-    `<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" belum tersedia.</p></div>`;
-};
+
 
 function dispatchRender(name){
   const n = name.toLowerCase().trim();
