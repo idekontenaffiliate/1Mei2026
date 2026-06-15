@@ -553,7 +553,8 @@ const URLS={
   Absensi_KTM :"https://docs.google.com/spreadsheets/d/e/2PACX-1vRvMd7u7EoLBPMWvMjoHCuenc0sMRX-YvSZs6cr9_EX1aYF4tBV_7LCtPAxtGjxPXy5jmmFk9W7Cj1b/pub?output=csv", 
   Absensi_sidang :"https://docs.google.com/spreadsheets/d/e/2PACX-1vT60wezdHOka1KA5bbmtX9vI6EbyoF6Bx02xO0Hl2FTDrKkEJh3CvCUaDDaewXq2RFTjqz0AlA41S8Q/pub?output=csv" ,
   Penjengukan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiUxK_tOhbUw_UJ7tXvRFjvMpEh4XMIlZ6ShXg6SuRDdgjjKy7wBEldKwQ_MAfR0-FL-GEb22ezKrU/pub?output=csv",
-  History :"https://docs.google.com/spreadsheets/d/e/2PACX-1vTYWBseHC1Bmj1L4XWJpcvOk0t-ZJyYiQAC_Tq3QO1zuJP7r8WlhSwEXlGQxna83DRgNmEnGeqM2qbp/pub?output=csv"
+  History :"https://docs.google.com/spreadsheets/d/e/2PACX-1vTYWBseHC1Bmj1L4XWJpcvOk0t-ZJyYiQAC_Tq3QO1zuJP7r8WlhSwEXlGQxna83DRgNmEnGeqM2qbp/pub?output=csv",
+  Pengumuman :"https://docs.google.com/spreadsheets/d/e/2PACX-1vTjtr6-2hhHCJzYhcO063Mxc0XUXfGlF2wbCPdbABKvZdc2u9V3vC0_QbY5bTvBI8EdnqMelaTUBM4G/pub?output=csv"
 
 };
 
@@ -567,6 +568,8 @@ const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9Fdn
 const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzM-aJghZebEsPGtIDzKNSqC1tMFYNOI7MARjEhS4R518pfo2Yox93c515e1dQnYcwBwA/exec";
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycby7BXX0S8YiczKHVjjWfLgXuPFAAf3UzZ7KYHRoUqE8fy-3Ob5joL3Haw46opCK0dSTyA/exec";
+const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbzFm3wgrp1KPnfyNvLDt2zydlMf3XbwfnchLcd5jqgOsX3rEtXq8MDwg8val6Rswkti/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -812,7 +815,7 @@ function setupNavigation(){
   });
 }
 function menuLabel(n){
-  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Absensi KTM':'📋','Absensi Sidang':'📋','Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',Admin:'🔑'};
+  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Absensi Anak':'👦','Manajemen Kelas':'🏫','Absensi KTM':'📋','Absensi Sidang':'📋','Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',Admin:'🔑'};
   return(icons[n.trim()]||'•')+' '+n.trim();
 }
 function loadModule(name,el){
@@ -850,6 +853,8 @@ function dispatchRender(name){
   else if(n==='absensi sidang') renderAbsensiSidang();
   else if(n==='laporan absensi') renderLaporanAbsensi();
   else if(n==='penjengukan') renderPenjengukan();
+  else if(n==='absensi anak') renderAbsensiAnak();
+  else if(n==='manajemen kelas') renderManajemenKelas();
   else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
 }   
 
@@ -873,6 +878,8 @@ function openInfoModal(){
     'Hasil Pertanyaan':'📋 Melihat dan menjawab semua pertanyaan yang masuk.',
     Penjengukan : '📋 buat untuk penjengukan',
     Admin:'🔑 Panel admin untuk melihat hasil dan log aktivitas.',
+    'Absensi anak':'Absensi untuk anak',
+    'manajemen kelas':'mengatur kelas'
   };
 
   // Build menu yang diperbolehkan berdasarkan field tipe/akses user
@@ -7414,7 +7421,7 @@ menuLabel = function(n){
   const icons={
     Dashboard:'📊',Beranda:'🏠',Kidung:'🎵',Alkitab:'📖',
     Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',
-    Pertanyaan:'❔','Absensi KTM':'📋','Absensi Sidang':'📋',
+    Pertanyaan:'❔','Absensi Anak':'👦','Manajemen Kelas':'🏫','Absensi KTM':'📋','Absensi Sidang':'📋',
     'Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',
     Admin:'🔑',
     'Catatan Doa':'🙏','Kegelisahan':'💭',
@@ -7696,6 +7703,610 @@ function renderPengumuman(){
 }
 
 console.log('✅ Patch demo account loaded: akundemo / pastibisamasuk');   
+// ── STATE ──────────────────────────────────────────────────────
+let absenAnakState = {
+  kelasData: [],          // daftar kelas dari server
+  anggotaData: [],        // anggota kelas terpilih
+  selectedKelas: null,    // id_kelas terpilih
+  tanggal: '',
+  mingguKe: '',
+  tahun: '',
+  poinMap: {},            // key(efataid/nama) → {kehadiran, hafalan}
+  sudahLoad: false,
+  searchQuery: '',
+  viewMode: 'grid',       // grid | text | prestasi
+};
+
+let kelasManageState = {
+  kelasList: [],
+  selectedKelasId: '',
+  anggota: [],
+  editMode: false,
+};
+
+// ── TABEL HADIAH DEFAULT ───────────────────────────────────────
+const DEFAULT_HADIAH = [
+  { poin_minimum: 60,   nama_prestasi: 'Extra B',       hadiah_rp: 50000 },
+  { poin_minimum: 160,  nama_prestasi: 'Extra A',       hadiah_rp: 75000 },
+  { poin_minimum: 300,  nama_prestasi: 'Juara 4',       hadiah_rp: 100000 },
+  { poin_minimum: 600,  nama_prestasi: 'Juara 3',       hadiah_rp: 125000 },
+  { poin_minimum: 800,  nama_prestasi: 'Juara 2',       hadiah_rp: 150000 },
+  { poin_minimum: 900,  nama_prestasi: 'Juara 1',       hadiah_rp: 180000 },
+  { poin_minimum: 1000, nama_prestasi: 'Juara Teladan', hadiah_rp: 350000 },
+];
+
+// ── RENDER ABSENSI ANAK ────────────────────────────────────────
+async function renderAbsensiAnak() {
+  const content = document.getElementById('app-content');
+  if (!bolehAbsenSidang()) {
+    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
+    return;
+  }
+
+  const now = new Date();
+  const pad = x => String(x).padStart(2, '0');
+  if (!absenAnakState.tanggal)
+    absenAnakState.tanggal = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  if (!absenAnakState.tahun)
+    absenAnakState.tahun = String(now.getFullYear());
+
+  content.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
+        👦👧 Absensi Sidang Anak + Poin Hafalan
+      </div>
+
+      <!-- Pilih Kelas -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">PILIH KELAS</div>
+        <div style="display:flex;gap:6px;">
+          <select id="anak-kelas" class="k-input" style="flex:1;" onchange="onSelectKelasAnak(this.value)">
+            <option value="">-- Pilih Kelas --</option>
+          </select>
+          <button onclick="loadDaftarKelasAnak()" class="btn-action" style="padding:8px 12px;">🔄</button>
+        </div>
+      </div>
+
+      <!-- Tanggal & Minggu -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL</div>
+          <input type="date" id="anak-tanggal" class="k-input"
+            value="${formatDateForInput(absenAnakState.tanggal)}"
+            onchange="absenAnakState.tanggal=formatDateFromInput(this.value)"
+            style="width:100%;">
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">MINGGU KE</div>
+          <input type="number" id="anak-minggu" class="k-input"
+            value="${absenAnakState.mingguKe}" min="1" max="53"
+            placeholder="1-53"
+            oninput="absenAnakState.mingguKe=this.value" style="width:100%;">
+        </div>
+      </div>
+
+      <button onclick="loadAbsensiAnak()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+        🔄 Muat Daftar Anak
+      </button>
+    </div>
+
+    <!-- Summary -->
+    <div id="anak-summary" style="display:none;margin-bottom:10px;"></div>
+
+    <!-- Toolbar -->
+    <div id="anak-toolbar" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+        <button onclick="anakSemuaHadir()" class="btn-action green" style="font-size:.78rem;">✅ Semua Hadir</button>
+        <button onclick="anakResetSemua()" class="btn-action red" style="font-size:.78rem;">❌ Reset</button>
+        <button onclick="simpanSemuaPoinAnak()" class="btn-action"
+          style="font-size:.78rem;background:var(--yellow);color:#000;border-color:var(--yellow);font-weight:700;">
+          💾 Simpan Semua
+        </button>
+        <button onclick="lihatPrestasiAnak()" class="btn-action accent" style="font-size:.78rem;">🏆 Prestasi</button>
+      </div>
+      <input type="text" id="anak-search" class="k-input"
+        placeholder="🔍 Cari nama..."
+        oninput="absenAnakState.searchQuery=this.value;renderAnakList()"
+        style="width:100%;">
+    </div>
+
+    <!-- Info Cara Pakai -->
+    <div id="anak-info-cara" style="display:none;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:12px;margin-bottom:10px;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:6px;">📖 Cara Pakai</div>
+      <div style="font-size:.75rem;color:var(--text2);line-height:1.6;">
+        Per anak ada <strong>3 tombol</strong>:<br>
+        <span style="color:var(--green);">✅ Hadir</span> = +10 poin kehadiran<br>
+        <span style="color:var(--accent);">📖 Penuh</span> = +10 poin hafalan<br>
+        <span style="color:var(--yellow);">📖 1/2</span> = +5 poin hafalan<br>
+        <strong>Maks per hari: 20 poin</strong> (10 kehadiran + 10 hafalan)<br>
+        1 tahun = 50 minggu × 20 = <strong>1.000 poin maks</strong>
+      </div>
+    </div>
+
+    <!-- Daftar Anak -->
+    <div id="anak-list-wrap">
+      <div class="empty-state"><div class="icon">👦</div><p>Pilih kelas & tanggal, lalu klik Muat.</p></div>
+    </div>
+  `;
+
+  // Load daftar kelas
+  loadDaftarKelasAnak();
+}
+
+// ── LOAD KELAS ─────────────────────────────────────────────────
+async function loadDaftarKelasAnak() {
+  if (APPS_SCRIPT_KELAS.includes('GANTI')) {
+    toast('⚠️ URL APPS_SCRIPT_KELAS belum diisi');
+    return;
+  }
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + absenAnakState.tahun);
+    const result = await resp.json();
+    absenAnakState.kelasData = result.data || [];
+    const sel = document.getElementById('anak-kelas');
+    if (sel) {
+      sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+        absenAnakState.kelasData.map(k =>
+          `<option value="${escHtml(k.id_kelas)}">${escHtml(k.nama_kelas)} (${escHtml(k.jenis||'anak')})</option>`
+        ).join('');
+    }
+  } catch(e) {
+    toast('⚠️ Gagal load kelas: ' + e.message);
+  }
+}
+
+function onSelectKelasAnak(idKelas) {
+  absenAnakState.selectedKelas = idKelas;
+}
+
+// ── LOAD ABSENSI ANAK ──────────────────────────────────────────
+async function loadAbsensiAnak() {
+  const idKelas = absenAnakState.selectedKelas || document.getElementById('anak-kelas')?.value;
+  const tglInput = document.getElementById('anak-tanggal')?.value;
+  if (tglInput) absenAnakState.tanggal = formatDateFromInput(tglInput);
+  absenAnakState.mingguKe = document.getElementById('anak-minggu')?.value || '';
+
+  if (!idKelas) return toast('⚠️ Pilih kelas dulu');
+  if (!absenAnakState.tanggal) return toast('⚠️ Pilih tanggal');
+
+  absenAnakState.selectedKelas = idKelas;
+  const wrap = document.getElementById('anak-list-wrap');
+  if (wrap) wrap.innerHTML = '<div class="loading-shimmer"></div>';
+
+  try {
+    // 1. Load anggota kelas
+    const respAnggota = await fetch(APPS_SCRIPT_KELAS + '?action=get_anggota_kelas&id_kelas=' + encodeURIComponent(idKelas));
+    const resultAnggota = await respAnggota.json();
+    absenAnakState.anggotaData = resultAnggota.data || [];
+
+    // 2. Load poin existing untuk tanggal ini
+    const respPoin = await fetch(APPS_SCRIPT_KELAS + '?action=get_poin&id_kelas=' + encodeURIComponent(idKelas)
+      + '&tanggal=' + encodeURIComponent(absenAnakState.tanggal));
+    const resultPoin = await respPoin.json();
+
+    // Build poinMap
+    absenAnakState.poinMap = {};
+    (resultPoin.data || []).forEach(p => {
+      const key = p.no_efataid || p.nama.toLowerCase();
+      absenAnakState.poinMap[key] = {
+        kehadiran: parseInt(p.poin_kehadiran) || 0,
+        hafalan: parseInt(p.poin_hafalan) || 0,
+      };
+    });
+
+    // Juga init poin untuk anggota yang belum ada poinnya
+    absenAnakState.anggotaData.forEach(a => {
+      const key = a.no_efataid || a.nama.toLowerCase();
+      if (!absenAnakState.poinMap[key]) {
+        absenAnakState.poinMap[key] = { kehadiran: 0, hafalan: 0 };
+      }
+    });
+
+    absenAnakState.sudahLoad = true;
+    document.getElementById('anak-toolbar').style.display = 'block';
+    document.getElementById('anak-summary').style.display = 'block';
+    document.getElementById('anak-info-cara').style.display = 'block';
+
+    toast(`✅ ${absenAnakState.anggotaData.length} anak dimuat`);
+    renderAnakSummary();
+    renderAnakList();
+
+  } catch(e) {
+    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
+  }
+}
+
+// ── SUMMARY ────────────────────────────────────────────────────
+function renderAnakSummary() {
+  const el = document.getElementById('anak-summary');
+  if (!el) return;
+
+  const total = absenAnakState.anggotaData.length;
+  let hadir = 0, hafalPenuh = 0, hafalSeparuh = 0;
+
+  absenAnakState.anggotaData.forEach(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    const poin = absenAnakState.poinMap[key] || {};
+    if (poin.kehadiran >= 10) hadir++;
+    if (poin.hafalan >= 10) hafalPenuh++;
+    else if (poin.hafalan >= 5) hafalSeparuh++;
+  });
+
+  const belum = total - hadir;
+  const pct = total > 0 ? Math.round(hadir / total * 100) : 0;
+  const kelasNama = absenAnakState.kelasData.find(k => k.id_kelas === absenAnakState.selectedKelas)?.nama_kelas || '-';
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:8px;">
+        📊 ${escHtml(kelasNama)} · ${formatTglDisplay(absenAnakState.tanggal)}
+        ${absenAnakState.mingguKe ? ' · Minggu ' + absenAnakState.mingguKe : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px;">
+        ${[
+          [total, 'Total', 'var(--text)', 'var(--surface2)', 'var(--border)'],
+          [hadir, 'Hadir', 'var(--green)', 'rgba(16,185,129,.1)', 'rgba(16,185,129,.3)'],
+          [belum, 'Belum', 'var(--red)', 'rgba(239,68,68,.1)', 'rgba(239,68,68,.3)'],
+          [hafalPenuh, 'Hafal✓', 'var(--accent)', 'rgba(59,130,246,.1)', 'rgba(59,130,246,.3)'],
+          [hafalSeparuh, 'Hafal½', 'var(--yellow)', 'rgba(245,158,11,.1)', 'rgba(245,158,11,.3)'],
+        ].map(([v,l,c,bg,br]) => `
+          <div style="background:${bg};border-radius:7px;padding:6px 2px;text-align:center;border:1px solid ${br};">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:${c};">${v}</div>
+            <div style="font-size:.52rem;color:${c};">${l}</div>
+          </div>`).join('')}
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--green),#86efac);border-radius:3px;transition:width .4s;"></div>
+      </div>
+      <div style="text-align:right;font-size:.68rem;color:var(--text3);margin-top:3px;">${pct}% hadir</div>
+    </div>`;
+}
+
+// ── RENDER LIST ANAK ───────────────────────────────────────────
+function renderAnakList() {
+  const wrap = document.getElementById('anak-list-wrap');
+  if (!wrap || !absenAnakState.sudahLoad) return;
+
+  const search = absenAnakState.searchQuery.toLowerCase();
+  const filtered = absenAnakState.anggotaData.filter(a =>
+    !search || a.nama.toLowerCase().includes(search)
+  );
+
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">👦</div><p>Tidak ada anak ditemukan.</p></div>`;
+    return;
+  }
+
+  // Pisahkan: sudah hadir vs belum
+  const belumHadir = filtered.filter(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    return (absenAnakState.poinMap[key]?.kehadiran || 0) < 10;
+  });
+  const sudahHadir = filtered.filter(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    return (absenAnakState.poinMap[key]?.kehadiran || 0) >= 10;
+  });
+
+  const renderItem = (a) => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    const poin = absenAnakState.poinMap[key] || { kehadiran: 0, hafalan: 0 };
+    const isHadir = poin.kehadiran >= 10;
+    const totalHari = Math.min(20, poin.kehadiran + poin.hafalan);
+
+    return `<div style="background:${isHadir ? 'rgba(16,185,129,.06)' : 'var(--surface)'};
+        border:1px solid ${isHadir ? 'rgba(16,185,129,.4)' : 'var(--border)'};
+        border-radius:12px;padding:12px;margin-bottom:8px;">
+
+      <!-- Nama & Info -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:.92rem;">${escHtml(a.nama)}</div>
+          ${a.no_efataid ? `<div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);">${escHtml(a.no_efataid)}</div>` : ''}
+          ${a.nama_ayah || a.nama_ibu ? `<div style="font-size:.68rem;color:var(--text3);margin-top:2px;">
+            ${a.nama_ayah ? '👨 ' + escHtml(a.nama_ayah) : ''}
+            ${a.nama_ibu ? ' 👩 ' + escHtml(a.nama_ibu) : ''}
+          </div>` : ''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:800;
+            color:${totalHari >= 20 ? 'var(--green)' : totalHari > 0 ? 'var(--accent)' : 'var(--text3)'};">
+            ${totalHari}
+          </div>
+          <div style="font-size:.6rem;color:var(--text3);">poin hari ini</div>
+        </div>
+      </div>
+
+      <!-- 3 TOMBOL UTAMA -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+
+        <!-- Tombol HADIR (+10 kehadiran) -->
+        <button onclick="toggleAnakHadir('${escHtml(key)}')"
+          style="padding:10px 4px;border-radius:10px;border:2px solid ${isHadir ? 'var(--green)' : 'var(--border)'};
+          background:${isHadir ? 'rgba(16,185,129,.15)' : 'var(--surface2)'};
+          color:${isHadir ? 'var(--green)' : 'var(--text3)'};
+          font-family:'DM Sans',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;
+          transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <span style="font-size:1.2rem;">${isHadir ? '✅' : '⬜'}</span>
+          <span>Hadir</span>
+          <span style="font-size:.65rem;opacity:.7;">+10</span>
+        </button>
+
+        <!-- Tombol HAFALAN PENUH (+10 hafalan) -->
+        <button onclick="setAnakHafalan('${escHtml(key)}', 10)"
+          style="padding:10px 4px;border-radius:10px;border:2px solid ${poin.hafalan >= 10 ? 'var(--accent)' : 'var(--border)'};
+          background:${poin.hafalan >= 10 ? 'rgba(59,130,246,.15)' : 'var(--surface2)'};
+          color:${poin.hafalan >= 10 ? 'var(--accent)' : 'var(--text3)'};
+          font-family:'DM Sans',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;
+          transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <span style="font-size:1.2rem;">📖</span>
+          <span>Penuh</span>
+          <span style="font-size:.65rem;opacity:.7;">+10</span>
+        </button>
+
+        <!-- Tombol HAFALAN SEPARUH (+5 hafalan) -->
+        <button onclick="setAnakHafalan('${escHtml(key)}', 5)"
+          style="padding:10px 4px;border-radius:10px;border:2px solid ${poin.hafalan === 5 ? 'var(--yellow)' : 'var(--border)'};
+          background:${poin.hafalan === 5 ? 'rgba(245,158,11,.15)' : 'var(--surface2)'};
+          color:${poin.hafalan === 5 ? 'var(--yellow)' : 'var(--text3)'};
+          font-family:'DM Sans',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;
+          transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <span style="font-size:1.2rem;">📖</span>
+          <span>½ Hafal</span>
+          <span style="font-size:.65rem;opacity:.7;">+5</span>
+        </button>
+      </div>
+
+      <!-- Breakdown poin -->
+      <div style="display:flex;justify-content:center;gap:12px;margin-top:6px;font-size:.68rem;color:var(--text3);font-family:'JetBrains Mono',monospace;">
+        <span>Hadir: <strong style="color:${poin.kehadiran > 0 ? 'var(--green)' : 'inherit'};">${poin.kehadiran}</strong></span>
+        <span>Hafalan: <strong style="color:${poin.hafalan > 0 ? 'var(--accent)' : 'inherit'};">${poin.hafalan}</strong></span>
+        <span>Total: <strong style="color:${totalHari > 0 ? 'var(--accent)' : 'inherit'};">${totalHari}/20</strong></span>
+      </div>
+    </div>`;
+  };
+
+  let html = '';
+  if (belumHadir.length) {
+    html += `<div style="font-size:.7rem;font-weight:700;color:var(--red);margin:6px 0 5px;text-transform:uppercase;letter-spacing:.8px;">⏳ Belum Hadir (${belumHadir.length})</div>`;
+    html += belumHadir.map(renderItem).join('');
+  }
+  if (sudahHadir.length) {
+    html += `<div style="font-size:.7rem;font-weight:700;color:var(--green);margin:10px 0 5px;text-transform:uppercase;letter-spacing:.8px;">✅ Sudah Hadir (${sudahHadir.length})</div>`;
+    html += sudahHadir.map(renderItem).join('');
+  }
+  if (!html) html = `<div class="empty-state"><div class="icon">👦</div><p>Tidak ada anak.</p></div>`;
+
+  wrap.innerHTML = html;
+}
+
+// ── TOGGLE HADIR ────────────────────────────────────────────────
+function toggleAnakHadir(key) {
+  if (!absenAnakState.poinMap[key]) absenAnakState.poinMap[key] = { kehadiran: 0, hafalan: 0 };
+  const poin = absenAnakState.poinMap[key];
+  poin.kehadiran = poin.kehadiran >= 10 ? 0 : 10;
+  renderAnakSummary();
+  renderAnakList();
+}
+
+// ── SET HAFALAN ─────────────────────────────────────────────────
+function setAnakHafalan(key, nilai) {
+  if (!absenAnakState.poinMap[key]) absenAnakState.poinMap[key] = { kehadiran: 0, hafalan: 0 };
+  const poin = absenAnakState.poinMap[key];
+  // Toggle: jika sudah sama, reset ke 0
+  poin.hafalan = poin.hafalan === nilai ? 0 : nilai;
+  renderAnakSummary();
+  renderAnakList();
+}
+
+// ── SEMUA HADIR ─────────────────────────────────────────────────
+function anakSemuaHadir() {
+  if (!confirm(`Set SEMUA ${absenAnakState.anggotaData.length} anak HADIR?`)) return;
+  absenAnakState.anggotaData.forEach(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    if (!absenAnakState.poinMap[key]) absenAnakState.poinMap[key] = { kehadiran: 0, hafalan: 0 };
+    absenAnakState.poinMap[key].kehadiran = 10;
+  });
+  renderAnakSummary();
+  renderAnakList();
+  toast('✅ Semua anak hadir — klik Simpan');
+}
+
+function anakResetSemua() {
+  if (!confirm('Reset semua poin hari ini?')) return;
+  Object.keys(absenAnakState.poinMap).forEach(key => {
+    absenAnakState.poinMap[key] = { kehadiran: 0, hafalan: 0 };
+  });
+  renderAnakSummary();
+  renderAnakList();
+  toast('❌ Semua direset');
+}
+
+// ── SIMPAN SEMUA POIN ──────────────────────────────────────────
+async function simpanSemuaPoinAnak() {
+  if (!absenAnakState.anggotaData.length) return toast('⚠️ Tidak ada data');
+  if (!absenAnakState.tanggal) return toast('⚠️ Pilih tanggal');
+  if (APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL belum diisi');
+
+  toast('⏳ Menyimpan poin semua anak...');
+
+  const items = absenAnakState.anggotaData.map(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    const poin = absenAnakState.poinMap[key] || { kehadiran: 0, hafalan: 0 };
+    return {
+      no_efataid: a.no_efataid || '',
+      nama: a.nama || '',
+      poin_kehadiran: poin.kehadiran,
+      poin_hafalan: poin.hafalan,
+    };
+  });
+
+  const params = new URLSearchParams({
+    action: 'simpan_poin_batch',
+    id_kelas: absenAnakState.selectedKelas,
+    tanggal: absenAnakState.tanggal,
+    minggu_ke: absenAnakState.mingguKe,
+    tahun: absenAnakState.tahun,
+    dicatat_oleh: currentUser?.username || '-',
+    data: JSON.stringify(items),
+  });
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      toast(`✅ ${result.saved} poin tersimpan!`);
+    } else {
+      toast('❌ ' + (result.message || 'Gagal'));
+    }
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+  }
+}
+
+// ── LIHAT PRESTASI ──────────────────────────────────────────────
+async function lihatPrestasiAnak() {
+  if (APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL belum diisi');
+
+  const wrap = document.getElementById('anak-list-wrap');
+  if (wrap) wrap.innerHTML = '<div class="loading-shimmer"></div>';
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_prestasi_anak&tahun=' + absenAnakState.tahun);
+    const result = await resp.json();
+    if (result.status !== 'ok') { toast('❌ ' + result.message); return; }
+
+    const data = result.data || [];
+    const settings = result.setting_hadiah || DEFAULT_HADIAH;
+
+    let html = `
+      <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:1rem;margin-bottom:10px;">🏆 Prestasi Anak — ${result.tahun}</div>
+        <div style="font-size:.78rem;color:var(--text3);margin-bottom:10px;">
+          Total: ${result.total_anak} anak · Total Hadiah: Rp ${(result.total_hadiah_rp || 0).toLocaleString('id-ID')}
+        </div>
+
+        <!-- Tabel Setting Hadiah -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;">📋 Tabel Prestasi</div>
+          <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
+            <thead><tr style="background:var(--surface2);">
+              <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.62rem;">Poin Min</th>
+              <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.62rem;">Prestasi</th>
+              <th style="padding:5px 7px;text-align:right;border-bottom:1px solid var(--border);font-size:.62rem;">Hadiah</th>
+            </tr></thead>
+            <tbody>${settings.map(s => `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:4px 7px;text-align:center;font-family:'JetBrains Mono',monospace;">${s.poin_minimum}</td>
+              <td style="padding:4px 7px;font-weight:600;">${escHtml(s.nama_prestasi)}</td>
+              <td style="padding:4px 7px;text-align:right;font-family:'JetBrains Mono',monospace;">Rp ${parseInt(s.hadiah_rp).toLocaleString('id-ID')}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+
+        <!-- Daftar Anak + Prestasi -->
+        <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;">👦👧 Ranking Anak</div>
+        <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:5px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;">#</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.6rem;">Nama</th>
+            <th style="padding:5px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;">Hadir</th>
+            <th style="padding:5px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;">Hafal</th>
+            <th style="padding:5px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;">Total</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.6rem;">Prestasi</th>
+            <th style="padding:5px 7px;text-align:right;border-bottom:1px solid var(--border);font-size:.6rem;">Hadiah</th>
+          </tr></thead>
+          <tbody>
+            ${data.map((d, i) => {
+              const prestasiColor = d.prestasi === 'Juara Teladan' ? 'var(--green)' :
+                d.prestasi.includes('Juara') ? 'var(--accent)' :
+                d.prestasi.includes('Extra') ? 'var(--yellow)' : 'var(--text3)';
+              return `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:5px 4px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text3);">${i+1}</td>
+                <td style="padding:5px 7px;font-weight:600;">${escHtml(d.nama)}</td>
+                <td style="padding:5px 4px;text-align:center;font-family:'JetBrains Mono',monospace;">${d.total_kehadiran}</td>
+                <td style="padding:5px 4px;text-align:center;font-family:'JetBrains Mono',monospace;">${d.total_hafalan}</td>
+                <td style="padding:5px 4px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);">${d.total_poin}</td>
+                <td style="padding:5px 7px;"><span style="color:${prestasiColor};font-weight:700;">${escHtml(d.prestasi)}</span></td>
+                <td style="padding:5px 7px;text-align:right;font-family:'JetBrains Mono',monospace;">
+                  ${d.hadiah_rp > 0 ? 'Rp ' + d.hadiah_rp.toLocaleString('id-ID') : '-'}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <button onclick="copyPrestasiAnak()" class="btn-action green" style="flex:1;padding:10px;">📋 Copy Laporan</button>
+          <button onclick="loadAbsensiAnak()" class="btn-action" style="flex:1;padding:10px;">← Kembali ke Absensi</button>
+        </div>
+      </div>`;
+
+    if (wrap) wrap.innerHTML = html;
+
+    // Simpan data untuk copy
+    window._prestasiData = data;
+    window._prestasiTahun = result.tahun;
+
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+  }
+}
+
+function copyPrestasiAnak() {
+  const data = window._prestasiData || [];
+  const tahun = window._prestasiTahun || '';
+  const lines = [
+    `LAPORAN PRESTASI ANAK — TAHUN ${tahun}`,
+    `Dicetak: ${new Date().toLocaleString('id-ID')}`,
+    '',
+    'No | Nama | Kehadiran | Hafalan | Total | Prestasi | Hadiah',
+    '-'.repeat(70),
+  ];
+  data.forEach((d, i) => {
+    lines.push(`${i+1}. ${d.nama} | ${d.total_kehadiran} | ${d.total_hafalan} | ${d.total_poin} | ${d.prestasi} | ${d.hadiah_rp > 0 ? 'Rp ' + d.hadiah_rp.toLocaleString('id-ID') : '-'}`);
+  });
+  const totalHadiah = data.reduce((s, d) => s + (d.hadiah_rp || 0), 0);
+  lines.push('');
+  lines.push(`Total Anak: ${data.length}`);
+  lines.push(`Total Hadiah: Rp ${totalHadiah.toLocaleString('id-ID')}`);
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => toast('✅ Laporan prestasi disalin!'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRASI KE ROUTING
+// Tambahkan di dispatchRender:
+//   if(n==='absensi anak') renderAbsensiAnak();
+//   if(n==='manajemen kelas') renderManajemenKelas();
+//
+// Tambahkan di menuLabel:
+//   'Absensi Anak':'👦', 'Manajemen Kelas':'🏫',
+//
+// Tambahkan di sheet Awal, kolom tipe user, contoh:
+//   Dashboard,Absensi Anak,Manajemen Kelas,Absensi Sidang,...
+// ═══════════════════════════════════════════════════════════════
+
+// ── Override dispatchRender (tambahkan setelah override yang sudah ada) ──
+const _origDispatch2 = dispatchRender;
+dispatchRender = function(name) {
+  const n = name.toLowerCase().trim();
+  if (n === 'absensi anak') { renderAbsensiAnak(); return; }
+  // Fallback
+  _origDispatch2(name);
+};
+
+// ── Override menuLabel ──
+const _origMenuLabel2 = menuLabel;
+menuLabel = function(n) {
+  if (n.trim() === 'Absensi Anak') return '👦 Absensi Anak';
+  if (n.trim() === 'Manajemen Kelas') return '🏫 Manajemen Kelas';
+  return _origMenuLabel2(n);
+};
+
+console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');   
 </script>
 </body>
 </html>
