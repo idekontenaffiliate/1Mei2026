@@ -859,6 +859,50 @@ function attemptLogin(){
   setupNavigation();
   logHistory('login', 'masuk aplikasi', `level: ${found.level||found.tipe||'-'}`); 
 }
+function patchAttemptLogin(){
+  const _orig = attemptLogin;
+  attemptLogin = function(){
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    const u = document.getElementById('user').value.trim();
+    const p = document.getElementById('pass').value;
+    if(!u || !p) return toast('⚠️ Isi username dan password');
+ 
+    // ★ AKUN DEMO HARDCODED
+    if(u === 'akundemo' && p === 'pastibisamasuk'){
+      currentUser = {
+        username:'akundemo', password:'pastibisamasuk', level:'Demo',
+        tipe:'Beranda,Catatan Doa,Kegelisahan,Alkitab,Kata-kata Hari Ini,Pertanyaan,Pengumuman',
+        no_EfataID:'DEMO-001', No_EfataID:'DEMO-001',
+      };
+      doAfterLogin();
+      return;
+    }
+ 
+    // Akun biasa
+    if(!db.Awal || !db.Awal.length) return toast('⏳ Memuat data, harap tunggu...');
+    const found = db.Awal.find(r => r.username === u && r.password === p);
+    if(!found){ errEl.style.display='block'; return; }
+    currentUser = found;
+    doAfterLogin();
+  };
+ 
+  function doAfterLogin(){
+    const u = currentUser;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    document.getElementById('header-title').textContent = u.username;
+    document.getElementById('header-sub').textContent = u.level || u.tipe || 'user';
+    Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
+    if(!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
+    if(!db.Kegiatan) Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
+    setupNavigation();
+    logHistory('login','masuk aplikasi','level: '+(u.level||u.tipe||'-'));
+    // Tampilkan popup pengumuman untuk SEMUA user
+    setTimeout(loadPengumumanPopup, 800);
+  }
+})();
+    
 function doLogout(){
   if(!confirm('Yakin ingin keluar?'))return;
   // Wrap dalam try-catch agar error state reset tidak hentikan proses logout
@@ -933,10 +977,19 @@ function setupNavigation(){
     if(idx===0)setTimeout(()=>btn.click(),100);
   });
 }
-function menuLabel(n){
-  const icons={Dashboard:'📊',Kidung:'🎵',Alkitab:'📖',Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',Pertanyaan:'❔','Absensi Anak':'👦','Manajemen Kelas':'🏫','Absensi KTM':'📋','Absensi Sidang':'📋','Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',Admin:'🔑'};
-  return(icons[n.trim()]||'•')+' '+n.trim();
-}
+menuLabel = function(n){
+  const icons = {
+    Dashboard:'📊', Beranda:'🏠', Kidung:'🎵', Alkitab:'📖',
+    Acara:'📅', Kegiatan:'⚡', Jemaat:'👥', Link:'🔗', Quiz:'❓',
+    Pertanyaan:'❔', 'Absensi Anak':'👦', 'Manajemen Kelas':'🏫',
+    'Absensi KTM':'📋', 'Absensi Sidang':'📋', 'Laporan Absensi':'📈',
+    Penjengukan:'🏠', 'Hasil Pertanyaan':'📋', Admin:'🔑',
+    'Catatan Doa':'🙏', Kegelisahan:'💭', 'Kata-kata Hari Ini':'✨',
+    Pengumuman:'📢',
+  };
+  return (icons[n.trim()] || '•') + ' ' + n.trim();
+};
+    
 function loadModule(name,el){
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   if(el)el.classList.add('active');
@@ -951,6 +1004,45 @@ function loadModule(name,el){
   }else dispatchRender(name);
 }
 
+// ══════════════════════════════════════════════════
+// PATCH 3: dispatchRender — SATU fungsi lengkap
+// ══════════════════════════════════════════════════
+dispatchRender = function(name){
+  const n = name.toLowerCase().trim();
+ 
+  // Log kecuali menu yang log sendiri
+  const noAutoLog = ['penjengukan','admin'];
+  if(!noAutoLog.includes(n)) logHistory(name, 'buka menu');
+ 
+  // Routing lengkap
+  if(n==='dashboard')              { renderDashboard(); return; }
+  if(n==='beranda')                { renderDashboard(); return; }
+  if(n==='kidung')                 { renderKidung(); return; }
+  if(n==='alkitab')                { renderAlkitab(); return; }
+  if(n==='acara')                  { renderAcara(); return; }
+  if(n==='kegiatan')               { renderKegiatan(); return; }
+  if(n==='jemaat')                 { renderJemaat(); return; }
+  if(n==='link')                   { renderLink(); return; }
+  if(n==='quiz')                   { renderQuiz(); return; }
+  if(n==='pertanyaan')             { renderPertanyaan(); return; }
+  if(n==='hasil pertanyaan')       { renderHasilPertanyaan(); return; }
+  if(n==='admin')                  { renderAdmin(); return; }
+  if(n==='absensi ktm')            { renderAbsensiKTM(); return; }
+  if(n==='absensi sidang')         { renderAbsensiSidang(); return; }
+  if(n==='laporan absensi')        { renderLaporanAbsensi(); return; }
+  if(n==='penjengukan')            { renderPenjengukan(); return; }
+  if(n==='absensi anak')           { renderAbsensiAnak(); return; }
+  if(n==='manajemen kelas')        { renderManajemenKelas(); return; }
+  if(n==='catatan doa')            { renderCatatanDoa(); return; }
+  if(n==='kegelisahan')            { renderKegelisahan(); return; }
+  if(n==='kata-kata hari ini')     { renderKataHariIni(); return; }
+  if(n==='pengumuman')             { renderPengumuman(); return; }
+ 
+  // Fallback
+  document.getElementById('app-content').innerHTML =
+    `<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" belum tersedia.</p></div>`;
+};
+ 
 function dispatchRender(name){
   const n = name.toLowerCase().trim();
   // Log setiap perpindahan menu (kecuali yang sudah log sendiri)
@@ -977,6 +1069,340 @@ function dispatchRender(name){
   else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
 }   
 
+// ══════════════════════════════════════════════════
+// PATCH 4: Pengumuman Popup — muncul untuk SEMUA user setelah login
+// ══════════════════════════════════════════════════
+async function loadPengumumanPopup(){
+  // Jangan tampilkan jika tidak ada URL atau URL belum diset
+  if(!URLS.Pengumuman || URLS.Pengumuman.includes('GANTI')) return;
+ 
+  try {
+    const resp = await fetch(URLS.Pengumuman + '&t=' + Date.now());
+    const text = await resp.text();
+    let rows = [];
+    Papa.parse(text, {
+      header: true,
+      complete: r => { rows = r.data; }
+    });
+ 
+    const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+    const aktif = rows.filter(r => {
+      if((r.deleted||'').toLowerCase() === 'y') return false;
+      if(!(r.judul||'').trim() && !(r.isi||'').trim()) return false;
+      // Filter tanggal jika ada
+      if(r.tanggal_akhir && r.tanggal_akhir.trim()){
+        const takhir = parsePengumumanTgl(r.tanggal_akhir);
+        if(takhir && takhir < today) return false;
+      }
+      return true;
+    });
+ 
+    if(!aktif.length) return;
+    showPengumumanPopup(aktif);
+  } catch(e) {
+    console.warn('Gagal load pengumuman:', e.message);
+  }
+}
+ 
+function parsePengumumanTgl(tgl){
+  if(!tgl) return '';
+  const s = String(tgl).trim();
+  // dd/mm/yyyy → yyyy-mm-dd
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // Sudah yyyy-mm-dd
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  return '';
+}
+ 
+function showPengumumanPopup(items){
+  const old = document.getElementById('pengumuman-popup-overlay');
+  if(old) old.remove();
+ 
+  const overlay = document.createElement('div');
+  overlay.id = 'pengumuman-popup-overlay';
+  overlay.style.cssText = [
+    'position:fixed','inset:0','z-index:9500',
+    'background:rgba(0,0,0,.75)','backdrop-filter:blur(6px)',
+    'display:flex','align-items:center','justify-content:center','padding:16px',
+    'overflow-y:auto',
+  ].join(';');
+ 
+  const urgentIcons = { Critical:'🔴', High:'🟠', Medium:'🔵', Low:'🟢', '':'📢' };
+ 
+  const itemsHtml = items.map((r,i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:16px;margin-bottom:10px;${i===0?'border-color:var(--accent);':''}"
+      ${i > 0 ? 'class="pum-item-extra" style="display:none;"' : ''}>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:.95rem;color:var(--text);">${escHtml(r.judul||'-')}</div>
+          <div style="font-size:.68rem;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px;">
+            ${r.author?'✍️ '+escHtml(r.author):''} ${r.waktu?'· '+escHtml(r.waktu):''}
+          </div>
+        </div>
+        <span style="font-size:1.2rem;flex-shrink:0;">${urgentIcons[r.urgensi||r.target||'']||'📢'}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--text2);line-height:1.6;white-space:pre-wrap;">${escHtml(r.isi||'')}</div>
+      ${r.tanggal_akhir&&r.tanggal_akhir.trim()?`<div style="font-size:.68rem;color:var(--yellow);margin-top:6px;">⏰ Berlaku s/d: ${escHtml(r.tanggal_akhir)}</div>`:''}
+    </div>`).join('');
+ 
+  overlay.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--accent);border-radius:20px;
+      width:100%;max-width:440px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);
+      animation:popupIn .3s cubic-bezier(.34,1.56,.64,1);">
+ 
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,var(--accent),var(--accent3));
+        padding:16px 18px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:800;color:#fff;">
+            📢 Pengumuman
+          </div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.75);margin-top:2px;">
+            ${items.length} pengumuman aktif
+          </div>
+        </div>
+        <button onclick="document.getElementById('pengumuman-popup-overlay').remove()"
+          style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);
+          border:1px solid rgba(255,255,255,.3);color:#fff;cursor:pointer;font-size:.95rem;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+      </div>
+ 
+      <!-- Isi -->
+      <div style="padding:14px;max-height:60vh;overflow-y:auto;" id="pum-content">
+        ${itemsHtml}
+        ${items.length > 1 ? `
+        <button onclick="togglePengumumanAll()" id="pum-toggle-btn"
+          class="btn-action" style="width:100%;padding:9px;font-size:.78rem;margin-top:4px;">
+          ▼ Lihat Semua (${items.length - 1} lagi)
+        </button>` : ''}
+      </div>
+ 
+      <!-- Footer -->
+      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:7px;">
+        <button onclick="document.getElementById('pengumuman-popup-overlay').remove()"
+          class="btn-action" style="flex:1;padding:11px;font-size:.88rem;">
+          ✓ Mengerti, Tutup
+        </button>
+        <button onclick="bukaMenuPengumuman()"
+          class="btn-action accent" style="flex:1;padding:11px;font-size:.88rem;">
+          📢 Lihat Semua
+        </button>
+      </div>
+    </div>`;
+ 
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+ 
+function togglePengumumanAll(){
+  const extras = document.querySelectorAll('.pum-item-extra');
+  const btn = document.getElementById('pum-toggle-btn');
+  const allVisible = [...extras].every(el => el.style.display !== 'none');
+  extras.forEach(el => el.style.display = allVisible ? 'none' : 'block');
+  if(btn) btn.textContent = allVisible ? `▼ Lihat Semua (${extras.length} lagi)` : '▲ Sembunyikan';
+}
+ 
+function bukaMenuPengumuman(){
+  document.getElementById('pengumuman-popup-overlay')?.remove();
+  // Cari dan klik tombol nav Pengumuman
+  document.querySelectorAll('nav button').forEach(btn => {
+    if(btn.textContent.includes('Pengumuman')){
+      btn.click();
+    }
+  });
+}
+ 
+ 
+// ══════════════════════════════════════════════════
+// PATCH 5: renderPengumuman — baca dari Google Sheet
+// ══════════════════════════════════════════════════
+function renderPengumuman(){
+  const content = document.getElementById('app-content');
+  const isAdmin = isAdminUser();
+ 
+  content.innerHTML = `
+    ${isAdmin ? `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">➕ Tambah Pengumuman</div>
+      <div class="ptny-field"><label>Judul</label>
+        <input type="text" id="pum-judul" class="k-input" placeholder="Judul pengumuman..." style="width:100%;"></div>
+      <div class="ptny-field"><label>Isi Pengumuman</label>
+        <textarea id="pum-isi" rows="4" class="k-input" placeholder="Isi pengumuman..." style="width:100%;resize:vertical;"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:.68rem;color:var(--text3);font-weight:700;display:block;margin-bottom:3px;">TARGET</label>
+          <select id="pum-target" class="k-input" style="width:100%;">
+            <option value="all">Semua</option><option value="admin">Admin</option>
+            <option value="penatua">Penatua</option><option value="gembala">Gembala</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.68rem;color:var(--text3);font-weight:700;display:block;margin-bottom:3px;">BERLAKU DARI</label>
+          <input type="date" id="pum-tgl-awal" class="k-input" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:.68rem;color:var(--text3);font-weight:700;display:block;margin-bottom:3px;">BERLAKU S/D</label>
+          <input type="date" id="pum-tgl-akhir" class="k-input" style="width:100%;">
+        </div>
+      </div>
+      <button onclick="submitPengumuman()" class="ptny-submit-btn">📤 Kirim Pengumuman</button>
+      <div id="pum-status" style="margin-top:8px;font-size:.8rem;text-align:center;color:var(--text3);"></div>
+    </div>` : ''}
+ 
+    <div class="section-header">
+      <span class="section-title">📢 Pengumuman</span>
+      <button onclick="loadDaftarPengumuman()" class="btn-action" style="padding:6px 12px;font-size:.78rem;">🔄 Refresh</button>
+    </div>
+    <div id="pum-list"><div class="loading-shimmer"></div></div>`;
+ 
+  loadDaftarPengumuman();
+}
+ 
+async function loadDaftarPengumuman(){
+  const el = document.getElementById('pum-list');
+  if(!el) return;
+  if(!URLS.Pengumuman || URLS.Pengumuman.includes('GANTI')){
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>URL Pengumuman belum diisi di config URLS.</p></div>`;
+    return;
+  }
+ 
+  el.innerHTML = '<div class="loading-shimmer"></div>';
+  try {
+    const resp = await fetch(URLS.Pengumuman + '&t=' + Date.now());
+    const text = await resp.text();
+    let rows = [];
+    Papa.parse(text, { header:true, complete:r => { rows = r.data; } });
+ 
+    const today = new Date().toISOString().split('T')[0];
+    const aktif = rows.filter(r => {
+      if((r.deleted||'').toLowerCase() === 'y') return false;
+      if(!(r.judul||'').trim() && !(r.isi||'').trim()) return false;
+      return true;
+    }).reverse(); // terbaru dulu
+ 
+    if(!aktif.length){
+      el.innerHTML = `<div class="empty-state"><div class="icon">📢</div><p>Belum ada pengumuman.</p></div>`;
+      return;
+    }
+ 
+    el.innerHTML = aktif.map((r, origIdx) => {
+      const realIdx = rows.indexOf(aktif[aktif.length - 1 - origIdx]); // index asli untuk edit
+      const rowIdx = rows.length - 1 - origIdx;
+      const sudahLewat = r.tanggal_akhir && parsePengumumanTgl(r.tanggal_akhir) < today;
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+          padding:16px;margin-bottom:10px;${sudahLewat?'opacity:.5;':''}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:.95rem;">${escHtml(r.judul||'-')}</div>
+              <div style="font-size:.68rem;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px;">
+                ${r.author?'✍️ '+escHtml(r.author):''} ${r.waktu?'· '+escHtml(r.waktu):''}
+                ${r.target&&r.target!=='all'?`<span class="tag" style="margin-left:4px;">${escHtml(r.target)}</span>`:''}
+              </div>
+            </div>
+            ${isAdminUser() ? `
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+              <button onclick="hapusPengumuman(${rows.indexOf(r)})"
+                style="padding:4px 8px;border-radius:6px;border:1px solid rgba(239,68,68,.3);
+                background:rgba(239,68,68,.08);color:var(--red);font-size:.72rem;cursor:pointer;">🗑</button>
+            </div>` : ''}
+          </div>
+          <div style="font-size:.88rem;color:var(--text);line-height:1.6;white-space:pre-wrap;
+            background:var(--surface2);border-radius:8px;padding:10px;">${escHtml(r.isi||'')}</div>
+          ${r.tanggal_awal||r.tanggal_akhir ? `
+          <div style="display:flex;gap:10px;margin-top:7px;font-size:.68rem;color:var(--text3);">
+            ${r.tanggal_awal?`<span>📅 Dari: ${escHtml(r.tanggal_awal)}</span>`:''}
+            ${r.tanggal_akhir?`<span>⏰ S/d: <span style="color:${sudahLewat?'var(--red)':'var(--yellow);'};">${escHtml(r.tanggal_akhir)}</span></span>`:''}
+          </div>` : ''}
+        </div>`;
+    }).join('');
+ 
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p></div>`;
+  }
+}
+ 
+async function submitPengumuman(){
+  const statusEl = document.getElementById('pum-status');
+  const judul = document.getElementById('pum-judul')?.value.trim();
+  const isi = document.getElementById('pum-isi')?.value.trim();
+  const target = document.getElementById('pum-target')?.value || 'all';
+  const tglAwal = document.getElementById('pum-tgl-awal')?.value || '';
+  const tglAkhir = document.getElementById('pum-tgl-akhir')?.value || '';
+ 
+  if(!judul || !isi) return toast('⚠️ Judul dan isi wajib diisi');
+  if(!APPS_SCRIPT_PENGUMUMAN || APPS_SCRIPT_PENGUMUMAN.includes('GANTI'))
+    return toast('⚠️ APPS_SCRIPT_PENGUMUMAN belum diisi');
+ 
+  if(statusEl) statusEl.textContent = '⏳ Mengirim...';
+ 
+  const now = new Date();
+  const pad = x => String(x).padStart(2,'0');
+  const waktu = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+ 
+  const body = {
+    action: 'tambah_pengumuman',
+    judul, isi, target,
+    author: currentUser?.username || 'Admin',
+    waktu,
+    tanggal_awal: tglAwal ? formatDateFromInput(tglAwal) : '',
+    tanggal_akhir: tglAkhir ? formatDateFromInput(tglAkhir) : '',
+    deleted: '',
+  };
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      toast('✅ Pengumuman berhasil dikirim!');
+      if(statusEl) statusEl.textContent = '✅ Terkirim!';
+      document.getElementById('pum-judul').value = '';
+      document.getElementById('pum-isi').value = '';
+      setTimeout(loadDaftarPengumuman, 1000);
+    } else {
+      toast('❌ Gagal: ' + (result.message||'error'));
+      if(statusEl) statusEl.textContent = '❌ ' + (result.message||'error');
+    }
+  } catch(e) {
+    // Fallback no-cors
+    await fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    toast('✅ Pengumuman dikirim (no-cors mode)');
+    if(statusEl) statusEl.textContent = '✅ Terkirim!';
+    document.getElementById('pum-judul').value = '';
+    document.getElementById('pum-isi').value = '';
+    setTimeout(loadDaftarPengumuman, 2000);
+  }
+}
+ 
+async function hapusPengumuman(rowIndex){
+  if(!confirm('Hapus pengumuman ini?')) return;
+  if(!APPS_SCRIPT_PENGUMUMAN || APPS_SCRIPT_PENGUMUMAN.includes('GANTI'))
+    return toast('⚠️ APPS_SCRIPT_PENGUMUMAN belum diisi');
+  try {
+    await fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action:'hapus_pengumuman', row_index:rowIndex }),
+    });
+    toast('🗑 Pengumuman dihapus');
+    setTimeout(loadDaftarPengumuman, 1200);
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+  }
+}
+ 
 // ══════════════════════════════════════════════════
 // INFO MODAL
 // ══════════════════════════════════════════════════
@@ -7483,56 +7909,6 @@ function refreshDashboardFS(){
   if(src&&dst){dst.innerHTML=src.innerHTML;toast('✅ Dashboard diperbarui');}
 }
 
-// ═══════════════════════════════════════════════════════════
-// PATCH: Akun Demo + Menu Baru
-// Tambahkan kode ini SEBELUM tag </script> di index.html
-// ═══════════════════════════════════════════════════════════
-
-// ── Override attemptLogin: tambah akun demo hardcoded ──────
-const _origAttemptLogin = attemptLogin;
-attemptLogin = function(){
-  const errEl=document.getElementById('login-error');errEl.style.display='none';
-  const u=document.getElementById('user').value.trim();
-  const p=document.getElementById('pass').value;
-  if(!u||!p)return toast('⚠️ Isi username dan password');
-
-  // ★ AKUN DEMO HARDCODED
-  if(u==='akundemo'&&p==='pastibisamasuk'){
-    currentUser={
-      username:'akundemo',
-      password:'pastibisamasuk',
-      level:'Demo',
-      tipe:'Beranda,Catatan Doa,Kegelisahan,Alkitab,Kata-kata Hari Ini,Pertanyaan,Pengumuman',
-      no_EfataID:'DEMO-001',
-      No_EfataID:'DEMO-001',
-    };
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('main-app').style.display='flex';
-    document.getElementById('header-title').textContent='akundemo';
-    document.getElementById('header-sub').textContent='Demo';
-    Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
-    if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
-    if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
-    setupNavigation();
-    logHistory('login','masuk aplikasi (demo)','level: Demo');
-    return;
-  }
-
-  // Akun biasa dari database
-  if(!db.Awal||!db.Awal.length)return toast('⏳ Memuat data, harap tunggu...');
-  const found=db.Awal.find(r=>r.username===u&&r.password===p);
-  if(!found){errEl.style.display='block';return;}
-  currentUser=found;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-app').style.display='flex';
-  document.getElementById('header-title').textContent=found.username;
-  document.getElementById('header-sub').textContent=found.level||found.tipe||'user';
-  Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
-  if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
-  if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
-  setupNavigation();
-  logHistory('login','masuk aplikasi','level: '+(found.level||found.tipe||'-'));
-};
 
 
 
@@ -8386,6 +8762,503 @@ function copyPrestasiAnak() {
 
 
 console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');   
+
+// ══════════════════════════════════════════════════
+// PATCH 6: renderManajemenKelas — implementasi lengkap
+// ══════════════════════════════════════════════════
+function renderManajemenKelas(){
+  const content = document.getElementById('app-content');
+  if(!bolehAbsenSidang()){
+    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
+    return;
+  }
+ 
+  content.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:12px;">🏫 Manajemen Kelas Anak</div>
+ 
+      <!-- Tambah Kelas Baru -->
+      <div style="background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:.75rem;font-weight:700;color:var(--accent);margin-bottom:8px;">➕ Tambah Kelas Baru</div>
+        <div class="ptny-field"><label>Nama Kelas</label>
+          <input type="text" id="km-nama" class="k-input" placeholder="Mis: Kelas Minggu A..." style="width:100%;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="ptny-field"><label>Jenis</label>
+            <select id="km-jenis" class="k-input" style="width:100%;">
+              <option value="anak">Anak</option><option value="remaja">Remaja</option>
+              <option value="pemuda">Pemuda</option><option value="gabungan">Gabungan</option>
+            </select>
+          </div>
+          <div class="ptny-field"><label>Tahun Ajaran</label>
+            <input type="text" id="km-tahun" class="k-input"
+              value="${new Date().getFullYear()}" placeholder="2026" style="width:100%;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="ptny-field"><label>Distrik / Lokal</label>
+            <input type="text" id="km-distrik" class="k-input" placeholder="Surabaya..." style="width:100%;"></div>
+          <div class="ptny-field"><label>Gembala Kelas</label>
+            <input type="text" id="km-gembala" class="k-input" placeholder="Nama gembala..." style="width:100%;"></div>
+        </div>
+        <button onclick="submitKelasManage()" class="ptny-submit-btn">💾 Simpan Kelas</button>
+        <div id="km-status" style="margin-top:8px;font-size:.8rem;text-align:center;color:var(--text3);"></div>
+      </div>
+ 
+      <!-- Tombol Muat Daftar Kelas -->
+      <button onclick="loadDaftarKelasManage()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+        🔄 Muat Daftar Kelas
+      </button>
+    </div>
+ 
+    <!-- Daftar Kelas -->
+    <div id="km-list">
+      <div class="empty-state"><div class="icon">🏫</div><p>Klik "Muat Daftar Kelas" untuk melihat kelas yang ada.</p></div>
+    </div>
+ 
+    <!-- Detail Anggota -->
+    <div id="km-anggota-wrap" style="margin-top:10px;"></div>
+  `;
+}
+ 
+async function submitKelasManage(){
+  const statusEl = document.getElementById('km-status');
+  const nama = document.getElementById('km-nama')?.value.trim();
+  if(!nama) return toast('⚠️ Nama kelas wajib');
+  if(APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL APPS_SCRIPT_KELAS belum diisi');
+ 
+  if(statusEl) statusEl.textContent = '⏳ Menyimpan...';
+  const params = new URLSearchParams({
+    action: 'simpan_kelas',
+    nama_kelas: nama,
+    jenis: document.getElementById('km-jenis')?.value || 'anak',
+    tahun_ajaran: document.getElementById('km-tahun')?.value || String(new Date().getFullYear()),
+    distrik: document.getElementById('km-distrik')?.value || '',
+    gembala_kelas: document.getElementById('km-gembala')?.value || '',
+    aktif: 'y',
+  });
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: params.toString()
+    });
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      toast('✅ Kelas berhasil ditambahkan: ' + nama);
+      if(statusEl) statusEl.textContent = '✅ Tersimpan! ID: ' + result.id;
+      document.getElementById('km-nama').value = '';
+      loadDaftarKelasManage();
+    } else {
+      toast('❌ ' + (result.message||'Gagal'));
+      if(statusEl) statusEl.textContent = '❌ ' + (result.message||'error');
+    }
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+    if(statusEl) statusEl.textContent = '❌ ' + e.message;
+  }
+}
+ 
+async function loadDaftarKelasManage(){
+  const el = document.getElementById('km-list');
+  if(!el) return;
+  if(APPS_SCRIPT_KELAS.includes('GANTI')){
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>APPS_SCRIPT_KELAS belum diisi.</p></div>`;
+    return;
+  }
+  el.innerHTML = '<div class="loading-shimmer"></div>';
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + new Date().getFullYear());
+    const result = await resp.json();
+    const data = result.data || [];
+ 
+    if(!data.length){
+      el.innerHTML = `<div class="empty-state"><div class="icon">🏫</div><p>Belum ada kelas. Tambahkan kelas baru di atas.</p></div>`;
+      return;
+    }
+ 
+    el.innerHTML = `
+      <div class="section-header" style="margin-bottom:8px;">
+        <span class="section-title">📋 Daftar Kelas (${data.length})</span>
+      </div>
+      ${data.map(k => `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+          padding:13px;margin-bottom:8px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:.92rem;">${escHtml(k.nama_kelas||'-')}</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
+                <span class="tag">${escHtml(k.jenis||'-')}</span>
+                <span class="tag green">${escHtml(k.tahun_ajaran||'-')}</span>
+                ${k.distrik?`<span class="tag yellow">${escHtml(k.distrik)}</span>`:''}
+              </div>
+              ${k.gembala_kelas?`<div style="font-size:.72rem;color:var(--text3);margin-top:3px;">👤 ${escHtml(k.gembala_kelas)}</div>`:''}
+              <div style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--text3);margin-top:2px;">
+                ID: ${escHtml(k.id_kelas||'-')}
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+              <button onclick="loadAnggotaKelas('${escHtml(k.id_kelas)}','${escHtml(k.nama_kelas)}')"
+                class="btn-action accent" style="font-size:.75rem;padding:6px 10px;">👦 Anggota</button>
+              <button onclick="nonaktifkanKelas('${escHtml(k.id_kelas)}','${escHtml(k.nama_kelas)}')"
+                class="btn-action red" style="font-size:.75rem;padding:6px 10px;">🗑 Hapus</button>
+            </div>
+          </div>
+        </div>`).join('')}`;
+ 
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}</p></div>`;
+  }
+}
+ 
+async function loadAnggotaKelas(idKelas, namaKelas){
+  const wrap = document.getElementById('km-anggota-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = '<div class="loading-shimmer"></div>';
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_anggota_kelas&id_kelas=' + encodeURIComponent(idKelas));
+    const result = await resp.json();
+    const anggota = result.data || [];
+ 
+    wrap.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;">
+        <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;">
+          👦 Anggota: ${escHtml(namaKelas)} (${anggota.length} orang)
+        </div>
+ 
+        <!-- Tambah Anggota -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:10px;">
+          <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:6px;">➕ Tambah Anggota</div>
+          <input type="text" id="km-anggota-nama" class="k-input"
+            placeholder="Nama anak..." style="width:100%;margin-bottom:6px;"
+            oninput="kmCariJemaat(this.value)">
+          <div id="km-suggest" style="display:none;background:var(--surface);border:1px solid var(--accent);
+            border-radius:8px;margin-bottom:6px;max-height:150px;overflow-y:auto;"></div>
+          <input type="hidden" id="km-anggota-efataid" value="">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+            <input type="text" id="km-anggota-ayah" class="k-input" placeholder="Nama Ayah...">
+            <input type="text" id="km-anggota-ibu" class="k-input" placeholder="Nama Ibu...">
+          </div>
+          <button onclick="tambahAnggotaKelas('${escHtml(idKelas)}')"
+            class="btn-action green" style="width:100%;padding:9px;">➕ Tambah ke Kelas</button>
+          <div id="km-anggota-status" style="margin-top:6px;font-size:.75rem;text-align:center;color:var(--text3);"></div>
+        </div>
+ 
+        <!-- Daftar Anggota -->
+        ${anggota.length === 0
+          ? '<div class="empty-state"><div class="icon">👦</div><p>Belum ada anggota.</p></div>'
+          : anggota.map(a => `
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:.88rem;">${escHtml(a.nama||'-')}</div>
+                <div style="font-size:.68rem;color:var(--text3);">
+                  ${a.no_efataid?`ID: ${a.no_efataid} · `:''} 
+                  ${a.nama_ayah?`👨 ${a.nama_ayah} `:''} 
+                  ${a.nama_ibu?`👩 ${a.nama_ibu}`:''}
+                </div>
+              </div>
+              <button onclick="hapusAnggotaKelas('${escHtml(a.id)}','${escHtml(a.nama)}')"
+                style="padding:4px 8px;border-radius:6px;border:1px solid rgba(239,68,68,.3);
+                background:rgba(239,68,68,.08);color:var(--red);font-size:.72rem;cursor:pointer;flex-shrink:0;">
+                ✕
+              </button>
+            </div>`).join('')}
+ 
+        <button onclick="document.getElementById('km-anggota-wrap').innerHTML=''"
+          class="btn-action" style="width:100%;padding:9px;margin-top:10px;">✕ Tutup</button>
+      </div>`;
+ 
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
+  }
+}
+ 
+function kmCariJemaat(q){
+  const sug = document.getElementById('km-suggest');
+  if(!sug) return;
+  if(!q || q.length < 2){ sug.style.display='none'; return; }
+  const matches = (db.Jemaat||[]).filter(j =>
+    (j['Nama Lengkap']||'').toLowerCase().includes(q.toLowerCase()) ||
+    (j['Nama Panggilan']||'').toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+  if(!matches.length){ sug.style.display='none'; return; }
+  sug.style.display = 'block';
+  sug.innerHTML = matches.map(j => {
+    const ef = (j['No_EfataID']||j['no_EfataID']||j['no_Efataid']||'').trim();
+    const nm = j['Nama Lengkap']||'-';
+    const pan = j['Nama Panggilan']||'';
+    return `<div onclick="kmSelectJemaat('${escHtml(nm)}','${escHtml(pan)}','${escHtml(ef)}',
+        '${escHtml(j['Ayah']||j['ayah']||'')}','${escHtml(j['Ibu']||j['ibu']||'')}')"
+      style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.82rem;"
+      onmouseover="this.style.background='var(--surface2)'"
+      onmouseout="this.style.background=''">
+      <strong>${escHtml(pan||nm)}</strong>
+      <span style="font-size:.7rem;color:var(--text3);"> · ${escHtml(nm)} · ${ef||'no-efata'}</span>
+    </div>`;
+  }).join('');
+}
+ 
+function kmSelectJemaat(nm, pan, ef, ayah, ibu){
+  const namaEl = document.getElementById('km-anggota-nama');
+  const efEl = document.getElementById('km-anggota-efataid');
+  const ayahEl = document.getElementById('km-anggota-ayah');
+  const ibuEl = document.getElementById('km-anggota-ibu');
+  const sug = document.getElementById('km-suggest');
+  if(namaEl) namaEl.value = pan||nm;
+  if(efEl) efEl.value = ef;
+  if(ayahEl && ayah) ayahEl.value = ayah;
+  if(ibuEl && ibu) ibuEl.value = ibu;
+  if(sug) sug.style.display = 'none';
+}
+ 
+async function tambahAnggotaKelas(idKelas){
+  const statusEl = document.getElementById('km-anggota-status');
+  const nama = document.getElementById('km-anggota-nama')?.value.trim();
+  const efataid = document.getElementById('km-anggota-efataid')?.value.trim();
+  const ayah = document.getElementById('km-anggota-ayah')?.value.trim();
+  const ibu = document.getElementById('km-anggota-ibu')?.value.trim();
+  if(!nama) return toast('⚠️ Isi nama anak');
+  if(APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL belum diisi');
+ 
+  if(statusEl) statusEl.textContent = '⏳ Menambahkan...';
+  const params = new URLSearchParams({
+    action: 'tambah_anggota',
+    id_kelas: idKelas,
+    no_efataid: efataid,
+    nama,
+    kategori: 'anak',
+    nama_ayah: ayah,
+    nama_ibu: ibu,
+  });
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: params.toString()
+    });
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      toast('✅ ' + nama + ' ditambahkan ke kelas');
+      if(statusEl) statusEl.textContent = '✅ Berhasil!';
+      document.getElementById('km-anggota-nama').value = '';
+      document.getElementById('km-anggota-efataid').value = '';
+      document.getElementById('km-anggota-ayah').value = '';
+      document.getElementById('km-anggota-ibu').value = '';
+      // Reload anggota
+      const namaKelasEl = document.querySelector('#km-anggota-wrap [style*="font-weight:700"]');
+      loadAnggotaKelas(idKelas, namaKelasEl?.textContent?.split(':')[1]?.split('(')[0]?.trim() || idKelas);
+    } else {
+      toast('❌ ' + (result.message||'Gagal'));
+      if(statusEl) statusEl.textContent = '❌ ' + result.message;
+    }
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+  }
+}
+ 
+async function hapusAnggotaKelas(id, nama){
+  if(!confirm(`Keluarkan "${nama}" dari kelas ini?`)) return;
+  if(APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL belum diisi');
+  const params = new URLSearchParams({ action:'hapus_anggota', id });
+  try {
+    await fetch(APPS_SCRIPT_KELAS, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: params.toString()
+    });
+    toast('✅ ' + nama + ' dikeluarkan dari kelas');
+    // Cari id kelas dari state atau refresh
+    await loadDaftarKelasManage();
+  } catch(e) { toast('⚠️ ' + e.message); }
+}
+ 
+async function nonaktifkanKelas(idKelas, namaKelas){
+  if(!confirm(`Nonaktifkan kelas "${namaKelas}"? Data anggota tidak dihapus.`)) return;
+  if(APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL belum diisi');
+  const params = new URLSearchParams({ action:'hapus_kelas', id_kelas:idKelas });
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: params.toString()
+    });
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      toast('✅ Kelas dinonaktifkan');
+      loadDaftarKelasManage();
+    } else toast('❌ ' + (result.message||'Gagal'));
+  } catch(e) { toast('⚠️ ' + e.message); }
+}
+ 
+ 
+// ══════════════════════════════════════════════════
+// PATCH 7: Tambah Pengumuman section di renderAdmin
+// ══════════════════════════════════════════════════
+// Override renderAdmin untuk tambahkan tombol pengumuman
+const _origRenderAdmin = renderAdmin;
+renderAdmin = function(){
+  _origRenderAdmin();
+ 
+  // Tambah tombol "Kelola Pengumuman" setelah tombol Quiz Results
+  const toolbar = document.getElementById('app-content');
+  if(!toolbar) return;
+ 
+  // Cari div tombol-tombol admin dan tambah tombol baru
+  const existingBtns = toolbar.querySelector('[style*="flex-direction:column"]');
+  if(existingBtns){
+    const newBtn = document.createElement('button');
+    newBtn.className = 'btn-action';
+    newBtn.style.cssText = 'padding:12px;font-weight:700;margin-top:-5px;';
+    newBtn.textContent = '📢 Kelola Pengumuman';
+    newBtn.onclick = () => {
+      // Load section pengumuman langsung di admin results
+      const el = document.getElementById('admin-results');
+      if(el) el.innerHTML = buildAdminPengumumanSection();
+      loadDaftarPengumumanAdmin();
+    };
+    existingBtns.appendChild(newBtn);
+  }
+};
+ 
+function buildAdminPengumumanSection(){
+  return `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;">📢 Kelola Pengumuman</div>
+ 
+      <!-- Form tambah -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px;">➕ Tambah Baru</div>
+        <div class="ptny-field"><label>Judul</label>
+          <input type="text" id="adm-pum-judul" class="k-input" placeholder="Judul..." style="width:100%;"></div>
+        <div class="ptny-field"><label>Isi</label>
+          <textarea id="adm-pum-isi" rows="3" class="k-input" placeholder="Isi pengumuman..." style="width:100%;resize:vertical;"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div>
+            <label style="font-size:.68rem;color:var(--text3);font-weight:700;display:block;margin-bottom:3px;">BERLAKU S/D</label>
+            <input type="date" id="adm-pum-tglakhir" class="k-input" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:.68rem;color:var(--text3);font-weight:700;display:block;margin-bottom:3px;">TARGET</label>
+            <select id="adm-pum-target" class="k-input" style="width:100%;">
+              <option value="all">Semua User</option>
+              <option value="admin">Admin saja</option>
+              <option value="penatua">Penatua+</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="submitPengumumanAdmin()" class="ptny-submit-btn">📤 Kirim Pengumuman</button>
+        <div id="adm-pum-status" style="margin-top:6px;font-size:.78rem;text-align:center;color:var(--text3);"></div>
+      </div>
+ 
+      <!-- Daftar -->
+      <button onclick="loadDaftarPengumumanAdmin()" class="btn-action accent" style="width:100%;padding:9px;margin-bottom:8px;font-weight:700;">
+        🔄 Muat Daftar Pengumuman
+      </button>
+      <div id="adm-pum-list"></div>
+    </div>`;
+}
+ 
+async function submitPengumumanAdmin(){
+  const statusEl = document.getElementById('adm-pum-status');
+  const judul = document.getElementById('adm-pum-judul')?.value.trim();
+  const isi = document.getElementById('adm-pum-isi')?.value.trim();
+  const target = document.getElementById('adm-pum-target')?.value || 'all';
+  const tglAkhir = document.getElementById('adm-pum-tglakhir')?.value || '';
+ 
+  if(!judul || !isi) return toast('⚠️ Judul dan isi wajib');
+  if(!APPS_SCRIPT_PENGUMUMAN || APPS_SCRIPT_PENGUMUMAN.includes('GANTI'))
+    return toast('⚠️ APPS_SCRIPT_PENGUMUMAN belum diisi di config');
+ 
+  if(statusEl) statusEl.textContent = '⏳ Mengirim...';
+ 
+  const now = new Date();
+  const pad = x => String(x).padStart(2,'0');
+  const waktu = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+ 
+  const body = {
+    action: 'tambah_pengumuman',
+    judul, isi, target,
+    author: currentUser?.username || 'Admin',
+    waktu,
+    tanggal_awal: '',
+    tanggal_akhir: tglAkhir ? formatDateFromInput(tglAkhir) : '',
+    deleted: '',
+  };
+ 
+  try {
+    const resp = await fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const result = await resp.json().catch(()=>({status:'ok'}));
+    toast('✅ Pengumuman berhasil dikirim!');
+    if(statusEl) statusEl.textContent = '✅ Terkirim!';
+    document.getElementById('adm-pum-judul').value = '';
+    document.getElementById('adm-pum-isi').value = '';
+    setTimeout(loadDaftarPengumumanAdmin, 1000);
+  } catch(e) {
+    // no-cors fallback
+    fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    toast('✅ Terkirim (no-cors)');
+    if(statusEl) statusEl.textContent = '✅ Terkirim!';
+    setTimeout(loadDaftarPengumumanAdmin, 2000);
+  }
+}
+ 
+async function loadDaftarPengumumanAdmin(){
+  const el = document.getElementById('adm-pum-list');
+  if(!el) return;
+  if(!URLS.Pengumuman || URLS.Pengumuman.includes('GANTI')){
+    el.innerHTML = `<div style="font-size:.78rem;color:var(--yellow);padding:8px;">⚠️ URL Pengumuman belum diisi di URLS config.</div>`;
+    return;
+  }
+  el.innerHTML = '<div class="loading-shimmer"></div>';
+  try {
+    const resp = await fetch(URLS.Pengumuman + '&t=' + Date.now());
+    const text = await resp.text();
+    let rows = [];
+    Papa.parse(text, { header:true, complete:r=>{ rows=r.data; } });
+    const aktif = rows.filter(r => !(r.deleted||'').toLowerCase().includes('y') && ((r.judul||'').trim()||(r.isi||'').trim()));
+    if(!aktif.length){ el.innerHTML='<div style="font-size:.8rem;color:var(--text3);padding:8px;">Belum ada pengumuman.</div>'; return; }
+    el.innerHTML = aktif.reverse().map((r,i) => {
+      const origIdx = rows.indexOf(r);
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:7px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.85rem;">${escHtml(r.judul||'-')}</div>
+            <div style="font-size:.68rem;color:var(--text3);margin-top:2px;">${escHtml(r.waktu||'')} · ${escHtml(r.author||'')} · target: ${escHtml(r.target||'all')}</div>
+            <div style="font-size:.78rem;color:var(--text2);margin-top:5px;white-space:pre-wrap;">${escHtml((r.isi||'').slice(0,120))}${(r.isi||'').length>120?'…':''}</div>
+            ${r.tanggal_akhir?`<div style="font-size:.65rem;color:var(--yellow);margin-top:3px;">⏰ S/d: ${escHtml(r.tanggal_akhir)}</div>`:''}
+          </div>
+          <button onclick="hapusPengumumanAdmin(${origIdx})"
+            style="padding:4px 8px;border-radius:6px;border:1px solid rgba(239,68,68,.3);
+            background:rgba(239,68,68,.08);color:var(--red);font-size:.72rem;cursor:pointer;flex-shrink:0;">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="font-size:.78rem;color:var(--red);padding:8px;">Gagal: ${e.message}</div>`;
+  }
+}
+ 
+async function hapusPengumumanAdmin(rowIndex){
+  if(!confirm('Hapus pengumuman ini?')) return;
+  if(!APPS_SCRIPT_PENGUMUMAN||APPS_SCRIPT_PENGUMUMAN.includes('GANTI')) return toast('⚠️ URL belum diisi');
+  try {
+    fetch(APPS_SCRIPT_PENGUMUMAN, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'hapus_pengumuman', row_index:rowIndex }),
+    });
+    toast('🗑 Pengumuman dihapus');
+    setTimeout(loadDaftarPengumumanAdmin, 1500);
+  } catch(e) { toast('⚠️ '+e.message); }
+}
+ 
+console.log('✅ PATCH CODE loaded: dispatchRender fixed, Manajemen Kelas ready, Pengumuman popup ready');   
 </script>
 </body>
 </html>
