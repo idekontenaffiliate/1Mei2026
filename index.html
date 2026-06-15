@@ -1042,33 +1042,37 @@ dispatchRender = function(name){
   document.getElementById('app-content').innerHTML =
     `<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" belum tersedia.</p></div>`;
 };
- 
+
 function dispatchRender(name){
   const n = name.toLowerCase().trim();
-  // Log setiap perpindahan menu (kecuali yang sudah log sendiri)
   const noAutoLog = ['penjengukan','admin'];
   if(!noAutoLog.includes(n)) logHistory(name, 'buka menu');
 
-  if(n==='dashboard')renderDashboard();
-  else if(n==='kidung')renderKidung();
-  else if(n==='alkitab')renderAlkitab();
-  else if(n==='acara')renderAcara();
-  else if(n==='kegiatan')renderKegiatan();
-  else if(n==='jemaat')renderJemaat();
-  else if(n==='link')renderLink();
-  else if(n==='quiz')renderQuiz();
-  else if(n==='pertanyaan')renderPertanyaan();
-  else if(n==='hasil pertanyaan')renderHasilPertanyaan();
-  else if(n==='admin')renderAdmin();
-  else if(n==='absensi ktm') renderAbsensiKTM();
-  else if(n==='absensi sidang') renderAbsensiSidang();
-  else if(n==='laporan absensi') renderLaporanAbsensi();
-  else if(n==='penjengukan') renderPenjengukan();
-  else if(n==='absensi anak') renderAbsensiAnak();
-  else if(n==='manajemen kelas') renderManajemenKelas();
-  else document.getElementById('app-content').innerHTML=`<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" siap.</p></div>`;
-}   
-
+  if(n==='dashboard')              renderDashboard();
+  else if(n==='beranda')           renderDashboard();
+  else if(n==='kidung')            renderKidung();
+  else if(n==='alkitab')           renderAlkitab();
+  else if(n==='acara')             renderAcara();
+  else if(n==='kegiatan')          renderKegiatan();
+  else if(n==='jemaat')            renderJemaat();
+  else if(n==='link')              renderLink();
+  else if(n==='quiz')              renderQuiz();
+  else if(n==='pertanyaan')        renderPertanyaan();
+  else if(n==='hasil pertanyaan')  renderHasilPertanyaan();
+  else if(n==='admin')             renderAdmin();
+  else if(n==='absensi ktm')       renderAbsensiKTM();
+  else if(n==='absensi sidang')    renderAbsensiSidang();
+  else if(n==='laporan absensi')   renderLaporanAbsensi();
+  else if(n==='penjengukan')       renderPenjengukan();
+  else if(n==='absensi anak')      renderAbsensiAnak();
+  else if(n==='manajemen kelas')   renderManajemenKelas();
+  else if(n==='catatan doa')       renderCatatanDoa();
+  else if(n==='kegelisahan')       renderKegelisahan();
+  else if(n==='kata-kata hari ini')renderKataHariIni();
+  else if(n==='pengumuman')        renderPengumuman();
+  else document.getElementById('app-content').innerHTML=
+    `<div class="empty-state"><div class="icon">🔧</div><p>Modul "${name}" belum tersedia.</p></div>`;
+}
 // ══════════════════════════════════════════════════
 // PATCH 4: Pengumuman Popup — muncul untuk SEMUA user setelah login
 // ══════════════════════════════════════════════════
