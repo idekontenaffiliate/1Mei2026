@@ -58,6 +58,62 @@ body{min-height:100vh;min-height:-webkit-fill-available;}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.4));}
 .login-divider::after{background:linear-gradient(90deg,rgba(212,175,55,.4),transparent);}
 .login-divider-icon{font-size:.8rem;color:#d4af37;}
+
+ /* ── TICKER / TEKS BERJALAN LOGIN ─────────────────────────── */
+.login-ticker-wrap {
+  overflow: hidden;
+  border-top: 1px solid rgba(212,175,55,.2);
+  border-bottom: 1px solid rgba(212,175,55,.2);
+  background: rgba(212,175,55,.06);
+  border-radius: 8px;
+  padding: 7px 0;
+  margin: 12px 0;
+  position: relative;
+}
+.login-ticker-wrap::before,
+.login-ticker-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 30px;
+  z-index: 2;
+}
+.login-ticker-wrap::before { left: 0; background: linear-gradient(to right, rgba(255,252,240,.95), transparent); }
+.login-ticker-wrap::after  { right:0; background: linear-gradient(to left,  rgba(255,252,240,.95), transparent); }
+
+.login-ticker {
+  display: flex;
+  white-space: nowrap;
+  animation: tickerScroll 28s linear infinite;
+  will-change: transform;
+}
+.login-ticker:hover { animation-play-state: paused; }
+.login-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  font-size: .72rem;
+  font-weight: 600;
+  color: #92400e;
+  letter-spacing: .3px;
+  font-family: 'DM Sans', sans-serif;
+}
+.login-ticker-sep {
+  color: #d4af37;
+  font-size: .9rem;
+}
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Dark theme ticker override */
+[data-theme^="dark"] .login-ticker-item { color: #fcd34d; }
+[data-theme^="dark"] .login-ticker-wrap::before { background: linear-gradient(to right, rgba(10,10,10,.95), transparent); }
+[data-theme^="dark"] .login-ticker-wrap::after  { background: linear-gradient(to left,  rgba(10,10,10,.95), transparent); }
+[data-theme="light-white"] .login-ticker-wrap::before { background: linear-gradient(to right, rgba(248,249,250,.95), transparent); }
+[data-theme="light-white"] .login-ticker-wrap::after  { background: linear-gradient(to left,  rgba(248,249,250,.95), transparent); }  
 .lf{margin-bottom:1rem;}
 .lf label{display:block;font-size:.68rem;font-weight:700;color:#8a9ab5;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;}
 .lf-input-wrap{position:relative;}
@@ -71,6 +127,16 @@ body{min-height:100vh;min-height:-webkit-fill-available;}
 .login-footer strong{color:#d4af37;}
 .login-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:8px 12px;font-size:.8rem;color:#dc2626;margin-top:8px;display:none;text-align:center;}
 
+
+/* ── POPUP PENGUMUMAN ANIMASI ─────────────────────────────── */
+@keyframes popupIn {
+  from { opacity:0; transform:scale(.9) translateY(20px); }
+  to   { opacity:1; transform:none; }
+}
+
+/* ── ADMIN PENGUMUMAN BUTTON ──────────────────────────────── */
+#admin-pum-section { animation: fadeIn .3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
 /* ── MAIN APP ─────────────────────────────────────────── */
 #main-app{display:none;flex-direction:column;height:100vh;height:-webkit-fill-available;padding-bottom:env(safe-area-inset-bottom,0px);}
 header{background:var(--header-bg);border-bottom:1px solid var(--border);padding:0 8px;height:54px;min-height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100;}
@@ -407,6 +473,40 @@ nav button:hover:not(.active){color:var(--text2);}
       <h2>Persekutuan</h2>
       <p class="sub">Surabaya · <span>sampai 31 Desember 2026</span></p>
     </div>
+    <div class="login-ticker-wrap">
+  <div class="login-ticker" id="login-ticker-inner">
+    <!-- Set 1 -->
+    <span class="login-ticker-item">📅 Persekutuan 2026</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">🙏 Selamat datang di sistem absensi</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">⛪ Sidang berlangsung sesuai jadwal</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">📋 Silakan login dengan username dan password</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">🔑 Hubungi admin jika lupa password</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">✨ Tuhan memberkati pelayananmu</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">📖 Mazmur 46:2 — Allah itu tempat perlindungan kita</span>
+    <span class="login-ticker-sep">✦</span>
+    <!-- Set 2 (duplikat untuk efek seamless loop) -->
+    <span class="login-ticker-item">📅 Persekutuan 2026</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">🙏 Selamat datang di sistem absensi</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">⛪ Sidang berlangsung sesuai jadwal</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">📋 Silakan login dengan username dan password</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">🔑 Hubungi admin jika lupa password</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">✨ Tuhan memberkati pelayananmu</span>
+    <span class="login-ticker-sep">✦</span>
+    <span class="login-ticker-item">📖 Mazmur 46:2 — Allah itu tempat perlindungan kita</span>
+    <span class="login-ticker-sep">✦</span>
+  </div>
+</div> 
     <div class="login-divider"><span class="login-divider-icon">✦</span></div>
     <div class="lf">
       <label>Username</label>
@@ -662,7 +762,26 @@ const KEPUTUSAN_OPTIONS=['VALID ANSWER','NOT VALID ANSWER','NOT VALID QUESTION',
   else if(LOGIN_IMAGE_URL&&LOGIN_IMAGE_URL.length>4){img.src=LOGIN_IMAGE_URL;img.style.display='block';}
   else{document.getElementById('login-media-wrap').style.display='none';}
 })();
-
+// Opsional: update ticker dari data pengumuman setelah dimuat
+function updateLoginTicker(rows){
+  const ticker = document.getElementById('login-ticker-inner');
+  if(!ticker || !rows || !rows.length) return;
+  const aktif = rows.filter(r => (r.judul||'').trim() && !(r.deleted||'').toLowerCase().includes('y'));
+  if(!aktif.length) return;
+  // Buat item dari pengumuman
+  const items = aktif.map(r =>
+    `<span class="login-ticker-item">📢 ${r.judul}</span><span class="login-ticker-sep">✦</span>`
+  ).join('');
+  // Tambahkan duplikat untuk seamless loop
+  ticker.innerHTML = items + items;
+}
+// Load pengumuman untuk ticker saat halaman pertama dibuka
+if(URLS.Pengumuman && !URLS.Pengumuman.includes('GANTI')){
+  Papa.parse(URLS.Pengumuman, {
+    download:true, header:true,
+    complete: r => updateLoginTicker(r.data)
+  });
+}
 Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
 
 setInterval(()=>{
@@ -7415,33 +7534,9 @@ attemptLogin = function(){
   logHistory('login','masuk aplikasi','level: '+(found.level||found.tipe||'-'));
 };
 
-// ── Override menuLabel: tambah ikon menu baru ──────────────
-const _origMenuLabel = menuLabel;
-menuLabel = function(n){
-  const icons={
-    Dashboard:'📊',Beranda:'🏠',Kidung:'🎵',Alkitab:'📖',
-    Acara:'📅',Kegiatan:'⚡',Jemaat:'👥',Link:'🔗',Quiz:'❓',
-    Pertanyaan:'❔','Absensi Anak':'👦','Manajemen Kelas':'🏫','Absensi KTM':'📋','Absensi Sidang':'📋',
-    'Laporan Absensi':'📈',Penjengukan:'🏠','Hasil Pertanyaan':'📋',
-    Admin:'🔑',
-    'Catatan Doa':'🙏','Kegelisahan':'💭',
-    'Kata-kata Hari Ini':'✨',Pengumuman:'📢'
-  };
-  return(icons[n.trim()]||'•')+' '+n.trim();
-};
 
-// ── Override dispatchRender: tambah routing menu baru ───────
-const _origDispatchRender = dispatchRender;
-dispatchRender = function(name){
-  const n = name.toLowerCase().trim();
-  if(n==='beranda'){renderDashboard();return;}
-  if(n==='catatan doa'){renderCatatanDoa();return;}
-  if(n==='kegelisahan'){renderKegelisahan();return;}
-  if(n==='kata-kata hari ini'){renderKataHariIni();return;}
-  if(n==='pengumuman'){renderPengumuman();return;}
-  // Fallback ke dispatch asli
-  _origDispatchRender(name);
-};
+
+
 
 // ══════════════════════════════════════════════════
 // MODUL BARU: Catatan Doa
@@ -8289,22 +8384,6 @@ function copyPrestasiAnak() {
 //   Dashboard,Absensi Anak,Manajemen Kelas,Absensi Sidang,...
 // ═══════════════════════════════════════════════════════════════
 
-// ── Override dispatchRender (tambahkan setelah override yang sudah ada) ──
-const _origDispatch2 = dispatchRender;
-dispatchRender = function(name) {
-  const n = name.toLowerCase().trim();
-  if (n === 'absensi anak') { renderAbsensiAnak(); return; }
-  // Fallback
-  _origDispatch2(name);
-};
-
-// ── Override menuLabel ──
-const _origMenuLabel2 = menuLabel;
-menuLabel = function(n) {
-  if (n.trim() === 'Absensi Anak') return '👦 Absensi Anak';
-  if (n.trim() === 'Manajemen Kelas') return '🏫 Manajemen Kelas';
-  return _origMenuLabel2(n);
-};
 
 console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');   
 </script>
