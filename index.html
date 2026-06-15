@@ -902,6 +902,7 @@ function attemptLogin(){
     setTimeout(loadPengumumanPopup, 800);
   }
 })();
+ 
     
 function doLogout(){
   if(!confirm('Yakin ingin keluar?'))return;
@@ -8142,7 +8143,6 @@ function renderPengumuman(){
   if(!db.Acara)Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;renderPengumuman();}});
   if(!db.Kegiatan)Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;renderPengumuman();}});
 }
-})(); // ← tutup IIFE patchAttemptLogin
 console.log('✅ Patch demo account loaded: akundemo / pastibisamasuk');   
 // ── STATE ──────────────────────────────────────────────────────
 let absenAnakState = {
