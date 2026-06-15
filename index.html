@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Statistik Pemulihan 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>   
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
@@ -665,7 +666,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbwfLIz4bLSno7gjWJ0O2UwK0yzopebOlcERGHc2l984JSGvTuSwNKocw3ZFbGiiY670JQ/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbxC9FdnwO14o4jIz5O6_6YVPBdfiWMMczrrXC9Sj9S83pBlzvywHXGd3b6GlZMipyO_0g/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbzM-aJghZebEsPGtIDzKNSqC1tMFYNOI7MARjEhS4R518pfo2Yox93c515e1dQnYcwBwA/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbye2JnadJP71eNHOFtBeQsUzdeIKjlM22h0zlOY8ta-I_wMT4j1Ea5iqMhoRt5-WWDutg/exec";
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycby7BXX0S8YiczKHVjjWfLgXuPFAAf3UzZ7KYHRoUqE8fy-3Ob5joL3Haw46opCK0dSTyA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
@@ -6335,44 +6336,197 @@ async function hapusPj(id, nama) {
 // ╚══════════════════════════════════════════════════════════════╝
  
 // ── STATE LAPORAN ──────────────────────────────────────────────
-let laporanAbsenState = { tglAwal:'', tglAkhir:'', data:null, _teksLaporan:'' };   
+let laporanAbsenState = {
+  tglAwal: '', tglAkhir: '',
+  activeTab: 'sidang',       // 'sidang' | 'ktm'
+  activeView: 'summary',     // 'summary' | 'weekly' | 'perperson'
+  filterSidang: '',          // filter jenis sidang tertentu
+  filterGugus: '',           // filter gugus tertentu
+  dataSidang: null,          // response dari server
+  dataKTM: null,
+  _teksLaporan: '',
+  loading: false,
+  tahun: new Date().getFullYear(),
+};   
+
+// ── ACCESS CONTROL ──────────────────────────────────────────────────
+function bolehLihatLaporan() {
+  const l = getLevelCode();
+  const u = (currentUser?.username || '').toLowerCase();
+  if (u === 'admin') return true;
+  if (['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(l)) return true;
+  const tipe = (currentUser?.tipe || '');
+  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].some(lv => tipe.includes(lv));
+}
  
+function bolehLihatPerNama() {
+  const l = getLevelCode();
+  const u = (currentUser?.username || '').toLowerCase();
+  if (u === 'admin') return true;
+  if (['Administrator','Penatua','Gembala Distrik'].includes(l)) return true;
+  const tipe = (currentUser?.tipe || '');
+  return ['Administrator','Penatua','Gembala Distrik'].some(lv => tipe.includes(lv));
+}
+ 
+function bolehLihatKTMLaporan() {
+  return bolehAbsenKTM(); // Penatua, Gembala Distrik, Administrator
+}
+ 
+// ── HELPER: Minggu dalam setahun ────────────────────────────────────
+function getWeeksInYear(year) {
+  // ISO 8601: 53 minggu jika 1 Jan = Kamis ATAU 31 Des = Kamis
+  const jan1 = new Date(year, 0, 1);
+  const dec31 = new Date(year, 11, 31);
+  return (jan1.getDay() === 4 || dec31.getDay() === 4) ? 53 : 52;
+}
+ 
+function getISOWeek(dateStr) {
+  // dateStr = "dd/mm/yyyy"
+  const p = dateStr.split('/');
+  if (p.length !== 3) return 0;
+  const d = new Date(Date.UTC(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+ 
+function getYearFromRange() {
+  // Ambil tahun dari tgl_awal atau tgl_akhir
+  const tgl = laporanAbsenState.tglAwal || laporanAbsenState.tglAkhir || '';
+  const p = tgl.split('/');
+  if (p.length === 3) return parseInt(p[2]) || new Date().getFullYear();
+  return new Date().getFullYear();
+} 
 function renderLaporanAbsensi() {
   const content = document.getElementById('app-content');
   if (!content) return;
-
+ 
+  if (!bolehLihatLaporan()) {
+    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Akses ditolak. Hanya Pra Gembala, Gembala, Penatua, Gembala Distrik, atau Administrator.</p></div>`;
+    return;
+  }
+ 
   const now = new Date();
-  const pad = x => String(x).padStart(2,'0');
-  const tglAkhir = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const satu = new Date(now); satu.setDate(satu.getDate()-30);
-  const tglAwal = `${satu.getFullYear()}-${pad(satu.getMonth()+1)}-${pad(satu.getDate())}`;
-
+  const pad = x => String(x).padStart(2, '0');
+  // Default: 1 Jan – hari ini (setahun penuh)
+  const tglAkhir = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const tglAwal = `${now.getFullYear()}-01-01`;
+ 
   if (!laporanAbsenState.tglAwal) laporanAbsenState.tglAwal = formatDateFromInput(tglAwal);
   if (!laporanAbsenState.tglAkhir) laporanAbsenState.tglAkhir = formatDateFromInput(tglAkhir);
-
+ 
+  const showKTMTab = bolehLihatKTMLaporan();
+  const showPerNama = bolehLihatPerNama();
+  const at = laporanAbsenState.activeTab;
+  const av = laporanAbsenState.activeView;
+ 
   content.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
-      <div style="font-size:.75rem;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
-        📊 Laporan Absensi Sidang
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <!-- ═══ FILTER BAR ═══ -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:14px;margin-bottom:10px;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text3);margin-bottom:10px;
+        text-transform:uppercase;letter-spacing:.8px;">📊 Laporan Absensi</div>
+ 
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
-          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AWAL</div>
-          <input type="date" id="lap-tgl-awal" class="k-input" value="${tglAwal}" style="width:100%;">
+          <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">TANGGAL AWAL</div>
+          <input type="date" id="lap-tgl-awal" class="k-input"
+            value="${formatDateForInput(laporanAbsenState.tglAwal)}" style="width:100%;">
         </div>
         <div>
-          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL AKHIR</div>
-          <input type="date" id="lap-tgl-akhir" class="k-input" value="${tglAkhir}" style="width:100%;">
+          <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">TANGGAL AKHIR</div>
+          <input type="date" id="lap-tgl-akhir" class="k-input"
+            value="${formatDateForInput(laporanAbsenState.tglAkhir)}" style="width:100%;">
         </div>
       </div>
-      <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+ 
+      <!-- TAB UTAMA -->
+      <div style="display:flex;gap:5px;margin-bottom:10px;">
+        <button onclick="lapSetTab('sidang')" class="btn-action${at === 'sidang' ? ' accent' : ''}"
+          style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
+          ⛪ Sidang
+        </button>
+        ${showKTMTab ? `
+        <button onclick="lapSetTab('ktm')" class="btn-action${at === 'ktm' ? ' accent' : ''}"
+          style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
+          📋 KTM
+        </button>` : ''}
+      </div>
+ 
+      <!-- FILTER SIDANG (hanya di tab sidang) -->
+      <div id="lap-filter-sidang" style="${at !== 'sidang' ? 'display:none;' : ''}">
+        <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">FILTER JENIS SIDANG</div>
+        <select id="lap-jenis-sidang" class="k-input" style="width:100%;margin-bottom:8px;"
+          onchange="laporanAbsenState.filterSidang=this.value;">
+          <option value="">-- Semua Sidang --</option>
+          ${SIDANG_OPTIONS.map(s => `<option value="${s}" ${s === laporanAbsenState.filterSidang ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+ 
+        <!-- Sub filter gugus (muncul jika sidang = Gugus) -->
+        <div id="lap-filter-gugus-wrap" style="${laporanAbsenState.filterSidang === 'Gugus' ? '' : 'display:none;'}">
+          <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">FILTER GUGUS</div>
+          <select id="lap-filter-gugus" class="k-input" style="width:100%;margin-bottom:8px;"
+            onchange="laporanAbsenState.filterGugus=this.value;">
+            <option value="">-- Semua Gugus --</option>
+            ${GUGUS_OPTIONS.map(g => `<option value="${g}" ${g === laporanAbsenState.filterGugus ? 'selected' : ''}>${g}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+ 
+      <!-- KTM FILTER -->
+      <div id="lap-filter-ktm" style="${at !== 'ktm' ? 'display:none;' : ''}">
+        <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">JENIS KTM</div>
+        <select id="lap-jenis-ktm" class="k-input" style="width:100%;margin-bottom:8px;">
+          <option value="">-- Semua --</option>
+          <option value="KTM">KTM</option>
+          <option value="KTM_Tahir">KTM Tahir</option>
+        </select>
+      </div>
+ 
+      <button onclick="lapLoadData()" class="btn-action accent"
+        style="width:100%;padding:11px;font-weight:700;">
         🔄 Tampilkan Laporan
       </button>
     </div>
+ 
+    <!-- ═══ VIEW TOGGLE ═══ -->
+    <div id="lap-view-bar" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
+        <button onclick="lapSetView('summary')" id="lap-vbtn-summary"
+          class="view-toggle-btn${av === 'summary' ? ' active' : ''}">📊 Summary</button>
+        ${showPerNama ? `
+        <button onclick="lapSetView('weekly')" id="lap-vbtn-weekly"
+          class="view-toggle-btn${av === 'weekly' ? ' active' : ''}">📅 52 Minggu</button>
+        <button onclick="lapSetView('perperson')" id="lap-vbtn-perperson"
+          class="view-toggle-btn${av === 'perperson' ? ' active' : ''}">👤 Per Orang</button>
+        ` : ''}
+      </div>
+ 
+      <!-- EXPORT BAR -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button onclick="lapExportCopy()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+          📋 Copy Teks</button>
+        <button onclick="lapExportExcel()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+          📗 Excel</button>
+        <button onclick="lapExportPDF()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+          📄 PDF</button>
+      </div>
+    </div>
+ 
+    <!-- ═══ RESULT ═══ -->
     <div id="laporan-result">
-      <div class="empty-state"><div class="icon">📊</div><p>Pilih rentang tanggal lalu klik Tampilkan.</p></div>
+      <div class="empty-state"><div class="icon">📊</div>
+        <p>Pilih rentang tanggal lalu klik Tampilkan.</p></div>
     </div>`;
+ 
+  // Dynamic show/hide gugus filter
+  document.getElementById('lap-jenis-sidang')?.addEventListener('change', function () {
+    const w = document.getElementById('lap-filter-gugus-wrap');
+    if (w) w.style.display = this.value === 'Gugus' ? '' : 'none';
+  });
 }
+ 
 
 async function loadLaporanAbsensi() {
   const tglAwal  = document.getElementById('lap-tgl-awal')?.value;
@@ -6424,7 +6578,865 @@ async function loadLaporanAbsensi() {
       <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="margin-top:10px;">🔄 Coba Lagi</button></div>`;
   }
 }
-
+function lapSetTab(tab) {
+  laporanAbsenState.activeTab = tab;
+  laporanAbsenState.activeView = 'summary';
+  laporanAbsenState.dataSidang = null;
+  laporanAbsenState.dataKTM = null;
+  renderLaporanAbsensi();
+}
+ 
+function lapSetView(view) {
+  laporanAbsenState.activeView = view;
+  lapRenderCurrentData();
+  // Update toggle buttons
+  ['summary', 'weekly', 'perperson'].forEach(v => {
+    const btn = document.getElementById('lap-vbtn-' + v);
+    if (btn) btn.classList.toggle('active', v === view);
+  });
+}
+ async function lapLoadData() {
+  const tglAwalInput = document.getElementById('lap-tgl-awal')?.value;
+  const tglAkhirInput = document.getElementById('lap-tgl-akhir')?.value;
+  if (!tglAwalInput || !tglAkhirInput) return toast('⚠️ Pilih tanggal awal dan akhir');
+ 
+  laporanAbsenState.tglAwal = formatDateFromInput(tglAwalInput);
+  laporanAbsenState.tglAkhir = formatDateFromInput(tglAkhirInput);
+  laporanAbsenState.tahun = getYearFromRange();
+ 
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+  el.innerHTML = `<div class="loading-shimmer"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat data laporan...</div>`;
+ 
+  if (laporanAbsenState.activeTab === 'ktm') {
+    await lapLoadKTM(el);
+  } else {
+    await lapLoadSidang(el);
+  }
+}
+ 
+// ── LOAD SIDANG ─────────────────────────────────────────────────────
+async function lapLoadSidang(el) {
+  try {
+    const filterSidang = document.getElementById('lap-jenis-sidang')?.value || '';
+    const filterGugus = document.getElementById('lap-filter-gugus')?.value || '';
+    laporanAbsenState.filterSidang = filterSidang;
+    laporanAbsenState.filterGugus = filterGugus;
+ 
+    const params = new URLSearchParams({
+      action: 'get_laporan_detail',
+      tgl_awal: laporanAbsenState.tglAwal,
+      tgl_akhir: laporanAbsenState.tglAkhir,
+    });
+    if (filterSidang) params.set('jenis_sidang', filterSidang);
+    if (filterGugus) params.set('sub_gugus', filterGugus);
+ 
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?' + params.toString());
+    const txt = await resp.text();
+    let result;
+    try { result = JSON.parse(txt); }
+    catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+        <p>Response tidak valid.<br>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:.6rem;word-break:break-all;
+        color:var(--text3);">${escHtml(txt.slice(0, 200))}</small></p></div>`;
+      return;
+    }
+ 
+    if (result.status !== 'ok') {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+        <p>${escHtml(result.message || 'Error')}</p></div>`;
+      return;
+    }
+ 
+    if (!result.data || !Object.keys(result.data).length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">📭</div>
+        <p>Tidak ada data absensi dalam rentang ini.</p></div>`;
+      return;
+    }
+ 
+    laporanAbsenState.dataSidang = result.data;
+    document.getElementById('lap-view-bar').style.display = 'block';
+    lapRenderCurrentData();
+ 
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+      <p>Gagal memuat: ${escHtml(e.message)}</p>
+      <button onclick="lapLoadData()" class="btn-action accent" style="margin-top:10px;">🔄 Coba Lagi</button></div>`;
+  }
+}
+ 
+// ── LOAD KTM ────────────────────────────────────────────────────────
+async function lapLoadKTM(el) {
+  if (!bolehLihatKTMLaporan()) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Hanya Penatua, Gembala Distrik, dan Administrator.</p></div>`;
+    return;
+  }
+  try {
+    const filterJenis = document.getElementById('lap-jenis-ktm')?.value || '';
+    const params = new URLSearchParams({
+      action: 'get_laporan_ktm_detail',
+      tgl_awal: laporanAbsenState.tglAwal,
+      tgl_akhir: laporanAbsenState.tglAkhir,
+    });
+    if (filterJenis) params.set('jenis', filterJenis);
+ 
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_KTM + '?' + params.toString());
+    const txt = await resp.text();
+    let result;
+    try { result = JSON.parse(txt); }
+    catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+        <p>Response tidak valid.</p></div>`;
+      return;
+    }
+ 
+    if (result.status !== 'ok') {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+        <p>${escHtml(result.message || 'Error')}</p></div>`;
+      return;
+    }
+ 
+    if (!result.data || !Object.keys(result.data).length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">📭</div>
+        <p>Tidak ada data KTM dalam rentang ini.</p></div>`;
+      return;
+    }
+ 
+    laporanAbsenState.dataKTM = result.data;
+    document.getElementById('lap-view-bar').style.display = 'block';
+    lapRenderCurrentData();
+ 
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+      <p>Gagal: ${escHtml(e.message)}</p></div>`;
+  }
+}
+ 
+// ══════════════════════════════════════════════════════════════════════
+// ROUTER RENDER
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderCurrentData() {
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+ 
+  if (laporanAbsenState.activeTab === 'ktm') {
+    const data = laporanAbsenState.dataKTM;
+    if (!data) { el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Belum ada data.</p></div>'; return; }
+ 
+    switch (laporanAbsenState.activeView) {
+      case 'weekly': lapRenderWeekly(el, data, 'KTM'); break;
+      case 'perperson': lapRenderPerPerson(el, data, 'KTM'); break;
+      default: lapRenderSummaryKTM(el, data); break;
+    }
+  } else {
+    const data = laporanAbsenState.dataSidang;
+    if (!data) { el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Belum ada data.</p></div>'; return; }
+ 
+    switch (laporanAbsenState.activeView) {
+      case 'weekly': lapRenderWeekly(el, data, 'Sidang'); break;
+      case 'perperson': lapRenderPerPerson(el, data, 'Sidang'); break;
+      default: lapRenderSummarySidang(el, data); break;
+    }
+  }
+}
+ 
+// ══════════════════════════════════════════════════════════════════════
+// VIEW 1: SUMMARY (Ringkasan Count per Tanggal)
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderSummarySidang(el, data) {
+  let html = '';
+  let grandTotal = 0, grandEfata = 0, grandAnak = 0, grandTamu = 0;
+  const teksLines = [
+    `LAPORAN ABSENSI SIDANG — SUMMARY`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    `Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username || '-'}`,
+    ''
+  ];
+ 
+  Object.entries(data).sort().forEach(([jenis, sd]) => {
+    const sortedTgl = sd.tanggal_list.slice().sort((a, b) => {
+      const pa = a.split('/'), pb = b.split('/');
+      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+    });
+ 
+    // Hitung per-gugus jika Gugus
+    const hasGugus = (sd.sub_gugus_list || []).length > 0;
+    let jenisTotal = 0, jenisEfata = 0, jenisAnak = 0, jenisTamu = 0;
+ 
+    teksLines.push(`▸ ${jenis}`);
+ 
+    html += `<div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:8px;">⛪ ${escHtml(jenis)}</div>`;
+ 
+    // Sub-header gugus jika ada
+    if (hasGugus && jenis === 'Gugus') {
+      html += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+        ${sd.sub_gugus_list.map(g => `<span class="tag yellow" style="font-size:.65rem;">${escHtml(g)}</span>`).join('')}
+      </div>`;
+    }
+ 
+    html += `<div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:400px;">
+        <thead><tr style="background:var(--surface2);">
+          <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+            font-size:.6rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+            font-size:.6rem;color:var(--accent);">EfataID</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+            font-size:.6rem;color:var(--accent3);">Anak</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+            font-size:.6rem;color:var(--yellow);">Tamu</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
+            font-size:.6rem;color:var(--green);">Total</th>
+        </tr></thead><tbody>`;
+ 
+    sortedTgl.forEach(tgl => {
+      const s = sd.summary_per_tgl?.[tgl] || { efata: 0, anak: 0, tamu: 0, total: 0 };
+      // Kalau summary_per_tgl kosong, hitung dari orang
+      let ef = s.efata, an = s.anak, tm = s.tamu, tot = s.total;
+      if (!tot && sd.orang) {
+        sd.orang.forEach(o => {
+          if (o.hadir_tanggal.includes(tgl)) {
+            tot++;
+            const kat = (o.kategori || '').toLowerCase();
+            if (kat === 'anak') an++;
+            else if (kat === 'tamu' || kat === 'tamu luar' || (!o.no_efataid && kat !== 'anak')) tm++;
+            else ef++;
+          }
+        });
+      }
+      jenisTotal += tot; jenisEfata += ef; jenisAnak += an; jenisTamu += tm;
+      teksLines.push(`  ${formatTglDisplay(tgl)}: Total ${tot} (EfataID ${ef}, Anak ${an}, Tamu ${tm})`);
+      html += `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:4px 7px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${ef}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${an}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${tm}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${tot}</td>
+      </tr>`;
+    });
+ 
+    grandTotal += jenisTotal; grandEfata += jenisEfata; grandAnak += jenisAnak; grandTamu += jenisTamu;
+    teksLines.push(`  TOTAL ${jenis}: ${jenisTotal} (EfataID ${jenisEfata}, Anak ${jenisAnak}, Tamu ${jenisTamu})`, '');
+ 
+    html += `<tr style="background:var(--surface2);font-weight:700;">
+      <td style="padding:5px 7px;">TOTAL</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${jenisEfata}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${jenisAnak}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${jenisTamu}</td>
+      <td style="padding:5px 7px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisTotal}</td>
+    </tr></tbody></table></div></div>`;
+  });
+ 
+  // Grand total card
+  const grandHtml = `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);
+      padding:14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:.78rem;font-weight:700;color:var(--text3);">
+          🏆 GRAND TOTAL — ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} s/d ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        ${[[grandTotal, 'Total', 'var(--green)', 'rgba(16,185,129,.1)'],
+          [grandEfata, 'EfataID', 'var(--accent)', 'rgba(59,130,246,.1)'],
+          [grandAnak, 'Anak', 'var(--accent3)', 'rgba(139,92,246,.1)'],
+          [grandTamu, 'Tamu', 'var(--yellow)', 'rgba(245,158,11,.1)'],
+        ].map(([v, l, c, bg]) => `
+          <div style="background:${bg};border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:${c};">${v}</div>
+            <div style="font-size:.58rem;color:${c};">${l}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+ 
+  teksLines.push(`GRAND TOTAL: ${grandTotal} (EfataID ${grandEfata}, Anak ${grandAnak}, Tamu ${grandTamu})`);
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+ 
+  el.innerHTML = grandHtml + html;
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// VIEW 1b: SUMMARY KTM
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderSummaryKTM(el, data) {
+  let html = '';
+  const teksLines = [
+    `LAPORAN KTM — SUMMARY`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    ''
+  ];
+ 
+  Object.entries(data).sort().forEach(([jenis, kd]) => {
+    const sortedTgl = kd.tanggal_list.slice().sort((a, b) => {
+      const pa = a.split('/'), pb = b.split('/');
+      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+    });
+ 
+    const totalOrang = kd.orang.length;
+    teksLines.push(`▸ ${jenis} (${totalOrang} orang unik)`);
+ 
+    html += `<div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:8px;">
+        📋 ${escHtml(jenis)} — ${totalOrang} orang unik
+      </div>
+      <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.72rem;">
+        <thead><tr style="background:var(--surface2);">
+          <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--green);">Hadir</th>
+          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--red);">Tidak Hadir</th>
+        </tr></thead><tbody>`;
+ 
+    sortedTgl.forEach(tgl => {
+      const hadirCount = kd.orang.filter(o => o.hadir_tanggal.includes(tgl)).length;
+      const tidakHadir = totalOrang - hadirCount;
+      teksLines.push(`  ${formatTglDisplay(tgl)}: Hadir ${hadirCount}, Tidak ${tidakHadir}`);
+ 
+      html += `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:4px 7px;">${escHtml(formatTglDisplay(tgl))}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${hadirCount}</td>
+        <td style="padding:4px 7px;text-align:center;color:var(--red);font-family:'JetBrains Mono',monospace;">${tidakHadir}</td>
+      </tr>`;
+    });
+ 
+    html += `</tbody></table></div></div>`;
+    teksLines.push('');
+  });
+ 
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+  el.innerHTML = html || '<div class="empty-state"><div class="icon">📭</div><p>Tidak ada data KTM.</p></div>';
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// VIEW 2: WEEKLY GRID (52/53 Minggu × N Orang)
+// Kolom: Nama | W1 | W2 | ... | W52 | Total
+// Baris per orang, warna hijau jika hadir
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderWeekly(el, data, tipe) {
+  if (!bolehLihatPerNama()) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Hanya Penatua, Gembala Distrik, dan Administrator yang bisa lihat per nama.</p></div>`;
+    return;
+  }
+ 
+  const tahun = getYearFromRange();
+  const maxWeeks = getWeeksInYear(tahun);
+  let html = '';
+  const teksLines = [
+    `LAPORAN ${tipe.toUpperCase()} — GRID ${maxWeeks} MINGGU`,
+    `Tahun: ${tahun}`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    `1 Tahun = ${maxWeeks} minggu`, ''
+  ];
+ 
+  // Info card
+  html += `<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);
+    border-radius:10px;padding:10px;margin-bottom:10px;">
+    <div style="font-size:.72rem;color:var(--accent);font-weight:700;">📅 Grid ${maxWeeks} Minggu — Tahun ${tahun}</div>
+    <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">
+      <span style="display:inline-block;width:12px;height:12px;background:var(--green);border-radius:2px;
+        vertical-align:middle;margin-right:3px;"></span> Hadir
+      <span style="display:inline-block;width:12px;height:12px;background:var(--surface2);border:1px solid var(--border);
+        border-radius:2px;vertical-align:middle;margin:0 3px 0 10px;"></span> Tidak hadir
+    </div>
+  </div>`;
+ 
+  Object.entries(data).sort().forEach(([jenis, sd]) => {
+    const orang = sd.orang || [];
+    if (!orang.length) return;
+ 
+    // Pisahkan kategori
+    const efataList = orang.filter(o => o.no_efataid && (o.kategori || '').toLowerCase() !== 'anak' && (o.kategori || '').toLowerCase() !== 'tamu');
+    const anakList = orang.filter(o => (o.kategori || '').toLowerCase() === 'anak');
+    const tamuList = orang.filter(o => !o.no_efataid && (o.kategori || '').toLowerCase() !== 'anak' || (o.kategori || '').toLowerCase() === 'tamu');
+ 
+    // Sub-gugus grouping untuk Gugus
+    const hasSubGugus = jenis === 'Gugus' && (sd.sub_gugus_list || []).length > 0;
+ 
+    teksLines.push(`▸ ${jenis} (${orang.length} orang)`);
+ 
+    html += `<div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:8px;">
+        ${tipe === 'KTM' ? '📋' : '⛪'} ${escHtml(jenis)} — ${orang.length} orang
+      </div>`;
+ 
+    // Render per kategori
+    const sections = [];
+    if (hasSubGugus) {
+      // Group by sub_gugus
+      (sd.sub_gugus_list || []).forEach(gugus => {
+        const gugusOrang = orang.filter(o => o.sub_gugus === gugus);
+        if (gugusOrang.length) sections.push({ label: `🏘️ Gugus ${gugus}`, orang: gugusOrang });
+      });
+      // Sisa tanpa gugus
+      const noGugus = orang.filter(o => !o.sub_gugus || !(sd.sub_gugus_list || []).includes(o.sub_gugus));
+      if (noGugus.length) sections.push({ label: '🏘️ Lainnya', orang: noGugus });
+    } else {
+      if (efataList.length) sections.push({ label: '🟢 Punya EfataID', orang: efataList });
+      if (anakList.length) sections.push({ label: '🟣 Anak', orang: anakList });
+      if (tamuList.length) sections.push({ label: '🟡 Tamu', orang: tamuList });
+      if (!sections.length) sections.push({ label: 'Semua', orang: orang });
+    }
+ 
+    sections.forEach(sec => {
+      html += _buildWeeklyTable(sec.label, sec.orang, maxWeeks, teksLines);
+    });
+ 
+    html += `</div>`;
+    teksLines.push('');
+  });
+ 
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+  el.innerHTML = html;
+}
+ 
+/** Build satu tabel weekly grid */
+function _buildWeeklyTable(label, orangList, maxWeeks, teksLines) {
+  if (!orangList.length) return '';
+ 
+  teksLines.push(`  [${label}] — ${orangList.length} orang`);
+ 
+  // Header minggu
+  let thWeeks = '';
+  for (let w = 1; w <= maxWeeks; w++) {
+    thWeeks += `<th style="padding:2px;text-align:center;font-size:.45rem;color:var(--text3);
+      min-width:16px;border-bottom:1px solid var(--border);writing-mode:vertical-lr;
+      transform:rotate(180deg);height:28px;">${w}</th>`;
+  }
+ 
+  let tbody = '';
+  orangList.forEach((o, idx) => {
+    const totalHadir = o.hadir_tanggal.length;
+    const hadirWeeks = new Set(o.hadir_tanggal.map(t => getISOWeek(t)));
+ 
+    let tdWeeks = '';
+    for (let w = 1; w <= maxWeeks; w++) {
+      const isHadir = hadirWeeks.has(w);
+      tdWeeks += `<td style="padding:1px;text-align:center;border:1px solid ${isHadir ? 'transparent' : 'var(--border)'};
+        background:${isHadir ? 'var(--green)' : 'transparent'};min-width:16px;height:14px;
+        border-radius:${isHadir ? '2px' : '0'};" 
+        title="Minggu ${w}${isHadir ? ' ✓' : ''}"></td>`;
+    }
+ 
+    const bgRow = idx % 2 === 0 ? '' : 'background:var(--surface2);';
+    const namaDisplay = escHtml(o.nama || '-');
+    const efDisplay = o.no_efataid ? `<span style="font-size:.5rem;color:var(--text3);display:block;">${escHtml(o.no_efataid)}</span>` : '';
+ 
+    tbody += `<tr style="${bgRow}">
+      <td style="padding:3px 6px;position:sticky;left:0;background:var(--surface);z-index:2;
+        border-right:2px solid var(--accent);min-width:100px;max-width:150px;white-space:nowrap;
+        overflow:hidden;text-overflow:ellipsis;font-size:.65rem;font-weight:500;">
+        ${namaDisplay}${efDisplay}
+      </td>
+      ${tdWeeks}
+      <td style="padding:3px 4px;text-align:center;font-family:'JetBrains Mono',monospace;
+        font-size:.65rem;font-weight:700;color:${totalHadir > 0 ? 'var(--green)' : 'var(--text3)'};
+        position:sticky;right:0;background:var(--surface);z-index:2;
+        border-left:2px solid var(--accent);">${totalHadir}</td>
+    </tr>`;
+ 
+    teksLines.push(`    ${o.nama}: ${totalHadir}×`);
+  });
+ 
+  return `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:4px;">
+        ${label} (${orangList.length})
+      </div>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:600px;
+        border:1px solid var(--border);border-radius:8px;">
+        <table style="border-collapse:collapse;font-size:.6rem;width:max-content;">
+          <thead style="position:sticky;top:0;z-index:3;background:var(--surface);">
+            <tr>
+              <th style="padding:4px 6px;text-align:left;font-size:.6rem;color:var(--text3);
+                position:sticky;left:0;z-index:4;background:var(--surface);
+                border-bottom:1px solid var(--border);border-right:2px solid var(--accent);
+                min-width:100px;">Nama</th>
+              ${thWeeks}
+              <th style="padding:4px;text-align:center;font-size:.55rem;color:var(--green);
+                position:sticky;right:0;z-index:4;background:var(--surface);
+                border-bottom:1px solid var(--border);border-left:2px solid var(--accent);
+                min-width:30px;">Tot</th>
+            </tr>
+          </thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// VIEW 3: PER PERSON (Nama + 1 Count)
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderPerPerson(el, data, tipe) {
+  if (!bolehLihatPerNama()) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Hanya Penatua, Gembala Distrik, dan Administrator.</p></div>`;
+    return;
+  }
+ 
+  let html = '';
+  const teksLines = [
+    `LAPORAN ${tipe.toUpperCase()} — PER ORANG (COUNT)`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`, ''
+  ];
+ 
+  Object.entries(data).sort().forEach(([jenis, sd]) => {
+    const orang = sd.orang || [];
+    if (!orang.length) return;
+ 
+    // Sort by total hadir descending
+    const sorted = orang.slice().sort((a, b) => b.hadir_tanggal.length - a.hadir_tanggal.length);
+ 
+    // Sub-gugus grouping
+    const hasSubGugus = jenis === 'Gugus' && (sd.sub_gugus_list || []).length > 0;
+ 
+    teksLines.push(`▸ ${jenis} — ${sorted.length} orang`);
+ 
+    html += `<div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:8px;">
+        ${tipe === 'KTM' ? '📋' : '⛪'} ${escHtml(jenis)} — ${sorted.length} orang
+      </div>`;
+ 
+    if (hasSubGugus) {
+      (sd.sub_gugus_list || []).forEach(gugus => {
+        const gOrang = sorted.filter(o => o.sub_gugus === gugus);
+        if (!gOrang.length) return;
+        html += _buildPerPersonTable(`🏘️ Gugus ${gugus}`, gOrang, teksLines);
+      });
+      const noGugus = sorted.filter(o => !o.sub_gugus);
+      if (noGugus.length) html += _buildPerPersonTable('🏘️ Lainnya', noGugus, teksLines);
+    } else {
+      // Pisahkan efata / anak / tamu
+      const efList = sorted.filter(o => o.no_efataid && (o.kategori || '').toLowerCase() !== 'anak' && (o.kategori || '').toLowerCase() !== 'tamu');
+      const anList = sorted.filter(o => (o.kategori || '').toLowerCase() === 'anak');
+      const tmList = sorted.filter(o => (!o.no_efataid && (o.kategori || '').toLowerCase() !== 'anak') || (o.kategori || '').toLowerCase() === 'tamu');
+ 
+      if (efList.length) html += _buildPerPersonTable('🟢 EfataID', efList, teksLines);
+      if (anList.length) html += _buildPerPersonTable('🟣 Anak', anList, teksLines);
+      if (tmList.length) html += _buildPerPersonTable('🟡 Tamu', tmList, teksLines);
+      if (!efList.length && !anList.length && !tmList.length) {
+        html += _buildPerPersonTable('Semua', sorted, teksLines);
+      }
+    }
+ 
+    html += `</div>`;
+    teksLines.push('');
+  });
+ 
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+  el.innerHTML = html;
+}
+ 
+function _buildPerPersonTable(label, orangList, teksLines) {
+  teksLines.push(`  [${label}] — ${orangList.length} orang`);
+ 
+  let rows = '';
+  orangList.forEach((o, idx) => {
+    const total = o.hadir_tanggal.length;
+    const bg = idx % 2 === 0 ? '' : 'background:var(--surface2);';
+    const barWidth = Math.min(100, total * 2);
+    rows += `<tr style="${bg}">
+      <td style="padding:5px 7px;font-size:.75rem;font-weight:500;max-width:200px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${escHtml(o.nama || '-')}
+        ${o.no_efataid ? `<span style="font-size:.55rem;color:var(--text3);"> · ${escHtml(o.no_efataid)}</span>` : ''}
+        ${o.sub_gugus ? `<span style="font-size:.55rem;color:var(--yellow);"> · ${escHtml(o.sub_gugus)}</span>` : ''}
+      </td>
+      <td style="padding:5px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
+        font-size:.82rem;font-weight:700;color:${total > 0 ? 'var(--green)' : 'var(--text3)'};">${total}</td>
+      <td style="padding:5px 7px;width:80px;">
+        <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${barWidth}%;background:var(--green);border-radius:4px;
+            transition:width .3s;"></div>
+        </div>
+      </td>
+    </tr>`;
+    teksLines.push(`    ${o.nama}: ${total}×`);
+  });
+ 
+  return `<div style="margin-bottom:10px;">
+    <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:4px;">
+      ${label} (${orangList.length})
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:var(--surface2);">
+          <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);
+            border-bottom:1px solid var(--border);">Nama</th>
+          <th style="padding:5px 7px;text-align:center;font-size:.6rem;color:var(--green);
+            border-bottom:1px solid var(--border);width:50px;">Hadir</th>
+          <th style="padding:5px 7px;font-size:.6rem;color:var(--text3);
+            border-bottom:1px solid var(--border);width:80px;"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// EXPORT: COPY TEXT
+// ══════════════════════════════════════════════════════════════════════
+function lapExportCopy() {
+  const t = laporanAbsenState._teksLaporan || '';
+  if (!t) return toast('⚠️ Tidak ada data. Tampilkan laporan dulu.');
+  navigator.clipboard.writeText(t).then(() => toast('✅ Laporan disalin ke clipboard!'));
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// EXPORT: EXCEL
+// ══════════════════════════════════════════════════════════════════════
+function lapExportExcel() {
+  const data = laporanAbsenState.activeTab === 'ktm' ? laporanAbsenState.dataKTM : laporanAbsenState.dataSidang;
+  if (!data) return toast('⚠️ Tidak ada data.');
+ 
+  // Check if XLSX library loaded
+  if (typeof XLSX === 'undefined') {
+    toast('⏳ Memuat pustaka Excel...');
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => _generateExcel(data);
+    s.onerror = () => {
+      // Fallback: download as CSV
+      _downloadCSV(data);
+    };
+    document.head.appendChild(s);
+    return;
+  }
+  _generateExcel(data);
+}
+ 
+function _generateExcel(data) {
+  try {
+    const wb = XLSX.utils.book_new();
+    const tahun = getYearFromRange();
+    const maxWeeks = getWeeksInYear(tahun);
+    const view = laporanAbsenState.activeView;
+ 
+    Object.entries(data).sort().forEach(([jenis, sd]) => {
+      const orang = sd.orang || [];
+      const sheetName = jenis.substring(0, 31).replace(/[:\\\/?*\[\]]/g, '-');
+ 
+      if (view === 'weekly' && bolehLihatPerNama()) {
+        // Sheet: Nama | W1 | W2 | ... | W52 | Total
+        const headerRow = ['Nama', 'EfataID', 'Kategori'];
+        for (let w = 1; w <= maxWeeks; w++) headerRow.push('M' + w);
+        headerRow.push('Total');
+ 
+        const rows = [headerRow];
+        orang.forEach(o => {
+          const hadirWeeks = new Set(o.hadir_tanggal.map(t => getISOWeek(t)));
+          const row = [o.nama, o.no_efataid || '', o.kategori || ''];
+          let total = 0;
+          for (let w = 1; w <= maxWeeks; w++) {
+            const h = hadirWeeks.has(w);
+            row.push(h ? '✓' : '');
+            if (h) total++;
+          }
+          row.push(total);
+          rows.push(row);
+        });
+ 
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+ 
+      } else if (view === 'perperson' && bolehLihatPerNama()) {
+        // Sheet: Nama | EfataID | Kategori | Total Hadir
+        const rows = [['Nama', 'EfataID', 'Kategori', 'Sub Gugus', 'Total Hadir']];
+        orang.sort((a, b) => b.hadir_tanggal.length - a.hadir_tanggal.length).forEach(o => {
+          rows.push([o.nama, o.no_efataid || '', o.kategori || '', o.sub_gugus || '', o.hadir_tanggal.length]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+ 
+      } else {
+        // Summary sheet: Tanggal | EfataID | Anak | Tamu | Total
+        const sortedTgl = (sd.tanggal_list || []).slice().sort((a, b) => {
+          const pa = a.split('/'), pb = b.split('/');
+          return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+        });
+ 
+        const rows = [['Tanggal', 'EfataID', 'Anak', 'Tamu', 'Total']];
+        sortedTgl.forEach(tgl => {
+          const s = sd.summary_per_tgl?.[tgl] || {};
+          rows.push([formatTglDisplay(tgl), s.efata || 0, s.anak || 0, s.tamu || 0, s.total || 0]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      }
+    });
+ 
+    const filename = `Laporan_${laporanAbsenState.activeTab === 'ktm' ? 'KTM' : 'Sidang'}_${tahun}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast('✅ Excel berhasil diunduh!');
+  } catch (e) {
+    toast('⚠️ Gagal buat Excel: ' + e.message);
+    _downloadCSV(data);
+  }
+}
+ 
+function _downloadCSV(data) {
+  let csv = '';
+  Object.entries(data).sort().forEach(([jenis, sd]) => {
+    csv += `\n=== ${jenis} ===\n`;
+    csv += 'Nama,EfataID,Total Hadir\n';
+    (sd.orang || []).forEach(o => {
+      csv += `"${(o.nama || '').replace(/"/g, '""')}","${o.no_efataid || ''}",${o.hadir_tanggal.length}\n`;
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Laporan_${laporanAbsenState.activeTab}.csv`;
+  link.click();
+  toast('✅ CSV diunduh (fallback)');
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// EXPORT: PDF (Print-friendly new window)
+// ══════════════════════════════════════════════════════════════════════
+function lapExportPDF() {
+  const reportEl = document.getElementById('laporan-result');
+  if (!reportEl || !reportEl.innerHTML.trim()) return toast('⚠️ Tidak ada data.');
+ 
+  const tahun = getYearFromRange();
+  const tipe = laporanAbsenState.activeTab === 'ktm' ? 'KTM' : 'Sidang';
+ 
+  // Ambil computed styles dari body untuk tema warna
+  const cs = getComputedStyle(document.body);
+  const bgColor = cs.getPropertyValue('--bg') || '#fff';
+  const textColor = cs.getPropertyValue('--text') || '#000';
+ 
+  const printContent = `
+    <!DOCTYPE html>
+    <html><head><meta charset="UTF-8">
+    <title>Laporan ${tipe} — ${tahun}</title>
+    <style>
+      @media print {
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @page { size: landscape; margin: 8mm; }
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1e293b;
+        padding: 10px; background: #fff; }
+      table { border-collapse: collapse; width: 100%; page-break-inside: auto; }
+      th, td { border: 1px solid #ccc; padding: 3px 5px; font-size: 8pt; }
+      th { background: #f0f4f8; font-weight: 700; text-align: center; }
+      tr:nth-child(even) { background: #f9fafb; }
+      .section-title { font-size: 11pt; font-weight: 700; margin: 12px 0 4px; color: #1a56db; }
+      .header-info { font-size: 8pt; color: #666; margin-bottom: 8px; }
+      .hadir-cell { background: #16a34a !important; min-width: 12px; }
+      td.nama { text-align: left; white-space: nowrap; max-width: 150px; overflow: hidden;
+        text-overflow: ellipsis; font-weight: 500; }
+      td.count { text-align: center; font-weight: 700; color: #16a34a; }
+      .print-btn { position: fixed; top: 10px; right: 10px; padding: 8px 16px; background: #1a56db;
+        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 10pt;
+        z-index: 999; }
+      @media print { .print-btn { display: none; } }
+    </style>
+    </head><body>
+    <button class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+ 
+    <div style="text-align:center;margin-bottom:12px;">
+      <h2 style="font-size:14pt;margin-bottom:2px;">Laporan Absensi ${tipe}</h2>
+      <div class="header-info">
+        Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}<br>
+        Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${escHtml(currentUser?.username || '-')}
+      </div>
+    </div>
+ 
+    ${_generatePrintHTML()}
+ 
+    </body></html>`;
+ 
+  const printWin = window.open('', '_blank');
+  if (printWin) {
+    printWin.document.write(printContent);
+    printWin.document.close();
+  } else {
+    toast('⚠️ Popup diblokir. Izinkan popup untuk cetak PDF.');
+  }
+}
+ 
+function _generatePrintHTML() {
+  const data = laporanAbsenState.activeTab === 'ktm' ? laporanAbsenState.dataKTM : laporanAbsenState.dataSidang;
+  if (!data) return '<p>Tidak ada data</p>';
+ 
+  const view = laporanAbsenState.activeView;
+  const tahun = getYearFromRange();
+  const maxWeeks = getWeeksInYear(tahun);
+  let html = '';
+ 
+  Object.entries(data).sort().forEach(([jenis, sd]) => {
+    const orang = sd.orang || [];
+    html += `<div class="section-title">⛪ ${jenis} (${orang.length} orang)</div>`;
+ 
+    if (view === 'weekly' && bolehLihatPerNama()) {
+      // Grid 52 minggu
+      html += '<table><thead><tr><th style="text-align:left;">Nama</th>';
+      for (let w = 1; w <= maxWeeks; w++) html += `<th style="font-size:5pt;padding:1px;">${w}</th>`;
+      html += '<th>Tot</th></tr></thead><tbody>';
+ 
+      orang.forEach(o => {
+        const hadirWeeks = new Set(o.hadir_tanggal.map(t => getISOWeek(t)));
+        html += `<tr><td class="nama">${o.nama}${o.no_efataid ? ' <small>' + o.no_efataid + '</small>' : ''}</td>`;
+        let total = 0;
+        for (let w = 1; w <= maxWeeks; w++) {
+          const h = hadirWeeks.has(w);
+          if (h) total++;
+          html += `<td style="padding:1px;${h ? 'background:#16a34a;' : ''}">${h ? '✓' : ''}</td>`;
+        }
+        html += `<td class="count">${total}</td></tr>`;
+      });
+      html += '</tbody></table>';
+ 
+    } else if (view === 'perperson' && bolehLihatPerNama()) {
+      html += '<table><thead><tr><th style="text-align:left;">No</th><th style="text-align:left;">Nama</th><th>EfataID</th><th>Total Hadir</th></tr></thead><tbody>';
+      const sorted = orang.slice().sort((a, b) => b.hadir_tanggal.length - a.hadir_tanggal.length);
+      sorted.forEach((o, i) => {
+        html += `<tr><td>${i + 1}</td><td class="nama">${o.nama}</td><td>${o.no_efataid || '-'}</td><td class="count">${o.hadir_tanggal.length}</td></tr>`;
+      });
+      html += '</tbody></table>';
+ 
+    } else {
+      // Summary
+      const sortedTgl = (sd.tanggal_list || []).slice().sort();
+      html += '<table><thead><tr><th style="text-align:left;">Tanggal</th><th>EfataID</th><th>Anak</th><th>Tamu</th><th>Total</th></tr></thead><tbody>';
+      sortedTgl.forEach(tgl => {
+        const s = sd.summary_per_tgl?.[tgl] || {};
+        html += `<tr><td>${formatTglDisplay(tgl)}</td><td style="text-align:center;">${s.efata || 0}</td><td style="text-align:center;">${s.anak || 0}</td><td style="text-align:center;">${s.tamu || 0}</td><td class="count">${s.total || 0}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+  });
+ 
+  return html;
+}
+ 
+ 
+// ══════════════════════════════════════════════════════════════════════
+// BACKWARD COMPAT: keep old function names working
+// ══════════════════════════════════════════════════════════════════════
+function loadLaporanAbsensi() { lapLoadData(); }
+function copyLaporanText() { lapExportCopy(); }
+function rebuildUmurAnalysis() { /* deprecated */ }
+ 
+console.log('✅ Enhanced Laporan Absensi v2.0 loaded'); 
 // ================================================================
 // PATCH 2: LAPORAN ABSENSI — renderLaporanResult
 // ================================================================     
