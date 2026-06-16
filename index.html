@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyQK
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycby7BXX0S8YiczKHVjjWfLgXuPFAAf3UzZ7KYHRoUqE8fy-3Ob5joL3Haw46opCK0dSTyA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbzFm3wgrp1KPnfyNvLDt2zydlMf3XbwfnchLcd5jqgOsX3rEtXq8MDwg8val6Rswkti/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbyyh8mBWwwZiIUIjFx4WCGrk3OQlCuRyVCcith63Ryj_iyA4x6fYL3f61a3J3MohpFG/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -802,9 +802,28 @@ function ytEmbedUrl(url){if(!url)return'';let id='';const m1=url.match(/[?&]v=([
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
 
-function getUserLevel(){return(currentUser?.level||currentUser?.tipe||'').trim();}
+function getUserLevel(){
+  // Robust: cek semua variasi case dari kolom level di CSV
+  const u = currentUser || {};
+  const lvl = u.level || u.Level || u.LEVEL || '';
+  if (lvl.trim()) return lvl.trim();
+  return (u.tipe || u.Tipe || u.TIPE || '').trim();
+}
 function isAdminUser(){const l=getUserLevel();return ADMIN_LEVELS.some(a=>l.includes(a))||((currentUser?.username||'').toLowerCase()==='admin');}
-function isLevelAdmin(){return getUserLevel().includes('Administrator')||(currentUser?.username||'').toLowerCase()==='admin';}
+function isLevelAdmin(){
+  const l = getUserLevel();
+  return l.includes('Administrator') || (currentUser?.username||'').toLowerCase()==='admin';
+}
+function getLevelCode(){
+  const raw = getUserLevel();
+  if(raw.includes('Administrator')) return 'Administrator';
+  if(raw.includes('Gembala Distrik')) return 'Gembala Distrik';
+  if(raw.includes('Penatua')) return 'Penatua';
+  if(raw.includes('Gembala')) return 'Gembala';
+  if(raw.includes('Pra Gembala')) return 'Pra Gembala';
+  if(raw.includes('Kaum Saleh')) return 'Kaum Saleh';
+  return raw;
+}
 function isLevelPenatua(){return getUserLevel().includes('Penatua');}
 function isLevelGemDistr(){return getUserLevel().includes('Gembala Distrik');}
 // Kolom yang boleh diedit per level
@@ -2817,15 +2836,15 @@ const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni',
 // ── LEVEL ──────────────────────────────────────────────────────────────
 
 function getLevelCode(){
-  // Coba field 'level' dulu
-  const lvl=(currentUser?.level||'').trim();
-  if(lvl)return lvl;
-  // Fallback ke field 'tipe' — mungkin berisi multi-value seperti "Dashboard,Jemaat,Administrator"
-  const tipe=(currentUser?.tipe||'').trim();
-  // Cek apakah tipe mengandung salah satu level yang dikenal
+  // Robust: cek semua variasi case dari kolom level/Level/LEVEL
+  const u = currentUser || {};
+  const lvl = (u.level || u.Level || u.LEVEL || '').trim();
+  if(lvl) return lvl;
+  // Fallback ke field 'tipe' — mungkin berisi multi-value
+  const tipe = (u.tipe || u.Tipe || u.TIPE || '').trim();
   const knownLevels=['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'];
-  const found=knownLevels.find(l=>tipe.split(',').map(s=>s.trim()).includes(l));
-  return found||tipe;
+  const found = knownLevels.find(l => tipe.split(',').map(s=>s.trim()).includes(l));
+  return found || tipe;
 }
 
 function bolehAbsenKTM(){
@@ -10136,19 +10155,19 @@ async function loadCGM() {
     const result = await resp.json();
     cgmState.anggotaData = result.data || [];
 
-    // Load existing CGM absensi for this date (from sidang CGM sheet)
+    // Load existing CGM absensi for this date
     try {
-      const respAbsen = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=get_absen_sidang'
-        + '&jenis_sidang=CGM&tanggal=' + encodeURIComponent(cgmState.tanggal)
-        + '&sub_gugus=' + encodeURIComponent(idKelas));
+      const respAbsen = await fetch(APPS_SCRIPT_KELAS + '?action=get_cgm_absen'
+        + '&id_cgm=' + encodeURIComponent(idKelas)
+        + '&tanggal=' + encodeURIComponent(cgmState.tanggal));
       const resultAbsen = await respAbsen.json();
       cgmState.cgmMap = {};
       (resultAbsen.data || []).forEach(r => {
         const key = r.no_efataid || r.nama.toLowerCase();
         cgmState.cgmMap[key] = {
-          hadir_anak: r.hadir === 'y',
-          hadir_ayah: (r.ayah_hadir || '') === 'y',
-          hadir_ibu: (r.ibu_hadir || '') === 'y',
+          hadir_anak: r.hadir_anak === 'y',
+          hadir_ayah: r.hadir_ayah === 'y',
+          hadir_ibu: r.hadir_ibu === 'y',
         };
       });
     } catch(e) {
@@ -10328,12 +10347,12 @@ function cgmResetSemua() {
   renderCGMFamilyCards();
 }
 
-// ── CGM: Simpan via Sidang Batch ─────────────────
+// ── CGM: Simpan via CGM_Absen (dedicated CGM sheet) ──
 async function simpanCGM() {
   if (!cgmState.sudahLoad || !cgmState.anggotaData.length) return toast('⚠️ Muat data dulu');
   const kelasId = cgmState.selectedKelas;
   const tgl = cgmState.tanggal;
-  if (!kelasId || !tgl) return toast('⚠️ Kelas & tanggal wajib');
+  if (!kelasId || !tgl) return toast('⚠️ Lokasi CGM & tanggal wajib');
 
   const items = cgmState.anggotaData.map(a => {
     const key = a.no_efataid || a.nama.toLowerCase();
@@ -10341,35 +10360,31 @@ async function simpanCGM() {
     return {
       no_efataid: a.no_efataid || '',
       nama: a.nama || '',
-      kategori: 'anak',
-      hadir: m.hadir_anak ? 'y' : 'n',
-      ayah_hadir: m.hadir_ayah ? 'y' : 'n',
-      ibu_hadir: m.hadir_ibu ? 'y' : 'n',
+      hadir_anak: m.hadir_anak ? 'y' : 'n',
+      hadir_ayah: m.hadir_ayah ? 'y' : 'n',
+      hadir_ibu: m.hadir_ibu ? 'y' : 'n',
     };
   });
 
   const params = new URLSearchParams({
-    action: 'simpan_batch_sidang',
-    jenis_sidang: 'CGM',
-    sub_gugus: kelasId,
-    tanggal_absen: tgl,
-    replace_tanggal: 'y',
+    action: 'simpan_cgm_absen_batch',
+    id_cgm: kelasId,
+    tanggal: tgl,
+    tahun: cgmState.tahun || String(new Date().getFullYear()),
     dicatat_oleh: currentUser?.username || '',
-    no_efataid_pencatat: currentUser?.no_efataid || currentUser?.no_efata_id || '',
-    level_user: getLevelCode(),
     data: JSON.stringify(items),
   });
 
   try {
     toast('⏳ Menyimpan CGM...');
-    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG, {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     });
     const result = await resp.json();
     if (result.status === 'ok') {
-      toast(`✅ CGM tersimpan! ${result.inserted || items.length} data`);
+      toast(`✅ CGM tersimpan! ${result.saved || items.length} data`);
       logHistory('CGM', 'simpan CGM', `${items.length} anak, tgl: ${tgl}`);
     } else {
       toast('❌ ' + (result.message || 'Gagal'));
