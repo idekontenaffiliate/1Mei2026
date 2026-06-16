@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 50 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 70 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10159,7 +10159,8 @@ async function loadCGM() {
     try {
       const respAbsen = await fetch(APPS_SCRIPT_KELAS + '?action=get_cgm_absen'
         + '&id_cgm=' + encodeURIComponent(idKelas)
-        + '&tanggal=' + encodeURIComponent(cgmState.tanggal));
+        + '&tanggal=' + encodeURIComponent(cgmState.tanggal)
+        + '&_t=' + Date.now());
       const resultAbsen = await respAbsen.json();
       cgmState.cgmMap = {};
       (resultAbsen.data || []).forEach(r => {
@@ -10442,7 +10443,8 @@ async function loadAbsensiAnak() {
 
     // 2. Load poin existing untuk tanggal ini
     const respPoin = await fetch(APPS_SCRIPT_KELAS + '?action=get_poin&id_kelas=' + encodeURIComponent(idKelas)
-      + '&tanggal=' + encodeURIComponent(absenAnakState.tanggal));
+      + '&tanggal=' + encodeURIComponent(absenAnakState.tanggal)
+      + '&_t=' + Date.now());
     const resultPoin = await respPoin.json();
 
     // Build poinMap
@@ -11884,7 +11886,7 @@ renderAnakPoinContent = async function() {
     wrap.id = 'patch-btn-hadiah';
     wrap.style.cssText = 'display:flex;gap:5px;margin-bottom:10px;';
     wrap.innerHTML = `
-      <button onclick="loadSettingHadiah()" class="btn-action" style="flex:1;padding:9px;font-size:.76rem;font-weight:600;">🎁 Setting Hadiah Anak</button>
+      <button onclick="showSettingHadiah()" class="btn-action" style="flex:1;padding:9px;font-size:.76rem;font-weight:600;">🎁 Setting Hadiah Anak</button>
       <button onclick="loadSettingHadiahCGM()" class="btn-action" style="flex:1;padding:9px;font-size:.76rem;font-weight:600;border-color:var(--accent3);color:var(--accent3);">🏆 Setting Hadiah CGM</button>`;
     // Taruh di awal setelah tab
     const firstChild = ct.firstElementChild;
@@ -11894,6 +11896,278 @@ renderAnakPoinContent = async function() {
 };
 
 console.log('✅ PATCH v3 loaded: Fix ManajemenKelas, CGM Hadiah, Laporan CGM, Search Universal');
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH F: EXPORT BUTTONS (Copy/Excel/PDF) untuk Anak & CGM  ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+function patchExportBtns(target) {
+  return `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;">
+    <button onclick="patchExportCopy('${target}')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">📋 Copy Teks</button>
+    <button onclick="patchExportExcel('${target}')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">📗 Excel</button>
+    <button onclick="patchExportPDF('${target}')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">📄 PDF</button>
+  </div>`;
+}
+
+function patchExportCopy(target) {
+  let lines = [];
+  const tahun = laporanAbsenState.tahun || String(new Date().getFullYear());
+  const ts = new Date().toLocaleString('id-ID');
+
+  if (target === 'cgm') {
+    const d = laporanAbsenState.dataCGM;
+    if (!d || !d.prestasi?.length) return toast('⚠️ Tidak ada data');
+    lines.push(`LAPORAN PRESTASI CGM — ${tahun}`, `Dicetak: ${ts}`, '',
+      'No | Nama | Kedatangan | Ayah | Ibu | Prestasi | Hadiah', '-'.repeat(65));
+    d.prestasi.forEach((x,i) => lines.push(`${i+1}. ${x.nama} | ${x.kedatangan||x.total_hadir_anak||0} | ${x.total_hadir_ayah||0} | ${x.total_hadir_ibu||0} | ${x.prestasi} | ${x.hadiah_rp>0?'Rp '+x.hadiah_rp.toLocaleString('id-ID'):'-'}`));
+    lines.push('', `Total: ${d.prestasi.length} anak, Hadiah: Rp ${(d.total_hadiah_rp||0).toLocaleString('id-ID')}`);
+  } else if (target === 'anak') {
+    const d = laporanAbsenState.dataAnak;
+    if (!d) return toast('⚠️ Tidak ada data');
+    const ad = d.prestasi || d.summary || [];
+    lines.push(`LAPORAN PRESTASI ANAK — ${tahun}`, `Dicetak: ${ts}`, '',
+      'No | Nama | Kehadiran | Hafalan | Total | Prestasi | Hadiah', '-'.repeat(65));
+    ad.forEach((x,i) => lines.push(`${i+1}. ${x.nama} | ${x.total_kehadiran||0} | ${x.total_hafalan||0} | ${x.total_poin||0} | ${x.prestasi||'-'} | ${x.hadiah_rp>0?'Rp '+x.hadiah_rp.toLocaleString('id-ID'):'-'}`));
+    lines.push('', `Total: ${ad.length} anak, Hadiah: Rp ${(d.total_hadiah_rp||0).toLocaleString('id-ID')}`);
+  }
+
+  if (lines.length) navigator.clipboard.writeText(lines.join('\n')).then(() => toast('✅ Teks disalin!'));
+}
+
+function patchExportExcel(target) {
+  try {
+    const wb = XLSX.utils.book_new();
+    const tahun = laporanAbsenState.tahun || String(new Date().getFullYear());
+
+    if (target === 'cgm') {
+      const d = laporanAbsenState.dataCGM;
+      if (!d || !d.prestasi?.length) return toast('⚠️ Tidak ada data');
+      const rows = [['No','Nama','Lokasi','Kedatangan Anak','Ayah Hadir','Ibu Hadir','Prestasi','Hadiah (Rp)']];
+      const lm = {}; (d.lokasi||[]).forEach(k => { lm[k.id_kelas] = k.nama_kelas; });
+      d.prestasi.forEach((x,i) => rows.push([i+1, x.nama, lm[x.id_cgm]||'-', x.kedatangan||x.total_hadir_anak||0, x.total_hadir_ayah||0, x.total_hadir_ibu||0, x.prestasi, x.hadiah_rp||0]));
+      rows.push([]); rows.push(['','Total Anak:', d.prestasi.length, '', '', '', 'Total Hadiah:', d.total_hadiah_rp||0]);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Prestasi CGM');
+      XLSX.writeFile(wb, `Prestasi_CGM_${tahun}.xlsx`);
+    } else if (target === 'anak') {
+      const d = laporanAbsenState.dataAnak;
+      if (!d) return toast('⚠️ Tidak ada data');
+      const ad = d.prestasi || d.summary || [];
+      const rows = [['No','Nama','Kehadiran','Hafalan','Total Poin','Minggu Hadir','Prestasi','Hadiah (Rp)']];
+      ad.forEach((x,i) => rows.push([i+1, x.nama, x.total_kehadiran||0, x.total_hafalan||0, x.total_poin||0, x.minggu_hadir||0, x.prestasi||'-', x.hadiah_rp||0]));
+      rows.push([]); rows.push(['','Total Anak:', ad.length, '', '', '', 'Total Hadiah:', d.total_hadiah_rp||0]);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Prestasi Anak');
+      XLSX.writeFile(wb, `Prestasi_Anak_${tahun}.xlsx`);
+    }
+    toast('✅ Excel diunduh!');
+  } catch(e) { toast('⚠️ ' + e.message); }
+}
+
+function patchExportPDF(target) {
+  const el = document.getElementById('laporan-result');
+  if (!el || !el.innerHTML.trim()) return toast('⚠️ Tidak ada data');
+  const tahun = laporanAbsenState.tahun || String(new Date().getFullYear());
+  const printContent = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Laporan ${target.toUpperCase()} — ${tahun}</title>
+    <style>
+      @media print { body { -webkit-print-color-adjust: exact !important; } @page { size: landscape; margin: 8mm; } }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1e293b; padding: 10px; background: #fff; }
+      table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ccc; padding: 3px 5px; font-size: 8pt; }
+      th { background: #f0f4f8; font-weight: 700; text-align: center; } tr:nth-child(even) { background: #f9fafb; }
+      button { display: none !important; } .btn-action { display: none !important; }
+    </style>
+  </head><body>
+    <h2 style="text-align:center;margin-bottom:10px;">Laporan ${target.toUpperCase()} — ${tahun}</h2>
+    <div style="text-align:center;font-size:8pt;color:#999;margin-bottom:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+    ${el.innerHTML}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked');
+  w.document.write(printContent); w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+// Inject export btns ke CGM summary
+const _patchCGMSummOrig = patchCGMSummaryUI;
+patchCGMSummaryUI = function(el, data) {
+  _patchCGMSummOrig(el, data);
+  el.innerHTML += patchExportBtns('cgm');
+};
+
+// Inject export btns ke Anak report
+const _patchOrigLapRenderAnakReport = typeof lapRenderAnakReport === 'function' ? lapRenderAnakReport : null;
+if (_patchOrigLapRenderAnakReport) {
+  lapRenderAnakReport = function(el, data) {
+    _patchOrigLapRenderAnakReport(el, data);
+    // Inject export buttons if not present
+    if (!el.querySelector('#patch-anak-export')) {
+      const div = document.createElement('div');
+      div.id = 'patch-anak-export';
+      div.innerHTML = patchExportBtns('anak');
+      el.appendChild(div);
+    }
+  };
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH G: SEARCH AUTOCOMPLETE dari data Jemaat              ║
+// ║  Admin: nama lengkap + umur                                 ║
+// ║  Gembala: pilih nama lengkap atau panggilan                 ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// Override patchRenderSearchUniversal untuk tambah autocomplete
+const _patchOrigSearchUniv = patchRenderSearchUniversal;
+patchRenderSearchUniversal = function(el) {
+  const tahun = laporanAbsenState.tahun || String(new Date().getFullYear());
+  const vb = document.getElementById('lap-view-bar'); if(vb) vb.style.display='none';
+  const isAdmin = isLevelAdmin();
+  const isGemb = getLevelCode() === 'Gembala';
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:10px;">🔍 Cari Riwayat Kehadiran — Semua Sidang</div>
+      <div style="font-size:.68rem;color:var(--text3);margin-bottom:10px;">
+        Cari di: Sidang Anak (poin+hafalan) dan CGM (anak+ayah+ibu). Tahun: ${tahun}
+      </div>
+      ${isGemb ? `<div style="display:flex;gap:6px;margin-bottom:8px;">
+        <label style="font-size:.7rem;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="radio" name="search-name-mode" value="lengkap" checked onchange="patchSearchNameMode='lengkap'"> Nama Lengkap
+        </label>
+        <label style="font-size:.7rem;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="radio" name="search-name-mode" value="panggilan" onchange="patchSearchNameMode='panggilan'"> Nama Panggilan
+        </label>
+      </div>` : ''}
+      <div style="position:relative;">
+        <input type="text" id="search-univ-q" class="k-input" placeholder="Ketik nama..." style="width:100%;"
+          oninput="patchSearchAutocomplete(this.value)"
+          onkeydown="if(event.key==='Enter'){patchSearchExec();patchHideAutocomplete();}">
+        <div id="search-autocomplete" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:100;
+          background:var(--surface);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;
+          box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
+      </div>
+      <button onclick="patchSearchExec();patchHideAutocomplete();" class="btn-action accent" style="width:100%;padding:10px;margin-top:8px;font-weight:700;">
+        🔍 Cari
+      </button>
+    </div>
+    <div id="search-univ-res"><div class="empty-state"><div class="icon">🔍</div><p>Ketik nama untuk mencari riwayat.</p></div></div>`;
+};
+
+let patchSearchNameMode = 'lengkap';
+
+function patchSearchAutocomplete(q) {
+  const el = document.getElementById('search-autocomplete');
+  if (!el) return;
+  if (!q || q.length < 2) { el.style.display = 'none'; return; }
+
+  const jemaat = db.Jemaat || [];
+  if (!jemaat.length) { el.style.display = 'none'; return; }
+
+  const query = q.toLowerCase();
+  const isAdmin = isLevelAdmin();
+  const useNickname = patchSearchNameMode === 'panggilan';
+
+  const matches = jemaat.filter(j => {
+    const namaLengkap = (j['Nama Lengkap'] || '').toLowerCase();
+    const namaPanggilan = (j['Nama Panggilan'] || '').toLowerCase();
+    return namaLengkap.includes(query) || namaPanggilan.includes(query);
+  }).slice(0, 8);
+
+  if (!matches.length) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  el.innerHTML = matches.map(j => {
+    const namaLengkap = j['Nama Lengkap'] || j['Nama Panggilan'] || '';
+    const namaPanggilan = j['Nama Panggilan'] || '';
+    const usia = j['Usia'] || j['usia'] || '';
+    const kat = j['Kategori'] || j['kategori'] || '';
+    const displayName = useNickname && namaPanggilan ? namaPanggilan : namaLengkap;
+    const searchName = namaLengkap; // Always search by full name for accuracy
+
+    let detail = '';
+    if (isAdmin && usia) detail += `${usia} th`;
+    if (kat) detail += (detail ? ' · ' : '') + kat;
+    if (namaPanggilan && namaPanggilan !== namaLengkap) detail += (detail ? ' · ' : '') + `"${namaPanggilan}"`;
+
+    return `<div onclick="patchPickAutocomplete('${escHtml(searchName)}')"
+      style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.8rem;
+      transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <div style="font-weight:600;">${escHtml(displayName)}</div>
+      ${detail ? `<div style="font-size:.68rem;color:var(--text3);">${escHtml(detail)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function patchPickAutocomplete(name) {
+  const input = document.getElementById('search-univ-q');
+  if (input) input.value = name;
+  patchHideAutocomplete();
+  patchSearchExec();
+}
+
+function patchHideAutocomplete() {
+  const el = document.getElementById('search-autocomplete');
+  if (el) el.style.display = 'none';
+}
+
+// Also fix CGM search to have autocomplete
+const _patchOrigCGMSearch = patchCGMSearchUI;
+patchCGMSearchUI = function(el) {
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent3);margin-bottom:10px;">🔍 Cari Anak — Riwayat CGM</div>
+      <div style="position:relative;">
+        <input type="text" id="search-cgm-q" class="k-input" placeholder="Ketik nama..." style="width:100%;"
+          oninput="patchCGMAutocomplete(this.value)"
+          onkeydown="if(event.key==='Enter'){patchSearchCGMExec();patchHideCGMAC();}">
+        <div id="search-cgm-ac" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:100;
+          background:var(--surface);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;
+          box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
+      </div>
+      <button onclick="patchSearchCGMExec();patchHideCGMAC();" class="btn-action accent" style="width:100%;padding:10px;margin-top:8px;">🔍 Cari</button>
+    </div>
+    <div id="search-cgm-res"><div class="empty-state"><div class="icon">🔍</div><p>Ketik nama untuk mencari.</p></div></div>`;
+};
+
+function patchCGMAutocomplete(q) {
+  const el = document.getElementById('search-cgm-ac');
+  if (!el || !q || q.length < 2) { if(el) el.style.display='none'; return; }
+  const jemaat = db.Jemaat || [];
+  const query = q.toLowerCase();
+  const matches = jemaat.filter(j => {
+    const n1 = (j['Nama Lengkap']||'').toLowerCase();
+    const n2 = (j['Nama Panggilan']||'').toLowerCase();
+    return n1.includes(query) || n2.includes(query);
+  }).slice(0, 6);
+  if (!matches.length) { el.style.display='none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = matches.map(j => {
+    const nm = j['Nama Lengkap'] || j['Nama Panggilan'] || '';
+    const usia = isLevelAdmin() ? (j['Usia']||'') : '';
+    return `<div onclick="document.getElementById('search-cgm-q').value='${escHtml(nm)}';patchHideCGMAC();patchSearchCGMExec();"
+      style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.8rem;"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600;">${escHtml(nm)}</span>
+      ${usia ? `<span style="font-size:.65rem;color:var(--text3);margin-left:6px;">${usia} th</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function patchHideCGMAC() {
+  const el = document.getElementById('search-cgm-ac');
+  if (el) el.style.display='none';
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH H: FIX Absensi Anak & CGM reload — cache-bust +     ║
+// ║  tambahan log diagnostik                                     ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// Preload Jemaat data jika belum (untuk autocomplete)
+if (!db.Jemaat && typeof URLS !== 'undefined' && URLS.Jemaat && !URLS.Jemaat.includes('GANTI')) {
+  Papa.parse(URLS.Jemaat, {download:true, header:true, complete: r => { db.Jemaat = r.data; }});
+}
+
+console.log('✅ PATCH v4 loaded: Export Anak/CGM, Autocomplete Jemaat, Cache-bust fix');
 </script>
 </body>
 </html>
