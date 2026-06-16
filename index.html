@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 30 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 25 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyQK
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwQ30cVt5jhILlZECFx6HB4F0efgPpCf3ukMkiEmEx7UGa-DGDDYUV1UAkJcuclG0ao/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwVa4AvHbhVtMrHgjT-KGQKKWbn13_zYYvV2sGNCUyX-kM5ObWgJ3H-9XOCX48jd2tx/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -792,8 +792,8 @@ Papa.parse(URLS.Awal, {
     console.error('❌ Gagal memuat data login:', err); 
     toast('❌ Gagal memuat data login. Cek koneksi internet.'); 
   }
-});   
-
+});
+   
 setInterval(()=>{
   const n=new Date();const pad=x=>String(x).padStart(2,'0');
   const d=`${pad(n.getDate())}-${pad(n.getMonth()+1)}-${String(n.getFullYear()).slice(-2)} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
@@ -888,16 +888,16 @@ function attemptLogin(){
   setupNavigation();
   logHistory('login', 'masuk aplikasi', `level: ${found.level||found.tipe||'-'}`); 
 }
-// ✅ PERBAIKAN patchAttemptLogin:
 (function patchAttemptLogin(){
+  const _orig = attemptLogin;
   attemptLogin = function(){
     const errEl = document.getElementById('login-error');
     errEl.style.display = 'none';
     const u = document.getElementById('user').value.trim();
-    const p = document.getElementById('pass').value.trim();   // ← tambahkan .trim()
+    const p = document.getElementById('pass').value;
     if(!u || !p) return toast('⚠️ Isi username dan password');
-
-    // Akun demo
+ 
+    // ★ AKUN DEMO HARDCODED
     if(u === 'akundemo' && p === 'pastibisamasuk'){
       currentUser = {
         username:'akundemo', password:'pastibisamasuk', level:'Demo',
@@ -907,19 +907,28 @@ function attemptLogin(){
       doAfterLogin();
       return;
     }
-
-    // Akun biasa — TRIM data CSV juga!
+ 
+    // Akun biasa
     if(!db.Awal || !db.Awal.length) return toast('⏳ Memuat data, harap tunggu...');
-    const found = db.Awal.find(r => 
-      (r.username || '').trim() === u && (r.password || '').trim() === p
-    );
+    const found = db.Awal.find(r => r.username === u && r.password === p);
     if(!found){ errEl.style.display='block'; return; }
     currentUser = found;
     doAfterLogin();
   };
-
+ 
   function doAfterLogin(){
-    // ... (isi fungsi tetap sama)
+    const u = currentUser;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    document.getElementById('header-title').textContent = u.username;
+    document.getElementById('header-sub').textContent = u.level || u.tipe || 'user';
+    Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
+    if(!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
+    if(!db.Kegiatan) Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
+    setupNavigation();
+    logHistory('login','masuk aplikasi','level: '+(u.level||u.tipe||'-'));
+    // Tampilkan popup pengumuman untuk SEMUA user
+    setTimeout(loadPengumumanPopup, 800);
   }
 })();
  
@@ -7898,7 +7907,6 @@ function _buildPerPersonTable(label, orangList, teksLines) {
       </table>
     </div>
   </div>`;
-}
 }
  
  
