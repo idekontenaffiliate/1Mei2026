@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 70 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 100 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyQK
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbyyh8mBWwwZiIUIjFx4WCGrk3OQlCuRyVCcith63Ryj_iyA4x6fYL3f61a3J3MohpFG/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwQ30cVt5jhILlZECFx6HB4F0efgPpCf3ukMkiEmEx7UGa-DGDDYUV1UAkJcuclG0ao/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -6375,6 +6375,74 @@ let laporanAbsenState = {
   tahun: new Date().getFullYear(),
 };   
 
+// ══════════════════════════════════════════════════════════════════════
+// JEMAAT LOOKUP — untuk menambahkan Alamat & Telpon di laporan
+// ══════════════════════════════════════════════════════════════════════
+let _jemaatLookupCache = null;
+
+async function ensureJemaatLoaded() {
+  if (db.Jemaat && db.Jemaat.length) return;
+  if (typeof URLS === 'undefined' || !URLS.Jemaat || URLS.Jemaat.includes('GANTI')) return;
+  return new Promise(resolve => {
+    Papa.parse(URLS.Jemaat, {
+      download: true, header: true,
+      complete: r => { db.Jemaat = r.data; _jemaatLookupCache = null; resolve(); },
+      error: () => resolve()
+    });
+  });
+}
+
+function getJemaatLookup() {
+  if (_jemaatLookupCache) return _jemaatLookupCache;
+  const map = {};
+  const jemaat = db.Jemaat || [];
+  const efaVariants = ['no_EfataID','No_EfataID','no_efataid','No_Efataid','no_Efataid','No EfataID','no efataid','EfataID','efataid'];
+  const alamatVariants = ['Alamat','alamat','ALAMAT','alamat lengkap','Alamat Lengkap','Address','address'];
+  const telpVariants = ['No_HP','no_hp','No HP','no hp','Telepon','telepon','Telpon','telpon','HP','hp','Phone','phone','No Telepon','no_telepon','No_Telepon','Nomor HP','nomor_hp'];
+  const namaVariants = ['Nama Lengkap','nama lengkap','Nama Panggilan','nama panggilan'];
+
+  jemaat.forEach(j => {
+    // Cari kolom EfataID
+    let efataId = '';
+    for (const v of efaVariants) { if (j[v]) { efataId = String(j[v]).trim(); break; } }
+    if (!efataId) return;
+
+    // Cari kolom Alamat
+    let alamat = '';
+    for (const v of alamatVariants) { if (j[v]) { alamat = String(j[v]).trim(); break; } }
+
+    // Cari kolom Telpon
+    let telpon = '';
+    for (const v of telpVariants) { if (j[v]) { telpon = String(j[v]).trim(); break; } }
+
+    // Cari Nama
+    let nama = '';
+    for (const v of namaVariants) { if (j[v]) { nama = String(j[v]).trim(); break; } }
+
+    map[efataId.toLowerCase()] = { alamat, telpon, nama };
+  });
+
+  _jemaatLookupCache = map;
+  return map;
+}
+
+function lookupJemaat(noEfataid, nama) {
+  const map = getJemaatLookup();
+  if (noEfataid) {
+    const found = map[noEfataid.toLowerCase()];
+    if (found) return found;
+  }
+  // Fallback: cari berdasarkan nama
+  if (nama) {
+    const namaLow = nama.toLowerCase();
+    for (const entry of Object.values(map)) {
+      if (entry.nama && entry.nama.toLowerCase() === namaLow) return entry;
+    }
+  }
+  return { alamat: '', telpon: '' };
+}
+// ══════════════════════════════════════════════════════════════════════
+
 // ── ACCESS CONTROL ──────────────────────────────────────────────────
 function bolehLihatLaporan() {
   const l = getLevelCode();
@@ -6674,6 +6742,9 @@ function lapSetView(view) {
   el.innerHTML = `<div class="loading-shimmer"></div>
     <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat data laporan...</div>`;
  
+  // ★ FIX: Pastikan data Jemaat sudah dimuat untuk lookup Alamat & Telpon
+  await ensureJemaatLoaded();
+
   if (laporanAbsenState.activeTab === 'ktm') {
     await lapLoadKTM(el);
   } else if (laporanAbsenState.activeTab === 'anak') {
@@ -6972,6 +7043,9 @@ async function lapAnakLoadKetidakhadiran() {
 
   const formattedTgl = formatDateFromInput(tgl);
 
+  // ★ FIX: Pastikan data Jemaat dimuat untuk lookup Alamat & Telpon
+  await ensureJemaatLoaded();
+
   try {
     // Load all children from classes
     const tahun = laporanAbsenState.dataAnak?.tahun || String(new Date().getFullYear());
@@ -7004,15 +7078,21 @@ async function lapAnakLoadKetidakhadiran() {
       return;
     }
 
-    let rows = allAbsent.map((a, i) => `
+    let rows = allAbsent.map((a, i) => {
+      // ★ Lookup Alamat & Telpon dari Jemaat
+      const jInfo = lookupJemaat(a.no_efataid, a.nama);
+      const telp = a.no_hp_ayah || a.no_hp_ibu || jInfo.telpon || '-';
+      return `
       <tr style="${i%2?'background:var(--surface2);':''}">
         <td style="padding:5px 7px;font-size:.75rem;">${i+1}</td>
         <td style="padding:5px 7px;font-size:.75rem;font-weight:600;">${escHtml(a.nama)}</td>
         <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${escHtml(a.kelas_nama||'-')}</td>
         <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.nama_ayah ? escHtml(a.nama_ayah) : '-'}</td>
         <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.nama_ibu ? escHtml(a.nama_ibu) : '-'}</td>
-        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.no_hp_ayah || a.no_hp_ibu || '-'}</td>
-      </tr>`).join('');
+        <td style="padding:5px 7px;font-size:.68rem;color:var(--text2);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(jInfo.alamat)}">${escHtml(jInfo.alamat || '-')}</td>
+        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${telp !== '-' ? `<a href="tel:${escHtml(telp)}" style="color:var(--accent);text-decoration:none;">${escHtml(telp)}</a>` : '-'}</td>
+      </tr>`;
+    }).join('');
 
     resultEl.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--red);border-radius:var(--radius);padding:12px;">
@@ -7020,13 +7100,14 @@ async function lapAnakLoadKetidakhadiran() {
           ❌ Tidak Hadir pada ${formatTglDisplay(formattedTgl)} — ${allAbsent.length} anak
         </div>
         <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;min-width:500px;">
+          <table style="width:100%;border-collapse:collapse;min-width:600px;">
             <thead><tr style="background:var(--surface2);">
               <th style="padding:5px 7px;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">#</th>
               <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Anak</th>
               <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Kelas</th>
               <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Ayah</th>
               <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Ibu</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Alamat</th>
               <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Telepon</th>
             </tr></thead>
             <tbody>${rows}</tbody>
@@ -7772,6 +7853,8 @@ function _buildPerPersonTable(label, orangList, teksLines) {
     const total = o.hadir_tanggal.length;
     const bg = idx % 2 === 0 ? '' : 'background:var(--surface2);';
     const barWidth = Math.min(100, total * 2);
+    // ★ Lookup Alamat & Telpon dari Jemaat
+    const jInfo = lookupJemaat(o.no_efataid, o.nama);
     rows += `<tr style="${bg}">
       <td style="padding:5px 7px;font-size:.75rem;font-weight:500;max-width:200px;
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -7779,6 +7862,8 @@ function _buildPerPersonTable(label, orangList, teksLines) {
         ${o.no_efataid ? `<span style="font-size:.55rem;color:var(--text3);"> · ${escHtml(o.no_efataid)}</span>` : ''}
         ${o.sub_gugus ? `<span style="font-size:.55rem;color:var(--yellow);"> · ${escHtml(o.sub_gugus)}</span>` : ''}
       </td>
+      <td style="padding:5px 7px;font-size:.68rem;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(jInfo.alamat)}">${escHtml(jInfo.alamat || '-')}</td>
+      <td style="padding:5px 7px;font-size:.68rem;color:var(--text2);white-space:nowrap;">${jInfo.telpon ? `<a href="tel:${escHtml(jInfo.telpon)}" style="color:var(--accent);text-decoration:none;">${escHtml(jInfo.telpon)}</a>` : '-'}</td>
       <td style="padding:5px 7px;text-align:center;font-family:'JetBrains Mono',monospace;
         font-size:.82rem;font-weight:700;color:${total > 0 ? 'var(--green)' : 'var(--text3)'};">${total}</td>
       <td style="padding:5px 7px;width:80px;">
@@ -7788,7 +7873,7 @@ function _buildPerPersonTable(label, orangList, teksLines) {
         </div>
       </td>
     </tr>`;
-    teksLines.push(`    ${o.nama}: ${total}×`);
+    teksLines.push(`    ${o.nama}: ${total}× | Alamat: ${jInfo.alamat || '-'} | Telp: ${jInfo.telpon || '-'}`);
   });
  
   return `<div style="margin-bottom:10px;">
@@ -7800,6 +7885,10 @@ function _buildPerPersonTable(label, orangList, teksLines) {
         <thead><tr style="background:var(--surface2);">
           <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);
             border-bottom:1px solid var(--border);">Nama</th>
+          <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);
+            border-bottom:1px solid var(--border);">Alamat</th>
+          <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);
+            border-bottom:1px solid var(--border);">Telpon</th>
           <th style="padding:5px 7px;text-align:center;font-size:.6rem;color:var(--green);
             border-bottom:1px solid var(--border);width:50px;">Hadir</th>
           <th style="padding:5px 7px;font-size:.6rem;color:var(--text3);
@@ -7809,6 +7898,7 @@ function _buildPerPersonTable(label, orangList, teksLines) {
       </table>
     </div>
   </div>`;
+}
 }
  
  
@@ -7862,14 +7952,15 @@ function _generateExcel(data) {
       const sheetName = jenis.substring(0, 31).replace(/[:\\\/?*\[\]]/g, '-');
  
       if (view === 'weekly' && bolehLihatPerNama()) {
-        // Sheet: Nama | W1 | W2 | ... | W52 | Total
+        // Sheet: Nama | W1 | W2 | ... | W52 | Total | Alamat | Telpon
         const headerRow = ['Nama', 'EfataID', 'Kategori'];
         for (let w = 1; w <= maxWeeks; w++) headerRow.push('M' + w);
-        headerRow.push('Total');
+        headerRow.push('Total', 'Alamat', 'Telpon');
  
         const rows = [headerRow];
         orang.forEach(o => {
           const hadirWeeks = new Set(o.hadir_tanggal.map(t => getISOWeek(t)));
+          const jInfo = lookupJemaat(o.no_efataid, o.nama);
           const row = [o.nama, o.no_efataid || '', o.kategori || ''];
           let total = 0;
           for (let w = 1; w <= maxWeeks; w++) {
@@ -7877,7 +7968,7 @@ function _generateExcel(data) {
             row.push(h ? '✓' : '');
             if (h) total++;
           }
-          row.push(total);
+          row.push(total, jInfo.alamat || '', jInfo.telpon || '');
           rows.push(row);
         });
  
@@ -7885,10 +7976,11 @@ function _generateExcel(data) {
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
  
       } else if (view === 'perperson' && bolehLihatPerNama()) {
-        // Sheet: Nama | EfataID | Kategori | Total Hadir
-        const rows = [['Nama', 'EfataID', 'Kategori', 'Sub Gugus', 'Total Hadir']];
+        // Sheet: Nama | EfataID | Kategori | Sub Gugus | Alamat | Telpon | Total Hadir
+        const rows = [['Nama', 'EfataID', 'Kategori', 'Sub Gugus', 'Alamat', 'Telpon', 'Total Hadir']];
         orang.sort((a, b) => b.hadir_tanggal.length - a.hadir_tanggal.length).forEach(o => {
-          rows.push([o.nama, o.no_efataid || '', o.kategori || '', o.sub_gugus || '', o.hadir_tanggal.length]);
+          const jInfo = lookupJemaat(o.no_efataid, o.nama);
+          rows.push([o.nama, o.no_efataid || '', o.kategori || '', o.sub_gugus || '', jInfo.alamat || '', jInfo.telpon || '', o.hadir_tanggal.length]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
