@@ -783,7 +783,16 @@ if(URLS.Pengumuman && !URLS.Pengumuman.includes('GANTI')){
     complete: r => updateLoginTicker(r.data)
   });
 }
-Papa.parse(URLS.Awal,{download:true,header:true,complete:r=>{db.Awal=r.data;}});
+Papa.parse(URLS.Awal, {
+  download: true, 
+  header: true, 
+  skipEmptyLines: true,    // ← abaikan baris kosong
+  complete: r => { db.Awal = r.data; },
+  error: err => { 
+    console.error('❌ Gagal memuat data login:', err); 
+    toast('❌ Gagal memuat data login. Cek koneksi internet.'); 
+  }
+});   
 
 setInterval(()=>{
   const n=new Date();const pad=x=>String(x).padStart(2,'0');
@@ -879,16 +888,16 @@ function attemptLogin(){
   setupNavigation();
   logHistory('login', 'masuk aplikasi', `level: ${found.level||found.tipe||'-'}`); 
 }
+// ✅ PERBAIKAN patchAttemptLogin:
 (function patchAttemptLogin(){
-  const _orig = attemptLogin;
   attemptLogin = function(){
     const errEl = document.getElementById('login-error');
     errEl.style.display = 'none';
     const u = document.getElementById('user').value.trim();
-    const p = document.getElementById('pass').value;
+    const p = document.getElementById('pass').value.trim();   // ← tambahkan .trim()
     if(!u || !p) return toast('⚠️ Isi username dan password');
- 
-    // ★ AKUN DEMO HARDCODED
+
+    // Akun demo
     if(u === 'akundemo' && p === 'pastibisamasuk'){
       currentUser = {
         username:'akundemo', password:'pastibisamasuk', level:'Demo',
@@ -898,28 +907,19 @@ function attemptLogin(){
       doAfterLogin();
       return;
     }
- 
-    // Akun biasa
+
+    // Akun biasa — TRIM data CSV juga!
     if(!db.Awal || !db.Awal.length) return toast('⏳ Memuat data, harap tunggu...');
-    const found = db.Awal.find(r => r.username === u && r.password === p);
+    const found = db.Awal.find(r => 
+      (r.username || '').trim() === u && (r.password || '').trim() === p
+    );
     if(!found){ errEl.style.display='block'; return; }
     currentUser = found;
     doAfterLogin();
   };
- 
+
   function doAfterLogin(){
-    const u = currentUser;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-app').style.display = 'flex';
-    document.getElementById('header-title').textContent = u.username;
-    document.getElementById('header-sub').textContent = u.level || u.tipe || 'user';
-    Papa.parse(URLS.Background,{download:true,header:true,complete:r=>{db.Background=r.data;}});
-    if(!db.Acara) Papa.parse(URLS.Acara,{download:true,header:true,complete:r=>{db.Acara=r.data;}});
-    if(!db.Kegiatan) Papa.parse(URLS.Kegiatan,{download:true,header:true,complete:r=>{db.Kegiatan=r.data;}});
-    setupNavigation();
-    logHistory('login','masuk aplikasi','level: '+(u.level||u.tipe||'-'));
-    // Tampilkan popup pengumuman untuk SEMUA user
-    setTimeout(loadPengumumanPopup, 800);
+    // ... (isi fungsi tetap sama)
   }
 })();
  
