@@ -971,7 +971,11 @@ function setupNavigation(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
   const menus=(currentUser?.tipe||'').split(',').map(s=>s.trim()).filter(Boolean);
   // Hilangkan menu Quiz dan Link
-  const filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link'); 
+  const filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link');
+  // Auto-inject untuk Administrator: Manajemen Kelas jika belum ada
+  if(isLevelAdmin()){
+    if(!filteredMenus.some(m=>m==='Manajemen Kelas')) filteredMenus.push('Manajemen Kelas');
+  }
   const allMenus=['Dashboard',...filteredMenus.filter(m=>m!=='Dashboard')];
   allMenus.forEach((menu,idx)=>{
     const btn=document.createElement('button');
@@ -9974,6 +9978,7 @@ async function renderAnakPoinContent() {
           💾 Simpan Semua
         </button>
         <button onclick="lihatPrestasiAnak()" class="btn-action accent" style="font-size:.78rem;">🏆 Prestasi</button>
+        ${isAdminUser() ? `<button onclick="showSettingHadiah()" class="btn-action" style="font-size:.78rem;">⚙️ Setting Hadiah</button>` : ''}
       </div>
       <input type="text" id="anak-search" class="k-input"
         placeholder="🔍 Cari nama anak..."
@@ -10037,12 +10042,12 @@ function renderCGMContent() {
         👨‍👩‍👧‍👦 Absensi CGM (Cell Group Meeting)
       </div>
 
-      <!-- Pilih Kelas -->
+      <!-- Pilih Lokasi CGM -->
       <div style="margin-bottom:10px;">
-        <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">PILIH KELAS</div>
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">PILIH LOKASI CGM</div>
         <div style="display:flex;gap:6px;">
           <select id="cgm-kelas" class="k-input" style="flex:1;" onchange="cgmState.selectedKelas=this.value">
-            <option value="">-- Pilih Kelas --</option>
+            <option value="">-- Pilih Lokasi CGM --</option>
           </select>
           <button onclick="loadDaftarKelasCGM()" class="btn-action" style="padding:8px 12px;">🔄</button>
         </div>
@@ -10092,21 +10097,25 @@ function renderCGMContent() {
   setTimeout(() => checkSundayWarning('cgm-tanggal', 'cgm-sunday-warn'), 200);
 }
 
-// ── CGM: Load Kelas ──────────────────────────────
+// ── CGM: Load Lokasi CGM (bukan kelas) ───────────
 async function loadDaftarKelasCGM() {
   if (APPS_SCRIPT_KELAS.includes('GANTI')) return;
   try {
-    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + cgmState.tahun);
+    // CGM menggunakan jenis='cgm' — BUKAN kelas biasa
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&jenis=cgm');
     const result = await resp.json();
     cgmState.kelasData = result.data || [];
     const sel = document.getElementById('cgm-kelas');
     if (sel) {
-      sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+      sel.innerHTML = '<option value="">-- Pilih Lokasi CGM --</option>' +
         cgmState.kelasData.map(k =>
-          `<option value="${escHtml(k.id_kelas)}" ${k.id_kelas === cgmState.selectedKelas ? 'selected' : ''}>${escHtml(k.nama_kelas)} (${escHtml(k.jenis||'anak')})</option>`
+          `<option value="${escHtml(k.id_kelas)}" ${k.id_kelas === cgmState.selectedKelas ? 'selected' : ''}>${escHtml(k.nama_kelas)} — ${escHtml(k.distrik||'')}${k.gembala_kelas ? ' (PIC: '+escHtml(k.gembala_kelas)+')' : ''}</option>`
         ).join('');
     }
-  } catch(e) { toast('⚠️ Gagal load kelas: ' + e.message); }
+    if (!cgmState.kelasData.length) {
+      toast('💡 Belum ada lokasi CGM. Buat di Manajemen Kelas → jenis "CGM"');
+    }
+  } catch(e) { toast('⚠️ Gagal load lokasi CGM: ' + e.message); }
 }
 
 // ── CGM: Load & Display ──────────────────────────
@@ -10215,7 +10224,7 @@ function renderCGMSummary() {
     </div>`;
 }
 
-// ── CGM: Family Cards ────────────────────────────
+// ── CGM: Family Cards (1 card per child) ─────────
 function renderCGMFamilyCards() {
   const wrap = document.getElementById('cgm-family-wrap');
   if (!wrap || !cgmState.sudahLoad) return;
@@ -10233,80 +10242,48 @@ function renderCGMFamilyCards() {
     return;
   }
 
-  // Group by family (nama_ayah + nama_ibu)
-  const families = {};
-  data.forEach(a => {
-    const fkey = (a.nama_ayah||'-').trim() + '|' + (a.nama_ibu||'-').trim();
-    if (!families[fkey]) families[fkey] = { ayah: (a.nama_ayah||'').trim(), ibu: (a.nama_ibu||'').trim(), children: [] };
-    families[fkey].children.push(a);
-  });
+  // 1 card per child — sesuai screenshot referensi
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">`;
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">`;
-
-  Object.values(families).forEach(fam => {
-    const allKeys = fam.children.map(c => c.no_efataid || c.nama.toLowerCase());
-    const firstChild = fam.children[0];
-    const firstKey = firstChild.no_efataid || firstChild.nama.toLowerCase();
-    const firstMap = cgmState.cgmMap[firstKey] || {};
-
-    // Check if all children in this family are present
-    const allChildHadir = fam.children.every(c => {
-      const k = c.no_efataid || c.nama.toLowerCase();
-      return cgmState.cgmMap[k]?.hadir_anak;
-    });
-    const ayahHadir = firstMap.hadir_ayah;
-    const ibuHadir = firstMap.hadir_ibu;
-    const allHadir = allChildHadir && ayahHadir && ibuHadir;
+  data.forEach(c => {
+    const key = c.no_efataid || c.nama.toLowerCase();
+    const m = cgmState.cgmMap[key] || {};
+    const ayah = (c.nama_ayah || '').trim();
+    const ibu = (c.nama_ibu || '').trim();
+    const allHadir = m.hadir_anak && m.hadir_ayah && m.hadir_ibu;
 
     html += `<div style="background:${allHadir ? 'rgba(16,185,129,.06)' : 'var(--surface)'};
       border:1px solid ${allHadir ? 'rgba(16,185,129,.4)' : 'var(--border)'};
-      border-radius:14px;padding:14px;">`;
+      border-radius:14px;padding:14px;">
 
-    // Children section
-    fam.children.forEach(c => {
-      const key = c.no_efataid || c.nama.toLowerCase();
-      const m = cgmState.cgmMap[key] || {};
-      html += `
-        <div style="margin-bottom:4px;">
-          <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Anak</div>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
-            <input type="checkbox" ${m.hadir_anak ? 'checked' : ''} 
-              onchange="toggleCGM('${escHtml(key)}','hadir_anak',this.checked)"
-              style="width:20px;height:20px;accent-color:var(--green);cursor:pointer;">
-            <span style="font-weight:600;font-size:.88rem;color:${m.hadir_anak ? 'var(--green)' : 'var(--text)'};">${escHtml(c.nama)}</span>
-          </label>
-        </div>`;
-    });
+      <!-- ANAK -->
+      <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Anak</div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;margin-bottom:8px;">
+        <input type="checkbox" ${m.hadir_anak ? 'checked' : ''} 
+          onchange="toggleCGM('${escHtml(key)}','hadir_anak',this.checked)"
+          style="width:20px;height:20px;accent-color:var(--green);cursor:pointer;">
+        <span style="font-weight:600;font-size:.88rem;color:${m.hadir_anak ? 'var(--green)' : 'var(--text)'};">${escHtml(c.nama)}</span>
+      </label>
 
-    // Parents section
-    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
-      <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Orang Tua</div>`;
-
-    if (fam.ayah && fam.ayah !== '-') {
-      html += `
+      <!-- ORANG TUA -->
+      <div style="padding-top:6px;border-top:1px solid var(--border);">
+        <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Orang Tua</div>
+        ${ayah && ayah !== '-' ? `
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
-          <input type="checkbox" ${ayahHadir ? 'checked' : ''}
-            onchange="toggleCGMParent('${escHtml(firstKey)}','hadir_ayah',this.checked,'${escHtml(fam.ayah)}|${escHtml(fam.ibu)}')"
+          <input type="checkbox" ${m.hadir_ayah ? 'checked' : ''}
+            onchange="toggleCGMParent('${escHtml(key)}','hadir_ayah',this.checked,'${escHtml(ayah)}|${escHtml(ibu)}')"
             style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;">
-          <span style="font-size:.85rem;color:${ayahHadir ? 'var(--accent)' : 'var(--text2)'};">${escHtml(fam.ayah)}</span>
-        </label>`;
-    } else {
-      html += `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`;
-    }
-
-    if (fam.ibu && fam.ibu !== '-') {
-      html += `
+          <span style="font-size:.85rem;color:${m.hadir_ayah ? 'var(--accent)' : 'var(--text2)'};">${escHtml(ayah)}</span>
+        </label>` : `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`}
+        ${ibu && ibu !== '-' ? `
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
-          <input type="checkbox" ${ibuHadir ? 'checked' : ''}
-            onchange="toggleCGMParent('${escHtml(firstKey)}','hadir_ibu',this.checked,'${escHtml(fam.ayah)}|${escHtml(fam.ibu)}')"
+          <input type="checkbox" ${m.hadir_ibu ? 'checked' : ''}
+            onchange="toggleCGMParent('${escHtml(key)}','hadir_ibu',this.checked,'${escHtml(ayah)}|${escHtml(ibu)}')"
             style="width:20px;height:20px;accent-color:var(--accent3);cursor:pointer;">
-          <span style="font-size:.85rem;color:${ibuHadir ? 'var(--accent3)' : 'var(--text2)'};">${escHtml(fam.ibu)}</span>
-        </label>`;
-    } else {
-      html += `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`;
-    }
-
-    html += `</div></div>`;
+          <span style="font-size:.85rem;color:${m.hadir_ibu ? 'var(--accent3)' : 'var(--text2)'};">${escHtml(ibu)}</span>
+        </label>` : `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`}
+      </div>
+    </div>`;
   });
 
   html += `</div>`;
@@ -10859,7 +10836,76 @@ function copyPrestasiAnak() {
 // ═══════════════════════════════════════════════════════════════
 
 
-console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');   
+console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');
+
+// ── Dynamic label change for CGM vs Kelas ─────────
+function kmJenisChanged(val) {
+  const isCGM = val === 'cgm';
+  const namaLabel = document.querySelector('label[for="km-nama"]') || document.getElementById('km-nama')?.previousElementSibling;
+  const distrikLabel = document.getElementById('km-distrik-label');
+  const gembalaLabel = document.getElementById('km-gembala-label');
+  const pic2Wrap = document.getElementById('km-pic2-wrap');
+  
+  if (distrikLabel) distrikLabel.textContent = isCGM ? 'Distrik' : 'Distrik / Lokal';
+  if (gembalaLabel) gembalaLabel.textContent = isCGM ? 'PIC 1' : 'Gembala Kelas';
+  if (pic2Wrap) pic2Wrap.style.display = isCGM ? 'block' : 'none';
+  
+  const namaInput = document.getElementById('km-nama');
+  if (namaInput) namaInput.placeholder = isCGM ? 'Mis: KETABANG, PACAR KELING...' : 'Mis: Kelas Minggu A...';
+}   
+
+// ══════════════════════════════════════════════════
+// SETTING HADIAH TAHUNAN — tampil & edit
+// ══════════════════════════════════════════════════
+async function showSettingHadiah() {
+  const tahun = absenAnakState.tahun || String(new Date().getFullYear());
+  const wrap = document.getElementById('anak-list-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading-shimmer"></div>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_setting_hadiah&tahun=' + tahun);
+    const result = await resp.json();
+    const data = (result.data || []).sort((a,b) => parseInt(a.poin_minimum) - parseInt(b.poin_minimum));
+    let rows = data.map((h, i) => `
+      <tr><td style="padding:6px;text-align:center;"><input type="number" value="${h.poin_minimum}" id="sh-poin-${i}" class="k-input" style="width:80px;text-align:center;"></td>
+      <td style="padding:6px;"><input type="text" value="${escHtml(h.nama_prestasi)}" id="sh-nama-${i}" class="k-input" style="width:100%;"></td>
+      <td style="padding:6px;text-align:center;"><input type="number" value="${h.hadiah_rp||0}" id="sh-hadiah-${i}" class="k-input" style="width:100px;text-align:center;"></td></tr>`).join('');
+    wrap.innerHTML = `<div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:.88rem;font-weight:700;color:var(--accent);">⚙️ Setting Hadiah — ${tahun}</div>
+        <button onclick="renderAnakPoinContent()" class="btn-action" style="font-size:.72rem;">✕ Tutup</button></div>
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:var(--surface2);">
+          <th style="padding:6px;font-size:.7rem;color:var(--text3);border-bottom:1px solid var(--border);">Poin Min</th>
+          <th style="padding:6px;font-size:.7rem;color:var(--text3);border-bottom:1px solid var(--border);text-align:left;">Prestasi</th>
+          <th style="padding:6px;font-size:.7rem;color:var(--text3);border-bottom:1px solid var(--border);">Hadiah (Rp)</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>
+      <button onclick="simpanSettingHadiah(${data.length},'${tahun}')" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;margin-top:10px;">💾 Simpan Setting</button>
+      <div id="sh-status" style="margin-top:8px;font-size:.8rem;text-align:center;color:var(--text3);"></div></div>`;
+  } catch(e) { wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`; }
+}
+
+async function simpanSettingHadiah(count, tahun) {
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const poin = document.getElementById('sh-poin-'+i)?.value;
+    const nama = document.getElementById('sh-nama-'+i)?.value;
+    const hadiah = document.getElementById('sh-hadiah-'+i)?.value;
+    if (poin && nama) items.push({ poin_minimum:poin, nama_prestasi:nama, hadiah_rp:hadiah||'0' });
+  }
+  if (!items.length) return toast('⚠️ Data kosong');
+  const statusEl = document.getElementById('sh-status');
+  if (statusEl) statusEl.textContent = '⏳ Menyimpan...';
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({ action:'simpan_setting_hadiah', tahun, data:JSON.stringify(items) }).toString()
+    });
+    const result = await resp.json();
+    if (result.status==='ok') { toast('✅ Setting hadiah tersimpan!'); if(statusEl) statusEl.textContent='✅ '+result.message; }
+    else { toast('❌ '+(result.message||'Gagal')); if(statusEl) statusEl.textContent='❌ '+(result.message||'error'); }
+  } catch(e) { toast('⚠️ '+e.message); if(statusEl) statusEl.textContent='❌ '+e.message; }
+}
 
 // ══════════════════════════════════════════════════
 // PATCH 6: renderManajemenKelas — implementasi lengkap
@@ -10882,9 +10928,10 @@ function renderManajemenKelas(){
           <input type="text" id="km-nama" class="k-input" placeholder="Mis: Kelas Minggu A..." style="width:100%;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div class="ptny-field"><label>Jenis</label>
-            <select id="km-jenis" class="k-input" style="width:100%;">
-              <option value="anak">Anak</option><option value="remaja">Remaja</option>
+            <select id="km-jenis" class="k-input" style="width:100%;" onchange="kmJenisChanged(this.value)">
+              <option value="anak">Anak (Kelas)</option><option value="remaja">Remaja</option>
               <option value="pemuda">Pemuda</option><option value="gabungan">Gabungan</option>
+              <option value="cgm">CGM (Lokasi)</option>
             </select>
           </div>
           <div class="ptny-field"><label>Tahun Ajaran</label>
@@ -10893,10 +10940,14 @@ function renderManajemenKelas(){
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div class="ptny-field"><label>Distrik / Lokal</label>
+          <div class="ptny-field"><label id="km-distrik-label">Distrik / Lokal</label>
             <input type="text" id="km-distrik" class="k-input" placeholder="Surabaya..." style="width:100%;"></div>
-          <div class="ptny-field"><label>Gembala Kelas</label>
-            <input type="text" id="km-gembala" class="k-input" placeholder="Nama gembala..." style="width:100%;"></div>
+          <div class="ptny-field"><label id="km-gembala-label">Gembala Kelas / PIC 1</label>
+            <input type="text" id="km-gembala" class="k-input" placeholder="Nama gembala / PIC..." style="width:100%;"></div>
+        </div>
+        <div class="ptny-field" id="km-pic2-wrap" style="display:none;">
+          <label>PIC 2</label>
+          <input type="text" id="km-pic2" class="k-input" placeholder="PIC 2..." style="width:100%;">
         </div>
         <button onclick="submitKelasManage()" class="ptny-submit-btn">💾 Simpan Kelas</button>
         <div id="km-status" style="margin-top:8px;font-size:.8rem;text-align:center;color:var(--text3);"></div>
@@ -10921,7 +10972,7 @@ function renderManajemenKelas(){
 async function submitKelasManage(){
   const statusEl = document.getElementById('km-status');
   const nama = document.getElementById('km-nama')?.value.trim();
-  if(!nama) return toast('⚠️ Nama kelas wajib');
+  if(!nama) return toast('⚠️ Nama kelas/lokasi wajib');
   if(APPS_SCRIPT_KELAS.includes('GANTI')) return toast('⚠️ URL APPS_SCRIPT_KELAS belum diisi');
  
   if(statusEl) statusEl.textContent = '⏳ Menyimpan...';
@@ -10932,6 +10983,7 @@ async function submitKelasManage(){
     tahun_ajaran: document.getElementById('km-tahun')?.value || String(new Date().getFullYear()),
     distrik: document.getElementById('km-distrik')?.value || '',
     gembala_kelas: document.getElementById('km-gembala')?.value || '',
+    lokal: document.getElementById('km-pic2')?.value || '',
     aktif: 'y',
   });
  
