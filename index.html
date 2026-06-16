@@ -936,7 +936,9 @@ function doLogout(){
       searchQuery:'',sudahLoad:false,viewMode:'grid',namaTabBaru:''
     };
     if(typeof laporanAbsenState!=='undefined')laporanAbsenState={
-      tglAwal:'',tglAkhir:'',data:null,_teksLaporan:''
+      tglAwal:'',tglAkhir:'',activeTab:'sidang',activeView:'summary',
+      filterSidang:'',filterGugus:'',dataSidang:null,dataKTM:null,dataAnak:null,
+      _teksLaporan:'',loading:false,tahun:new Date().getFullYear()
     };
   }catch(e){console.warn('State reset error:',e);}
   // Hentikan clock interval
@@ -6338,12 +6340,13 @@ async function hapusPj(id, nama) {
 // ── STATE LAPORAN ──────────────────────────────────────────────
 let laporanAbsenState = {
   tglAwal: '', tglAkhir: '',
-  activeTab: 'sidang',       // 'sidang' | 'ktm'
+  activeTab: 'sidang',       // 'sidang' | 'ktm' | 'anak'
   activeView: 'summary',     // 'summary' | 'weekly' | 'perperson'
   filterSidang: '',          // filter jenis sidang tertentu
   filterGugus: '',           // filter gugus tertentu
   dataSidang: null,          // response dari server
   dataKTM: null,
+  dataAnak: null,            // response poin anak
   _teksLaporan: '',
   loading: false,
   tahun: new Date().getFullYear(),
@@ -6354,22 +6357,47 @@ function bolehLihatLaporan() {
   const l = getLevelCode();
   const u = (currentUser?.username || '').toLowerCase();
   if (u === 'admin') return true;
-  if (['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].includes(l)) return true;
+  if (['Administrator','Penatua','Gembala Distrik','Gembala'].includes(l)) return true;
   const tipe = (currentUser?.tipe || '');
-  return ['Administrator','Penatua','Gembala Distrik','Gembala','Pra Gembala'].some(lv => tipe.includes(lv));
+  return ['Administrator','Penatua','Gembala Distrik','Gembala'].some(lv => tipe.includes(lv));
+}
+
+// Laporan Sidang & Anak: Gembala, Gembala Distrik, Administrator
+function bolehLihatLaporanSidang() {
+  const l = getLevelCode();
+  const u = (currentUser?.username || '').toLowerCase();
+  if (u === 'admin') return true;
+  if (['Administrator','Gembala Distrik','Gembala'].includes(l)) return true;
+  const tipe = (currentUser?.tipe || '');
+  return ['Administrator','Gembala Distrik','Gembala'].some(lv => tipe.includes(lv));
+}
+
+// Laporan KTM: Penatua, Gembala Distrik, Administrator
+function bolehLihatLaporanKTM() {
+  return bolehAbsenKTM(); // Penatua, Gembala Distrik, Administrator
+}
+
+// Laporan Anak (Poin/Nilai): Gembala, Gembala Distrik, Administrator
+function bolehLihatLaporanAnak() {
+  const l = getLevelCode();
+  const u = (currentUser?.username || '').toLowerCase();
+  if (u === 'admin') return true;
+  if (['Administrator','Gembala Distrik','Gembala'].includes(l)) return true;
+  const tipe = (currentUser?.tipe || '');
+  return ['Administrator','Gembala Distrik','Gembala'].some(lv => tipe.includes(lv));
 }
  
 function bolehLihatPerNama() {
   const l = getLevelCode();
   const u = (currentUser?.username || '').toLowerCase();
   if (u === 'admin') return true;
-  if (['Administrator','Penatua','Gembala Distrik'].includes(l)) return true;
+  if (['Administrator','Penatua','Gembala Distrik','Gembala'].includes(l)) return true;
   const tipe = (currentUser?.tipe || '');
-  return ['Administrator','Penatua','Gembala Distrik'].some(lv => tipe.includes(lv));
+  return ['Administrator','Penatua','Gembala Distrik','Gembala'].some(lv => tipe.includes(lv));
 }
  
 function bolehLihatKTMLaporan() {
-  return bolehAbsenKTM(); // Penatua, Gembala Distrik, Administrator
+  return bolehLihatLaporanKTM(); // Penatua, Gembala Distrik, Administrator
 }
  
 // ── HELPER: Minggu dalam setahun ────────────────────────────────────
@@ -6403,7 +6431,7 @@ function renderLaporanAbsensi() {
  
   if (!bolehLihatLaporan()) {
     content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
-      <p>Akses ditolak. Hanya Pra Gembala, Gembala, Penatua, Gembala Distrik, atau Administrator.</p></div>`;
+      <p>Akses ditolak. Hanya Gembala, Gembala Distrik, Penatua, atau Administrator.</p></div>`;
     return;
   }
  
@@ -6452,6 +6480,11 @@ function renderLaporanAbsensi() {
           style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
           📋 KTM
         </button>` : ''}
+        ${bolehLihatLaporanAnak() ? `
+        <button onclick="lapSetTab('anak')" class="btn-action${at === 'anak' ? ' accent' : ''}"
+          style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
+          👦 Anak
+        </button>` : ''}
       </div>
  
       <!-- FILTER SIDANG (hanya di tab sidang) -->
@@ -6482,6 +6515,14 @@ function renderLaporanAbsensi() {
           <option value="KTM">KTM</option>
           <option value="KTM_Tahir">KTM Tahir</option>
         </select>
+      </div>
+
+      <!-- ANAK FILTER -->
+      <div id="lap-filter-anak" style="${at !== 'anak' ? 'display:none;' : ''}">
+        <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">TAHUN AJARAN</div>
+        <input type="number" id="lap-tahun-anak" class="k-input" 
+          value="${new Date().getFullYear()}" min="2020" max="2030"
+          style="width:100%;margin-bottom:8px;">
       </div>
  
       <button onclick="lapLoadData()" class="btn-action accent"
@@ -6583,6 +6624,7 @@ function lapSetTab(tab) {
   laporanAbsenState.activeView = 'summary';
   laporanAbsenState.dataSidang = null;
   laporanAbsenState.dataKTM = null;
+  laporanAbsenState.dataAnak = null;
   renderLaporanAbsensi();
 }
  
@@ -6611,6 +6653,8 @@ function lapSetView(view) {
  
   if (laporanAbsenState.activeTab === 'ktm') {
     await lapLoadKTM(el);
+  } else if (laporanAbsenState.activeTab === 'anak') {
+    await lapLoadAnak(el);
   } else {
     await lapLoadSidang(el);
   }
@@ -6714,6 +6758,345 @@ async function lapLoadKTM(el) {
       <p>Gagal: ${escHtml(e.message)}</p></div>`;
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// LOAD ANAK — Poin Summary + Prestasi
+// ══════════════════════════════════════════════════════════════════════
+async function lapLoadAnak(el) {
+  if (!bolehLihatLaporanAnak()) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Hanya Gembala, Gembala Distrik, dan Administrator.</p></div>`;
+    return;
+  }
+  try {
+    const tahun = document.getElementById('lap-tahun-anak')?.value || String(new Date().getFullYear());
+    laporanAbsenState.tahun = parseInt(tahun);
+
+    // Load poin summary
+    const paramsSummary = new URLSearchParams({
+      action: 'get_poin_summary',
+      tahun: tahun,
+    });
+    const respSum = await fetch(APPS_SCRIPT_KELAS + '?' + paramsSummary.toString());
+    const resultSum = await respSum.json();
+
+    if (resultSum.status !== 'ok') {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+        <p>${escHtml(resultSum.message || 'Error')}</p></div>`;
+      return;
+    }
+
+    // Load prestasi
+    const paramsPrestasi = new URLSearchParams({
+      action: 'get_prestasi_anak',
+      tahun: tahun,
+    });
+    const respPres = await fetch(APPS_SCRIPT_KELAS + '?' + paramsPrestasi.toString());
+    const resultPres = await respPres.json();
+
+    // Load kelas data for mapping
+    const respKelas = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + tahun);
+    const resultKelas = await respKelas.json();
+
+    laporanAbsenState.dataAnak = {
+      summary: resultSum.data || [],
+      prestasi: resultPres.data || [],
+      setting_hadiah: resultPres.setting_hadiah || [],
+      total_hadiah_rp: resultPres.total_hadiah_rp || 0,
+      kelas: resultKelas.data || [],
+      tahun: tahun,
+    };
+
+    document.getElementById('lap-view-bar').style.display = 'none'; // Anak pakai view sendiri
+    lapRenderCurrentData();
+
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+      <p>Gagal memuat data anak: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RENDER LAPORAN ANAK — Tabel Poin + Highlight Nilai 10
+// ══════════════════════════════════════════════════════════════════════
+function lapRenderAnakReport(el, data) {
+  const anakData = data.prestasi || data.summary || [];
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+  const tahun = data.tahun || laporanAbsenState.tahun;
+  const settingHadiah = data.setting_hadiah || [];
+
+  if (!anakData.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">👦</div>
+      <p>Tidak ada data poin anak untuk tahun ${tahun}.</p></div>`;
+    return;
+  }
+
+  // Stats
+  const totalAnak = anakData.length;
+  const nilaiKehadiran10 = anakData.filter(a => a.minggu_hadir > 0 && a.total_kehadiran >= 10);
+  const nilaiHafalan10 = anakData.filter(a => a.total_hafalan >= 10);
+  const nilaiSempurna = anakData.filter(a => a.total_kehadiran >= 10 && a.total_hafalan >= 10);
+  const berPrestasi = anakData.filter(a => a.prestasi && a.prestasi !== '-');
+
+  // Copy text builder
+  const teksLines = [
+    `LAPORAN POIN ANAK — TAHUN ${tahun}`,
+    `Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username || '-'}`,
+    `Total Anak: ${totalAnak}`,
+    `Anak Kehadiran ≥10: ${nilaiKehadiran10.length}`,
+    `Anak Hafalan ≥10: ${nilaiHafalan10.length}`,
+    `Anak Sempurna (keduanya ≥10): ${nilaiSempurna.length}`,
+    `Anak Berprestasi: ${berPrestasi.length}`,
+    ''
+  ];
+
+  let html = '';
+
+  // SUMMARY CARDS
+  html += `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);
+      padding:14px;margin-bottom:12px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
+        👦 Laporan Poin Anak — Tahun ${tahun}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+        <div style="background:rgba(59,130,246,.1);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent);">${totalAnak}</div>
+          <div style="font-size:.65rem;color:var(--accent);">Total Anak</div>
+        </div>
+        <div style="background:rgba(16,185,129,.1);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--green);">${berPrestasi.length}</div>
+          <div style="font-size:.65rem;color:var(--green);">Berprestasi</div>
+        </div>
+        <div style="background:rgba(245,158,11,.1);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--yellow);">${nilaiKehadiran10.length}</div>
+          <div style="font-size:.65rem;color:var(--yellow);">Kehadiran ≥10</div>
+        </div>
+        <div style="background:rgba(139,92,246,.1);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent3);">${nilaiHafalan10.length}</div>
+          <div style="font-size:.65rem;color:var(--accent3);">Hafalan ≥10</div>
+        </div>
+      </div>
+      ${data.total_hadiah_rp ? `
+      <div style="background:rgba(16,185,129,.08);border:1px solid var(--green);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-size:.68rem;color:var(--green);font-weight:600;">💰 Total Anggaran Hadiah</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--green);">
+          Rp ${Number(data.total_hadiah_rp).toLocaleString('id-ID')}
+        </div>
+      </div>` : ''}
+    </div>`;
+
+  // SETTING HADIAH INFO
+  if (settingHadiah.length) {
+    html += `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:12px;margin-bottom:10px;">
+      <div style="font-size:.75rem;font-weight:700;color:var(--accent3);margin-bottom:8px;">🏆 Level Prestasi Tahun ${tahun}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${settingHadiah.map(h => `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.7rem;">
+            <span style="font-weight:700;color:var(--accent);">${escHtml(h.nama_prestasi)}</span>
+            <span style="color:var(--text3);"> ≥${h.poin_minimum} poin</span>
+            <span style="color:var(--green);font-weight:600;"> Rp${Number(h.hadiah_rp||0).toLocaleString('id-ID')}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // FILTER BUTTONS
+  html += `
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+      <button onclick="lapAnakFilter('all')" class="btn-action accent" style="font-size:.72rem;padding:5px 10px;">
+        📋 Semua (${totalAnak})</button>
+      <button onclick="lapAnakFilter('kehadiran10')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+        ✅ Kehadiran ≥10 (${nilaiKehadiran10.length})</button>
+      <button onclick="lapAnakFilter('hafalan10')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+        📖 Hafalan ≥10 (${nilaiHafalan10.length})</button>
+      <button onclick="lapAnakFilter('sempurna')" class="btn-action green" style="font-size:.72rem;padding:5px 10px;">
+        🌟 Sempurna (${nilaiSempurna.length})</button>
+      <button onclick="lapAnakFilter('prestasi')" class="btn-action" style="font-size:.72rem;padding:5px 10px;background:var(--accent3);border-color:var(--accent3);color:#fff;">
+        🏆 Berprestasi (${berPrestasi.length})</button>
+      <button onclick="lapAnakCopyText()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+        📋 Copy</button>
+      <button onclick="lapAnakExportExcel()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
+        📗 Excel</button>
+    </div>`;
+
+  // MAIN TABLE
+  html += `<div id="lap-anak-table-wrap">`;
+  html += _buildAnakPoinTable(anakData, kelasMap, 'all', teksLines);
+  html += `</div>`;
+
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+  el.innerHTML = html;
+}
+
+function lapAnakFilter(filter) {
+  const data = laporanAbsenState.dataAnak;
+  if (!data) return;
+  const wrap = document.getElementById('lap-anak-table-wrap');
+  if (!wrap) return;
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+  const teksLines = [];
+  wrap.innerHTML = _buildAnakPoinTable(data.prestasi || data.summary || [], kelasMap, filter, teksLines);
+  laporanAbsenState._teksLaporan = teksLines.join('\n');
+}
+
+function _buildAnakPoinTable(anakData, kelasMap, filter, teksLines) {
+  let filtered = anakData.slice();
+  let filterLabel = 'Semua Anak';
+
+  if (filter === 'kehadiran10') {
+    filtered = filtered.filter(a => a.total_kehadiran >= 10);
+    filterLabel = 'Anak dengan Kehadiran ≥10';
+  } else if (filter === 'hafalan10') {
+    filtered = filtered.filter(a => a.total_hafalan >= 10);
+    filterLabel = 'Anak dengan Hafalan ≥10';
+  } else if (filter === 'sempurna') {
+    filtered = filtered.filter(a => a.total_kehadiran >= 10 && a.total_hafalan >= 10);
+    filterLabel = 'Anak Sempurna (Kehadiran & Hafalan ≥10)';
+  } else if (filter === 'prestasi') {
+    filtered = filtered.filter(a => a.prestasi && a.prestasi !== '-');
+    filterLabel = 'Anak Berprestasi';
+  }
+
+  // Sort: total poin desc
+  filtered.sort((a, b) => (b.total_poin || 0) - (a.total_poin || 0));
+
+  teksLines.push(`[${filterLabel}] — ${filtered.length} anak`);
+
+  if (!filtered.length) {
+    return `<div class="empty-state"><div class="icon">📭</div><p>Tidak ada anak yang memenuhi filter "${filterLabel}".</p></div>`;
+  }
+
+  let rows = '';
+  filtered.forEach((a, idx) => {
+    const bg = idx % 2 === 0 ? '' : 'background:var(--surface2);';
+    const kehadiran = parseInt(a.total_kehadiran) || 0;
+    const hafalan = parseInt(a.total_hafalan) || 0;
+    const totalPoin = parseInt(a.total_poin) || 0;
+    const mingguHadir = parseInt(a.minggu_hadir) || 0;
+    const kelasNama = kelasMap[a.id_kelas] || '-';
+    const prestasi = a.prestasi || '-';
+    const hadiahRp = parseInt(a.hadiah_rp) || 0;
+
+    // Highlight logic: nilai 10 per minggu berarti kehadiran atau hafalan sempurna
+    const kehadiranPerfect = kehadiran >= 10;
+    const hafalanPerfect = hafalan >= 10;
+    const bothPerfect = kehadiranPerfect && hafalanPerfect;
+
+    const rowHighlight = bothPerfect
+      ? 'border-left:4px solid var(--green);'
+      : (kehadiranPerfect || hafalanPerfect)
+        ? 'border-left:4px solid var(--yellow);'
+        : '';
+
+    rows += `<tr style="${bg}${rowHighlight}">
+      <td style="padding:5px 7px;font-size:.72rem;font-weight:600;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${bothPerfect ? '🌟 ' : ''}${escHtml(a.nama || '-')}
+        ${a.no_efataid ? `<div style="font-size:.55rem;color:var(--text3);">${escHtml(a.no_efataid)}</div>` : ''}
+      </td>
+      <td style="padding:5px 5px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;
+        font-weight:700;color:${kehadiranPerfect ? 'var(--green)' : 'var(--text2)'};">
+        ${kehadiran}${kehadiranPerfect ? ' ✓' : ''}
+      </td>
+      <td style="padding:5px 5px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;
+        font-weight:700;color:${hafalanPerfect ? 'var(--accent3)' : 'var(--text2)'};">
+        ${hafalan}${hafalanPerfect ? ' ✓' : ''}
+      </td>
+      <td style="padding:5px 5px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.82rem;
+        font-weight:700;color:var(--accent);">
+        ${totalPoin}
+      </td>
+      <td style="padding:5px 5px;text-align:center;font-size:.72rem;color:var(--text3);">${mingguHadir}</td>
+      <td style="padding:5px 5px;text-align:center;font-size:.68rem;
+        color:${prestasi !== '-' ? 'var(--green)' : 'var(--text3)'};font-weight:${prestasi !== '-' ? '700' : '400'};">
+        ${prestasi !== '-' ? '🏆 ' : ''}${escHtml(prestasi)}
+      </td>
+    </tr>`;
+
+    teksLines.push(`  ${idx+1}. ${a.nama}: Kehadiran=${kehadiran}, Hafalan=${hafalan}, Total=${totalPoin}, Hadir=${mingguHadir}x, Prestasi=${prestasi}`);
+  });
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        📋 ${filterLabel} — ${filtered.length} anak
+      </div>
+      <div style="margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:.65rem;color:var(--text3);">
+          <span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>
+          Kehadiran ≥10 = ✓
+        </div>
+        <div style="font-size:.65rem;color:var(--text3);">
+          <span style="display:inline-block;width:10px;height:10px;background:var(--accent3);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>
+          Hafalan ≥10 = ✓
+        </div>
+        <div style="font-size:.65rem;color:var(--text3);">
+          🌟 Kedua ≥10 = Sempurna
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:500px;">
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:6px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Nama</th>
+            <th style="padding:6px 5px;text-align:center;font-size:.6rem;color:var(--green);border-bottom:1px solid var(--border);min-width:55px;">Kehadiran</th>
+            <th style="padding:6px 5px;text-align:center;font-size:.6rem;color:var(--accent3);border-bottom:1px solid var(--border);min-width:55px;">Hafalan</th>
+            <th style="padding:6px 5px;text-align:center;font-size:.6rem;color:var(--accent);border-bottom:1px solid var(--border);min-width:50px;">Total</th>
+            <th style="padding:6px 5px;text-align:center;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);min-width:40px;">Hadir</th>
+            <th style="padding:6px 5px;text-align:center;font-size:.6rem;color:var(--green);border-bottom:1px solid var(--border);min-width:70px;">Prestasi</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function lapAnakCopyText() {
+  const t = laporanAbsenState._teksLaporan || '';
+  if (!t) return toast('⚠️ Tidak ada data.');
+  navigator.clipboard.writeText(t).then(() => toast('✅ Laporan anak disalin!'));
+}
+
+function lapAnakExportExcel() {
+  const data = laporanAbsenState.dataAnak;
+  if (!data) return toast('⚠️ Tidak ada data.');
+  const anakData = data.prestasi || data.summary || [];
+  if (!anakData.length) return toast('⚠️ Tidak ada data anak.');
+
+  if (typeof XLSX === 'undefined') {
+    toast('⏳ Memuat pustaka Excel...');
+    return;
+  }
+
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+
+  const wb = XLSX.utils.book_new();
+  const rows = [['No', 'Nama', 'EfataID', 'Kelas', 'Kehadiran', 'Hafalan', 'Total Poin', 'Minggu Hadir', 'Prestasi', 'Hadiah (Rp)']];
+  anakData.sort((a, b) => (b.total_poin || 0) - (a.total_poin || 0)).forEach((a, idx) => {
+    rows.push([
+      idx + 1,
+      a.nama || '',
+      a.no_efataid || '',
+      kelasMap[a.id_kelas] || a.id_kelas || '-',
+      parseInt(a.total_kehadiran) || 0,
+      parseInt(a.total_hafalan) || 0,
+      parseInt(a.total_poin) || 0,
+      parseInt(a.minggu_hadir) || 0,
+      a.prestasi || '-',
+      parseInt(a.hadiah_rp) || 0,
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Poin Anak ' + (data.tahun || ''));
+  XLSX.writeFile(wb, `Laporan_Anak_${data.tahun || ''}.xlsx`);
+  toast('✅ Excel anak berhasil diunduh!');
+}
  
 // ══════════════════════════════════════════════════════════════════════
 // ROUTER RENDER
@@ -6731,6 +7114,10 @@ function lapRenderCurrentData() {
       case 'perperson': lapRenderPerPerson(el, data, 'KTM'); break;
       default: lapRenderSummaryKTM(el, data); break;
     }
+  } else if (laporanAbsenState.activeTab === 'anak') {
+    const data = laporanAbsenState.dataAnak;
+    if (!data) { el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Belum ada data.</p></div>'; return; }
+    lapRenderAnakReport(el, data);
   } else {
     const data = laporanAbsenState.dataSidang;
     if (!data) { el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Belum ada data.</p></div>'; return; }
@@ -7201,6 +7588,11 @@ function lapExportCopy() {
 // EXPORT: EXCEL
 // ══════════════════════════════════════════════════════════════════════
 function lapExportExcel() {
+  // Anak tab has its own export
+  if (laporanAbsenState.activeTab === 'anak') {
+    lapAnakExportExcel();
+    return;
+  }
   const data = laporanAbsenState.activeTab === 'ktm' ? laporanAbsenState.dataKTM : laporanAbsenState.dataSidang;
   if (!data) return toast('⚠️ Tidak ada data.');
  
@@ -7374,6 +7766,9 @@ function lapExportPDF() {
 }
  
 function _generatePrintHTML() {
+  if (laporanAbsenState.activeTab === 'anak') {
+    return _generatePrintHTMLAnak();
+  }
   const data = laporanAbsenState.activeTab === 'ktm' ? laporanAbsenState.dataKTM : laporanAbsenState.dataSidang;
   if (!data) return '<p>Tidak ada data</p>';
  
@@ -7425,6 +7820,38 @@ function _generatePrintHTML() {
     }
   });
  
+  return html;
+}
+
+function _generatePrintHTMLAnak() {
+  const data = laporanAbsenState.dataAnak;
+  if (!data) return '<p>Tidak ada data anak</p>';
+  const anakData = data.prestasi || data.summary || [];
+  if (!anakData.length) return '<p>Tidak ada data poin anak</p>';
+
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+
+  let html = '<div class="section-title">Laporan Poin Anak — Tahun ' + (data.tahun || '') + '</div>';
+  html += '<table><thead><tr><th style="text-align:left;">No</th><th style="text-align:left;">Nama</th><th>EfataID</th><th>Kehadiran</th><th>Hafalan</th><th>Total</th><th>Hadir</th><th>Prestasi</th></tr></thead><tbody>';
+
+  anakData.sort((a, b) => (b.total_poin || 0) - (a.total_poin || 0)).forEach((a, idx) => {
+    const kehadiran = parseInt(a.total_kehadiran) || 0;
+    const hafalan = parseInt(a.total_hafalan) || 0;
+    const bothPerfect = kehadiran >= 10 && hafalan >= 10;
+    html += '<tr' + (bothPerfect ? ' style="background:#e6ffe6 !important;"' : '') + '>';
+    html += '<td>' + (idx + 1) + '</td>';
+    html += '<td class="nama">' + (bothPerfect ? '* ' : '') + (a.nama || '-') + '</td>';
+    html += '<td style="text-align:center;">' + (a.no_efataid || '-') + '</td>';
+    html += '<td class="count" style="color:' + (kehadiran >= 10 ? '#16a34a' : '#666') + ';">' + kehadiran + (kehadiran >= 10 ? ' V' : '') + '</td>';
+    html += '<td class="count" style="color:' + (hafalan >= 10 ? '#7c3aed' : '#666') + ';">' + hafalan + (hafalan >= 10 ? ' V' : '') + '</td>';
+    html += '<td class="count">' + (parseInt(a.total_poin) || 0) + '</td>';
+    html += '<td style="text-align:center;">' + (parseInt(a.minggu_hadir) || 0) + '</td>';
+    html += '<td style="text-align:center;font-weight:' + (a.prestasi && a.prestasi !== '-' ? '700' : '400') + ';">' + (a.prestasi || '-') + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
   return html;
 }
  
@@ -9750,8 +10177,8 @@ console.log('✅ Modul Absensi Anak + Poin + Kelas loaded');
 // ══════════════════════════════════════════════════
 function renderManajemenKelas(){
   const content = document.getElementById('app-content');
-  if(!bolehAbsenSidang()){
-    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
+  if(!isLevelAdmin()){
+    content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak. Hanya Administrator yang bisa mengatur Manajemen Kelas.</p></div>`;
     return;
   }
  
