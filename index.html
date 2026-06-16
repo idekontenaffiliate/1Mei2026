@@ -6825,42 +6825,65 @@ function lapRenderAnakReport(el, data) {
   (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
   const tahun = data.tahun || laporanAbsenState.tahun;
   const settingHadiah = data.setting_hadiah || [];
+  const activeSubView = data._activeSubView || 'summary';
+
+  // Sub-view tabs
+  let html = `
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+      <button onclick="lapAnakSetSubView('summary')" class="btn-action${activeSubView === 'summary' ? ' accent' : ''}" style="font-size:.72rem;padding:7px 12px;font-weight:600;">
+        📊 Summary Poin</button>
+      <button onclick="lapAnakSetSubView('ketidakhadiran')" class="btn-action${activeSubView === 'ketidakhadiran' ? ' accent' : ''}" style="font-size:.72rem;padding:7px 12px;font-weight:600;">
+        ❌ Ketidakhadiran</button>
+      <button onclick="lapAnakSetSubView('weekly')" class="btn-action${activeSubView === 'weekly' ? ' accent' : ''}" style="font-size:.72rem;padding:7px 12px;font-weight:600;">
+        📅 52 Minggu</button>
+      <button onclick="lapAnakSetSubView('search')" class="btn-action${activeSubView === 'search' ? ' accent' : ''}" style="font-size:.72rem;padding:7px 12px;font-weight:600;">
+        🔍 Cari Anak</button>
+    </div>
+    <div id="lap-anak-subview"></div>`;
+
+  el.innerHTML = html;
+  const subEl = document.getElementById('lap-anak-subview');
+  if (!subEl) return;
+
+  if (activeSubView === 'ketidakhadiran') {
+    lapAnakRenderKetidakhadiran(subEl, data);
+  } else if (activeSubView === 'weekly') {
+    lapAnakRenderWeekly(subEl, data);
+  } else if (activeSubView === 'search') {
+    lapAnakRenderSearch(subEl, data);
+  } else {
+    lapAnakRenderSummary(subEl, data);
+  }
+}
+
+function lapAnakSetSubView(view) {
+  const data = laporanAbsenState.dataAnak;
+  if (!data) return;
+  data._activeSubView = view;
+  const el = document.getElementById('laporan-result');
+  if (el) lapRenderAnakReport(el, data);
+}
+
+// ── ANAK SUB-VIEW 1: Summary Poin ────────────────
+function lapAnakRenderSummary(el, data) {
+  const anakData = data.prestasi || data.summary || [];
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+  const tahun = data.tahun;
+  const settingHadiah = data.setting_hadiah || [];
 
   if (!anakData.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">👦</div>
-      <p>Tidak ada data poin anak untuk tahun ${tahun}.</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="icon">👦</div><p>Tidak ada data poin anak tahun ${tahun}.</p></div>`;
     return;
   }
 
-  // Stats
   const totalAnak = anakData.length;
-  const nilaiKehadiran10 = anakData.filter(a => a.minggu_hadir > 0 && a.total_kehadiran >= 10);
-  const nilaiHafalan10 = anakData.filter(a => a.total_hafalan >= 10);
-  const nilaiSempurna = anakData.filter(a => a.total_kehadiran >= 10 && a.total_hafalan >= 10);
   const berPrestasi = anakData.filter(a => a.prestasi && a.prestasi !== '-');
 
-  // Copy text builder
-  const teksLines = [
-    `LAPORAN POIN ANAK — TAHUN ${tahun}`,
-    `Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username || '-'}`,
-    `Total Anak: ${totalAnak}`,
-    `Anak Kehadiran ≥10: ${nilaiKehadiran10.length}`,
-    `Anak Hafalan ≥10: ${nilaiHafalan10.length}`,
-    `Anak Sempurna (keduanya ≥10): ${nilaiSempurna.length}`,
-    `Anak Berprestasi: ${berPrestasi.length}`,
-    ''
-  ];
-
-  let html = '';
-
-  // SUMMARY CARDS
-  html += `
-    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);
-      padding:14px;margin-bottom:12px;">
-      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
-        👦 Laporan Poin Anak — Tahun ${tahun}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+  let html = `
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">🏆 Laporan Poin & Prestasi — ${tahun}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div style="background:rgba(59,130,246,.1);border-radius:10px;padding:10px;text-align:center;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent);">${totalAnak}</div>
           <div style="font-size:.65rem;color:var(--accent);">Total Anak</div>
@@ -6869,67 +6892,259 @@ function lapRenderAnakReport(el, data) {
           <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--green);">${berPrestasi.length}</div>
           <div style="font-size:.65rem;color:var(--green);">Berprestasi</div>
         </div>
-        <div style="background:rgba(245,158,11,.1);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--yellow);">${nilaiKehadiran10.length}</div>
-          <div style="font-size:.65rem;color:var(--yellow);">Kehadiran ≥10</div>
-        </div>
-        <div style="background:rgba(139,92,246,.1);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent3);">${nilaiHafalan10.length}</div>
-          <div style="font-size:.65rem;color:var(--accent3);">Hafalan ≥10</div>
-        </div>
       </div>
-      ${data.total_hadiah_rp ? `
-      <div style="background:rgba(16,185,129,.08);border:1px solid var(--green);border-radius:8px;padding:8px;text-align:center;">
-        <div style="font-size:.68rem;color:var(--green);font-weight:600;">💰 Total Anggaran Hadiah</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--green);">
-          Rp ${Number(data.total_hadiah_rp).toLocaleString('id-ID')}
-        </div>
-      </div>` : ''}
+      ${data.total_hadiah_rp ? `<div style="background:rgba(16,185,129,.08);border:1px solid var(--green);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-size:.68rem;color:var(--green);font-weight:600;">💰 Total Anggaran Hadiah: Rp ${Number(data.total_hadiah_rp).toLocaleString('id-ID')}</div></div>` : ''}
     </div>`;
 
-  // SETTING HADIAH INFO
-  if (settingHadiah.length) {
-    html += `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-      padding:12px;margin-bottom:10px;">
-      <div style="font-size:.75rem;font-weight:700;color:var(--accent3);margin-bottom:8px;">🏆 Level Prestasi Tahun ${tahun}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${settingHadiah.map(h => `
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.7rem;">
-            <span style="font-weight:700;color:var(--accent);">${escHtml(h.nama_prestasi)}</span>
-            <span style="color:var(--text3);"> ≥${h.poin_minimum} poin</span>
-            <span style="color:var(--green);font-weight:600;"> Rp${Number(h.hadiah_rp||0).toLocaleString('id-ID')}</span>
-          </div>`).join('')}
-      </div>
-    </div>`;
-  }
-
-  // FILTER BUTTONS
-  html += `
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
-      <button onclick="lapAnakFilter('all')" class="btn-action accent" style="font-size:.72rem;padding:5px 10px;">
-        📋 Semua (${totalAnak})</button>
-      <button onclick="lapAnakFilter('kehadiran10')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
-        ✅ Kehadiran ≥10 (${nilaiKehadiran10.length})</button>
-      <button onclick="lapAnakFilter('hafalan10')" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
-        📖 Hafalan ≥10 (${nilaiHafalan10.length})</button>
-      <button onclick="lapAnakFilter('sempurna')" class="btn-action green" style="font-size:.72rem;padding:5px 10px;">
-        🌟 Sempurna (${nilaiSempurna.length})</button>
-      <button onclick="lapAnakFilter('prestasi')" class="btn-action" style="font-size:.72rem;padding:5px 10px;background:var(--accent3);border-color:var(--accent3);color:#fff;">
-        🏆 Berprestasi (${berPrestasi.length})</button>
-      <button onclick="lapAnakCopyText()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
-        📋 Copy</button>
-      <button onclick="lapAnakExportExcel()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">
-        📗 Excel</button>
-    </div>`;
-
-  // MAIN TABLE
-  html += `<div id="lap-anak-table-wrap">`;
+  // Table
+  const teksLines = [`LAPORAN POIN ANAK — ${tahun}`];
   html += _buildAnakPoinTable(anakData, kelasMap, 'all', teksLines);
-  html += `</div>`;
+
+  // Export buttons
+  html += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
+    <button onclick="lapAnakCopyText()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">📋 Copy</button>
+    <button onclick="lapAnakExportExcel()" class="btn-action" style="font-size:.72rem;padding:5px 10px;">📗 Excel</button>
+  </div>`;
 
   laporanAbsenState._teksLaporan = teksLines.join('\n');
   el.innerHTML = html;
+}
+
+// ── ANAK SUB-VIEW 2: Ketidakhadiran ──────────────
+function lapAnakRenderKetidakhadiran(el, data) {
+  const tahun = data.tahun || laporanAbsenState.tahun;
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--red);margin-bottom:10px;">❌ Laporan Ketidakhadiran Anak</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">TANGGAL</div>
+          <input type="date" id="lap-anak-absent-tgl" class="k-input" style="width:100%;">
+        </div>
+        <div>
+          <div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;font-weight:600;">KELAS</div>
+          <select id="lap-anak-absent-kelas" class="k-input" style="width:100%;">
+            <option value="">-- Semua Kelas --</option>
+            ${(data.kelas||[]).map(k => `<option value="${escHtml(k.id_kelas)}">${escHtml(k.nama_kelas)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <button onclick="lapAnakLoadKetidakhadiran()" class="btn-action accent" style="width:100%;padding:10px;font-weight:700;">🔄 Tampilkan</button>
+    </div>
+    <div id="lap-anak-absent-result">
+      <div class="empty-state"><div class="icon">📋</div><p>Pilih tanggal lalu klik Tampilkan.</p></div>
+    </div>`;
+}
+
+async function lapAnakLoadKetidakhadiran() {
+  const tgl = document.getElementById('lap-anak-absent-tgl')?.value;
+  const kelas = document.getElementById('lap-anak-absent-kelas')?.value;
+  if (!tgl) return toast('⚠️ Pilih tanggal');
+
+  const resultEl = document.getElementById('lap-anak-absent-result');
+  if (!resultEl) return;
+  resultEl.innerHTML = '<div class="loading-shimmer"></div>';
+
+  const formattedTgl = formatDateFromInput(tgl);
+
+  try {
+    // Load all children from classes
+    const tahun = laporanAbsenState.dataAnak?.tahun || String(new Date().getFullYear());
+    const respKelas = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + tahun);
+    const kelasResult = await respKelas.json();
+    const kelasList = kelas ? (kelasResult.data||[]).filter(k => k.id_kelas === kelas) : (kelasResult.data||[]);
+
+    let allAbsent = [];
+    for (const k of kelasList) {
+      // Load anggota
+      const respA = await fetch(APPS_SCRIPT_KELAS + '?action=get_anggota_kelas&id_kelas=' + encodeURIComponent(k.id_kelas));
+      const rA = await respA.json();
+      const anggota = rA.data || [];
+
+      // Load poin for this date
+      const respP = await fetch(APPS_SCRIPT_KELAS + '?action=get_poin&id_kelas=' + encodeURIComponent(k.id_kelas) + '&tanggal=' + encodeURIComponent(formattedTgl));
+      const rP = await respP.json();
+      const hadirKeys = new Set((rP.data||[]).filter(p => parseInt(p.poin_kehadiran) >= 10).map(p => p.no_efataid || p.nama.toLowerCase()));
+
+      anggota.forEach(a => {
+        const key = a.no_efataid || a.nama.toLowerCase();
+        if (!hadirKeys.has(key)) {
+          allAbsent.push({ ...a, kelas_nama: k.nama_kelas });
+        }
+      });
+    }
+
+    if (!allAbsent.length) {
+      resultEl.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>Semua anak hadir pada ${formatTglDisplay(formattedTgl)}!</p></div>`;
+      return;
+    }
+
+    let rows = allAbsent.map((a, i) => `
+      <tr style="${i%2?'background:var(--surface2);':''}">
+        <td style="padding:5px 7px;font-size:.75rem;">${i+1}</td>
+        <td style="padding:5px 7px;font-size:.75rem;font-weight:600;">${escHtml(a.nama)}</td>
+        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${escHtml(a.kelas_nama||'-')}</td>
+        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.nama_ayah ? escHtml(a.nama_ayah) : '-'}</td>
+        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.nama_ibu ? escHtml(a.nama_ibu) : '-'}</td>
+        <td style="padding:5px 7px;font-size:.72rem;color:var(--text3);">${a.no_hp_ayah || a.no_hp_ibu || '-'}</td>
+      </tr>`).join('');
+
+    resultEl.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--red);border-radius:var(--radius);padding:12px;">
+        <div style="font-weight:700;font-size:.85rem;color:var(--red);margin-bottom:8px;">
+          ❌ Tidak Hadir pada ${formatTglDisplay(formattedTgl)} — ${allAbsent.length} anak
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;min-width:500px;">
+            <thead><tr style="background:var(--surface2);">
+              <th style="padding:5px 7px;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">#</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Anak</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Kelas</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Ayah</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Ibu</th>
+              <th style="padding:5px 7px;text-align:left;font-size:.6rem;color:var(--text3);border-bottom:1px solid var(--border);">Telepon</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+  } catch(e) {
+    resultEl.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
+  }
+}
+
+// ── ANAK SUB-VIEW 3: 52 Minggu Grid ──────────────
+function lapAnakRenderWeekly(el, data) {
+  const anakData = data.prestasi || data.summary || [];
+  const tahun = data.tahun;
+
+  if (!anakData.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📅</div><p>Tidak ada data.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:8px;">📅 Kehadiran 52 Minggu — ${tahun}</div>
+      <div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;">
+        <span style="display:inline-block;width:12px;height:12px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:3px;"></span> Hadir (poin ≥10)
+        <span style="display:inline-block;width:12px;height:12px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;vertical-align:middle;margin:0 3px 0 10px;"></span> Tidak hadir
+      </div>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:600px;border:1px solid var(--border);border-radius:8px;">
+        <table style="border-collapse:collapse;font-size:.6rem;width:max-content;">
+          <thead style="position:sticky;top:0;z-index:3;background:var(--surface);">
+            <tr>
+              <th style="padding:4px 6px;text-align:left;font-size:.6rem;color:var(--text3);position:sticky;left:0;z-index:4;background:var(--surface);border-bottom:1px solid var(--border);border-right:2px solid var(--accent);min-width:110px;">Nama</th>
+              ${Array.from({length:52},(_, w) => `<th style="padding:2px;text-align:center;font-size:.45rem;color:var(--text3);min-width:16px;border-bottom:1px solid var(--border);writing-mode:vertical-lr;transform:rotate(180deg);height:28px;">${w+1}</th>`).join('')}
+              <th style="padding:4px;text-align:center;font-size:.55rem;color:var(--green);position:sticky;right:0;z-index:4;background:var(--surface);border-bottom:1px solid var(--border);border-left:2px solid var(--accent);min-width:30px;">Tot</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${anakData.map((a, idx) => {
+              const mingguHadir = parseInt(a.minggu_hadir) || 0;
+              // Simulate weekly data from total (actual implementation would need per-week data)
+              let weekCells = '';
+              for (let w = 1; w <= 52; w++) {
+                const isHadir = w <= mingguHadir;
+                weekCells += `<td style="padding:1px;text-align:center;border:1px solid ${isHadir ? 'transparent' : 'var(--border)'};background:${isHadir ? 'var(--green)' : 'transparent'};min-width:16px;height:14px;border-radius:${isHadir ? '2px' : '0'};" title="Minggu ${w}"></td>`;
+              }
+              return `<tr style="${idx%2?'background:var(--surface2);':''}">
+                <td style="padding:3px 6px;position:sticky;left:0;background:var(--surface);z-index:2;border-right:2px solid var(--accent);min-width:110px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.65rem;font-weight:500;">${escHtml(a.nama)}</td>
+                ${weekCells}
+                <td style="padding:3px 4px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;color:${mingguHadir > 0 ? 'var(--green)' : 'var(--text3)'};position:sticky;right:0;background:var(--surface);z-index:2;border-left:2px solid var(--accent);">${mingguHadir}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── ANAK SUB-VIEW 4: Pencarian Anak ──────────────
+function lapAnakRenderSearch(el, data) {
+  const anakData = data.prestasi || data.summary || [];
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">🔍 Cari Anak — Riwayat Kehadiran</div>
+      <input type="text" id="lap-anak-search-input" class="k-input"
+        placeholder="Ketik nama anak..."
+        oninput="lapAnakDoSearch()" style="width:100%;">
+    </div>
+    <div id="lap-anak-search-result">
+      <div class="empty-state"><div class="icon">🔍</div><p>Ketik nama untuk mencari.</p></div>
+    </div>`;
+}
+
+function lapAnakDoSearch() {
+  const q = (document.getElementById('lap-anak-search-input')?.value || '').toLowerCase().trim();
+  const resultEl = document.getElementById('lap-anak-search-result');
+  if (!resultEl) return;
+  const data = laporanAbsenState.dataAnak;
+  if (!data) return;
+
+  const anakData = data.prestasi || data.summary || [];
+  const kelasMap = {};
+  (data.kelas || []).forEach(k => { kelasMap[k.id_kelas] = k.nama_kelas || k.id_kelas; });
+
+  if (!q || q.length < 2) {
+    resultEl.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Ketik minimal 2 huruf.</p></div>`;
+    return;
+  }
+
+  const found = anakData.filter(a => (a.nama||'').toLowerCase().includes(q));
+  if (!found.length) {
+    resultEl.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Tidak ditemukan: "${escHtml(q)}"</p></div>`;
+    return;
+  }
+
+  let html = found.map(a => {
+    const kehadiran = parseInt(a.total_kehadiran) || 0;
+    const hafalan = parseInt(a.total_hafalan) || 0;
+    const totalPoin = parseInt(a.total_poin) || 0;
+    const mingguHadir = parseInt(a.minggu_hadir) || 0;
+    const kelasNama = kelasMap[a.id_kelas] || '-';
+    const prestasi = a.prestasi || '-';
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-weight:700;font-size:.95rem;">${escHtml(a.nama)}</div>
+          ${a.no_efataid ? `<div style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--text3);">${escHtml(a.no_efataid)}</div>` : ''}
+          <div style="font-size:.72rem;color:var(--text3);margin-top:3px;">📚 ${escHtml(kelasNama)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:800;color:var(--accent);">${totalPoin}</div>
+          <div style="font-size:.58rem;color:var(--text3);">total poin</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">
+        <div style="background:rgba(16,185,129,.1);border-radius:7px;padding:5px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--green);">${kehadiran}</div>
+          <div style="font-size:.5rem;color:var(--green);">Kehadiran</div>
+        </div>
+        <div style="background:rgba(139,92,246,.1);border-radius:7px;padding:5px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--accent3);">${hafalan}</div>
+          <div style="font-size:.5rem;color:var(--accent3);">Hafalan</div>
+        </div>
+        <div style="background:rgba(59,130,246,.1);border-radius:7px;padding:5px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--accent);">${mingguHadir}×</div>
+          <div style="font-size:.5rem;color:var(--accent);">Hadir</div>
+        </div>
+        <div style="background:rgba(245,158,11,.1);border-radius:7px;padding:5px;text-align:center;">
+          <div style="font-size:.75rem;font-weight:700;color:${prestasi !== '-' ? 'var(--green)' : 'var(--text3)'};">${prestasi !== '-' ? '🏆' : '-'}</div>
+          <div style="font-size:.5rem;color:var(--text3);">${escHtml(prestasi)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  resultEl.innerHTML = `<div style="font-size:.72rem;color:var(--text3);margin-bottom:6px;">${found.length} hasil ditemukan</div>` + html;
 }
 
 function lapAnakFilter(filter) {
@@ -9595,6 +9810,19 @@ let absenAnakState = {
   sudahLoad: false,
   searchQuery: '',
   viewMode: 'grid',       // grid | text | prestasi
+  activeTab: 'anak',      // 'anak' | 'cgm'
+};
+
+// CGM State
+let cgmState = {
+  kelasData: [],
+  anggotaData: [],
+  selectedKelas: null,
+  tanggal: '',
+  tahun: '',
+  cgmMap: {},             // key → {hadir_anak, hadir_ayah, hadir_ibu}
+  sudahLoad: false,
+  searchQuery: '',
 };
 
 let kelasManageState = {
@@ -9615,13 +9843,75 @@ const DEFAULT_HADIAH = [
   { poin_minimum: 1000, nama_prestasi: 'Juara Teladan', hadiah_rp: 350000 },
 ];
 
-// ── RENDER ABSENSI ANAK ────────────────────────────────────────
+// ── HELPER: cek apakah tanggal adalah hari Minggu ────────────
+function isSunday(dateStr) {
+  if (!dateStr) return false;
+  // dateStr bisa format yyyy-mm-dd atau dd/mm/yyyy
+  let d;
+  if (dateStr.includes('-')) {
+    d = new Date(dateStr);
+  } else {
+    const p = dateStr.split('/');
+    if (p.length === 3) d = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+  }
+  return d && d.getDay() === 0; // 0 = Sunday
+}
+
+function validateSunday(inputId) {
+  const val = document.getElementById(inputId)?.value;
+  if (!val) return true;
+  if (!isSunday(val)) {
+    toast('⚠️ Absensi Anak & CGM hanya aktif di hari Minggu!');
+    return false;
+  }
+  return true;
+}
+
+// ── RENDER ABSENSI ANAK (dengan Tab CGM + Anak) ───────────────
 async function renderAbsensiAnak() {
   const content = document.getElementById('app-content');
   if (!bolehAbsenSidang()) {
     content.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>Akses ditolak.</p></div>`;
     return;
   }
+
+  const at = absenAnakState.activeTab || 'anak';
+
+  content.innerHTML = `
+    <!-- TAB BUTTONS -->
+    <div style="display:flex;gap:5px;margin-bottom:10px;">
+      <button onclick="switchAnakTab('anak')" class="btn-action${at === 'anak' ? ' accent' : ''}"
+        style="flex:1;padding:11px;font-size:.88rem;font-weight:700;">
+        👦 Absensi Anak
+      </button>
+      <button onclick="switchAnakTab('cgm')" class="btn-action${at === 'cgm' ? ' accent' : ''}"
+        style="flex:1;padding:11px;font-size:.88rem;font-weight:700;">
+        👨‍👩‍👧 Absensi CGM
+      </button>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div id="anak-tab-content"></div>
+  `;
+
+  if (at === 'cgm') {
+    renderCGMContent();
+  } else {
+    renderAnakPoinContent();
+  }
+}
+
+function switchAnakTab(tab) {
+  absenAnakState.activeTab = tab;
+  renderAbsensiAnak();
+}
+
+// ══════════════════════════════════════════════════
+// TAB 1: ABSENSI ANAK (POIN + HAFALAN) — existing
+// ══════════════════════════════════════════════════
+async function renderAnakPoinContent() {
+  const container = document.getElementById('anak-tab-content');
+  if (!container) return;
 
   const now = new Date();
   const pad = x => String(x).padStart(2, '0');
@@ -9630,7 +9920,7 @@ async function renderAbsensiAnak() {
   if (!absenAnakState.tahun)
     absenAnakState.tahun = String(now.getFullYear());
 
-  content.innerHTML = `
+  container.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
         👦👧 Absensi Sidang Anak + Poin Hafalan
@@ -9650,11 +9940,12 @@ async function renderAbsensiAnak() {
       <!-- Tanggal & Minggu -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
-          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL</div>
+          <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL (Minggu saja)</div>
           <input type="date" id="anak-tanggal" class="k-input"
             value="${formatDateForInput(absenAnakState.tanggal)}"
-            onchange="absenAnakState.tanggal=formatDateFromInput(this.value)"
+            onchange="absenAnakState.tanggal=formatDateFromInput(this.value);checkSundayWarning('anak-tanggal','anak-sunday-warn')"
             style="width:100%;">
+          <div id="anak-sunday-warn" style="font-size:.65rem;color:var(--red);margin-top:3px;display:none;">⚠️ Bukan hari Minggu!</div>
         </div>
         <div>
           <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">MINGGU KE</div>
@@ -9665,7 +9956,7 @@ async function renderAbsensiAnak() {
         </div>
       </div>
 
-      <button onclick="loadAbsensiAnak()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+      <button onclick="if(!validateSunday('anak-tanggal'))return;loadAbsensiAnak()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
         🔄 Muat Daftar Anak
       </button>
     </div>
@@ -9685,7 +9976,7 @@ async function renderAbsensiAnak() {
         <button onclick="lihatPrestasiAnak()" class="btn-action accent" style="font-size:.78rem;">🏆 Prestasi</button>
       </div>
       <input type="text" id="anak-search" class="k-input"
-        placeholder="🔍 Cari nama..."
+        placeholder="🔍 Cari nama anak..."
         oninput="absenAnakState.searchQuery=this.value;renderAnakList()"
         style="width:100%;">
     </div>
@@ -9705,12 +9996,410 @@ async function renderAbsensiAnak() {
 
     <!-- Daftar Anak -->
     <div id="anak-list-wrap">
-      <div class="empty-state"><div class="icon">👦</div><p>Pilih kelas & tanggal, lalu klik Muat.</p></div>
+      <div class="empty-state"><div class="icon">👦</div><p>Pilih kelas & tanggal (Minggu), lalu klik Muat.</p></div>
     </div>
   `;
 
-  // Load daftar kelas
   loadDaftarKelasAnak();
+  // Show Sunday warning if current date is not Sunday
+  setTimeout(() => checkSundayWarning('anak-tanggal', 'anak-sunday-warn'), 200);
+}
+
+// ── SUNDAY WARNING HELPER ─────────────────────────────────────
+function checkSundayWarning(inputId, warnId) {
+  const val = document.getElementById(inputId)?.value;
+  const warn = document.getElementById(warnId);
+  if (!warn) return;
+  if (val && !isSunday(val)) {
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════
+// TAB 2: ABSENSI CGM (Family Cards)
+// ══════════════════════════════════════════════════
+function renderCGMContent() {
+  const container = document.getElementById('anak-tab-content');
+  if (!container) return;
+
+  const now = new Date();
+  const pad = x => String(x).padStart(2, '0');
+  if (!cgmState.tanggal)
+    cgmState.tanggal = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  if (!cgmState.tahun)
+    cgmState.tahun = String(now.getFullYear());
+
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent3);margin-bottom:10px;">
+        👨‍👩‍👧‍👦 Absensi CGM (Cell Group Meeting)
+      </div>
+
+      <!-- Pilih Kelas -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">PILIH KELAS</div>
+        <div style="display:flex;gap:6px;">
+          <select id="cgm-kelas" class="k-input" style="flex:1;" onchange="cgmState.selectedKelas=this.value">
+            <option value="">-- Pilih Kelas --</option>
+          </select>
+          <button onclick="loadDaftarKelasCGM()" class="btn-action" style="padding:8px 12px;">🔄</button>
+        </div>
+      </div>
+
+      <!-- Tanggal -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;font-weight:600;">TANGGAL (Minggu saja)</div>
+        <input type="date" id="cgm-tanggal" class="k-input"
+          value="${formatDateForInput(cgmState.tanggal)}"
+          onchange="cgmState.tanggal=formatDateFromInput(this.value);checkSundayWarning('cgm-tanggal','cgm-sunday-warn')"
+          style="width:100%;">
+        <div id="cgm-sunday-warn" style="font-size:.65rem;color:var(--red);margin-top:3px;display:none;">⚠️ Bukan hari Minggu!</div>
+      </div>
+
+      <button onclick="if(!validateSunday('cgm-tanggal'))return;loadCGM()" class="btn-action accent" style="width:100%;padding:11px;font-weight:700;">
+        🔄 Muat Daftar Keluarga
+      </button>
+    </div>
+
+    <!-- CGM Summary -->
+    <div id="cgm-summary" style="display:none;margin-bottom:10px;"></div>
+
+    <!-- CGM Toolbar -->
+    <div id="cgm-toolbar" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+        <button onclick="cgmHadirSemua()" class="btn-action green" style="font-size:.78rem;">✅ Hadir Semua</button>
+        <button onclick="cgmResetSemua()" class="btn-action red" style="font-size:.78rem;">❌ Reset</button>
+        <button onclick="simpanCGM()" class="btn-action"
+          style="font-size:.78rem;background:var(--yellow);color:#000;border-color:var(--yellow);font-weight:700;">
+          💾 Simpan CGM
+        </button>
+      </div>
+      <input type="text" id="cgm-search" class="k-input"
+        placeholder="🔍 Cari nama anak/orang tua..."
+        oninput="cgmState.searchQuery=this.value;renderCGMFamilyCards()"
+        style="width:100%;">
+    </div>
+
+    <!-- Family Cards -->
+    <div id="cgm-family-wrap">
+      <div class="empty-state"><div class="icon">👨‍👩‍👧</div><p>Pilih kelas & tanggal (Minggu), lalu klik Muat.</p></div>
+    </div>
+  `;
+
+  loadDaftarKelasCGM();
+  setTimeout(() => checkSundayWarning('cgm-tanggal', 'cgm-sunday-warn'), 200);
+}
+
+// ── CGM: Load Kelas ──────────────────────────────
+async function loadDaftarKelasCGM() {
+  if (APPS_SCRIPT_KELAS.includes('GANTI')) return;
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + cgmState.tahun);
+    const result = await resp.json();
+    cgmState.kelasData = result.data || [];
+    const sel = document.getElementById('cgm-kelas');
+    if (sel) {
+      sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+        cgmState.kelasData.map(k =>
+          `<option value="${escHtml(k.id_kelas)}" ${k.id_kelas === cgmState.selectedKelas ? 'selected' : ''}>${escHtml(k.nama_kelas)} (${escHtml(k.jenis||'anak')})</option>`
+        ).join('');
+    }
+  } catch(e) { toast('⚠️ Gagal load kelas: ' + e.message); }
+}
+
+// ── CGM: Load & Display ──────────────────────────
+async function loadCGM() {
+  const idKelas = cgmState.selectedKelas || document.getElementById('cgm-kelas')?.value;
+  const tglInput = document.getElementById('cgm-tanggal')?.value;
+  if (tglInput) cgmState.tanggal = formatDateFromInput(tglInput);
+  if (!idKelas) return toast('⚠️ Pilih kelas dulu');
+  if (!cgmState.tanggal) return toast('⚠️ Pilih tanggal');
+  cgmState.selectedKelas = idKelas;
+
+  const wrap = document.getElementById('cgm-family-wrap');
+  if (wrap) wrap.innerHTML = '<div class="loading-shimmer"></div>';
+
+  try {
+    // Load anggota kelas (termasuk data orang tua)
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_anggota_kelas&id_kelas=' + encodeURIComponent(idKelas));
+    const result = await resp.json();
+    cgmState.anggotaData = result.data || [];
+
+    // Load existing CGM absensi for this date (from sidang CGM sheet)
+    try {
+      const respAbsen = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=get_absen_sidang'
+        + '&jenis_sidang=CGM&tanggal=' + encodeURIComponent(cgmState.tanggal)
+        + '&sub_gugus=' + encodeURIComponent(idKelas));
+      const resultAbsen = await respAbsen.json();
+      cgmState.cgmMap = {};
+      (resultAbsen.data || []).forEach(r => {
+        const key = r.no_efataid || r.nama.toLowerCase();
+        cgmState.cgmMap[key] = {
+          hadir_anak: r.hadir === 'y',
+          hadir_ayah: (r.ayah_hadir || '') === 'y',
+          hadir_ibu: (r.ibu_hadir || '') === 'y',
+        };
+      });
+    } catch(e) {
+      cgmState.cgmMap = {};
+    }
+
+    // Init map for all children
+    cgmState.anggotaData.forEach(a => {
+      const key = a.no_efataid || a.nama.toLowerCase();
+      if (!cgmState.cgmMap[key]) {
+        cgmState.cgmMap[key] = { hadir_anak: false, hadir_ayah: false, hadir_ibu: false };
+      }
+    });
+
+    cgmState.sudahLoad = true;
+    document.getElementById('cgm-toolbar').style.display = 'block';
+    document.getElementById('cgm-summary').style.display = 'block';
+    toast(`✅ ${cgmState.anggotaData.length} anak dimuat (CGM)`);
+    renderCGMSummary();
+    renderCGMFamilyCards();
+
+  } catch(e) {
+    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
+  }
+}
+
+// ── CGM: Summary ─────────────────────────────────
+function renderCGMSummary() {
+  const el = document.getElementById('cgm-summary');
+  if (!el) return;
+  const total = cgmState.anggotaData.length;
+  let hadirAnak = 0, hadirAyah = 0, hadirIbu = 0;
+  const parentKeys = new Set();
+
+  cgmState.anggotaData.forEach(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    const m = cgmState.cgmMap[key] || {};
+    if (m.hadir_anak) hadirAnak++;
+    // Track unique parents
+    const parentKey = (a.nama_ayah||'-') + '|' + (a.nama_ibu||'-');
+    if (!parentKeys.has(parentKey)) {
+      parentKeys.add(parentKey);
+      if (m.hadir_ayah) hadirAyah++;
+      if (m.hadir_ibu) hadirIbu++;
+    }
+  });
+
+  const totalOrtu = parentKeys.size * 2; // ayah + ibu
+  const hadirOrtu = hadirAyah + hadirIbu;
+  const kesehatanPct = totalOrtu > 0 ? Math.round(hadirOrtu / totalOrtu * 100) : 0;
+  const kelasNama = cgmState.kelasData.find(k => k.id_kelas === cgmState.selectedKelas)?.nama_kelas || '-';
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:8px;">
+        📊 CGM ${escHtml(kelasNama)} · ${formatTglDisplay(cgmState.tanggal)}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px;">
+        ${[
+          [hadirAnak + '/' + total, 'Anak Hadir', 'var(--green)', 'rgba(16,185,129,.1)'],
+          [hadirAyah, 'Ayah Hadir', 'var(--accent)', 'rgba(59,130,246,.1)'],
+          [hadirIbu, 'Ibu Hadir', 'var(--accent3)', 'rgba(139,92,246,.1)'],
+          [kesehatanPct + '%', 'Kesehatan', 'var(--yellow)', 'rgba(245,158,11,.1)'],
+        ].map(([v,l,c,bg]) => `
+          <div style="background:${bg};border-radius:7px;padding:6px 2px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700;color:${c};">${v}</div>
+            <div style="font-size:.5rem;color:${c};">${l}</div>
+          </div>`).join('')}
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${kesehatanPct}%;background:linear-gradient(90deg,var(--yellow),var(--green));border-radius:3px;"></div>
+      </div>
+    </div>`;
+}
+
+// ── CGM: Family Cards ────────────────────────────
+function renderCGMFamilyCards() {
+  const wrap = document.getElementById('cgm-family-wrap');
+  if (!wrap || !cgmState.sudahLoad) return;
+
+  const search = (cgmState.searchQuery || '').toLowerCase();
+  const data = cgmState.anggotaData.filter(a => {
+    if (!search) return true;
+    return a.nama.toLowerCase().includes(search)
+      || (a.nama_ayah||'').toLowerCase().includes(search)
+      || (a.nama_ibu||'').toLowerCase().includes(search);
+  });
+
+  if (!data.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">👨‍👩‍👧</div><p>Tidak ditemukan.</p></div>`;
+    return;
+  }
+
+  // Group by family (nama_ayah + nama_ibu)
+  const families = {};
+  data.forEach(a => {
+    const fkey = (a.nama_ayah||'-').trim() + '|' + (a.nama_ibu||'-').trim();
+    if (!families[fkey]) families[fkey] = { ayah: (a.nama_ayah||'').trim(), ibu: (a.nama_ibu||'').trim(), children: [] };
+    families[fkey].children.push(a);
+  });
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">`;
+
+  Object.values(families).forEach(fam => {
+    const allKeys = fam.children.map(c => c.no_efataid || c.nama.toLowerCase());
+    const firstChild = fam.children[0];
+    const firstKey = firstChild.no_efataid || firstChild.nama.toLowerCase();
+    const firstMap = cgmState.cgmMap[firstKey] || {};
+
+    // Check if all children in this family are present
+    const allChildHadir = fam.children.every(c => {
+      const k = c.no_efataid || c.nama.toLowerCase();
+      return cgmState.cgmMap[k]?.hadir_anak;
+    });
+    const ayahHadir = firstMap.hadir_ayah;
+    const ibuHadir = firstMap.hadir_ibu;
+    const allHadir = allChildHadir && ayahHadir && ibuHadir;
+
+    html += `<div style="background:${allHadir ? 'rgba(16,185,129,.06)' : 'var(--surface)'};
+      border:1px solid ${allHadir ? 'rgba(16,185,129,.4)' : 'var(--border)'};
+      border-radius:14px;padding:14px;">`;
+
+    // Children section
+    fam.children.forEach(c => {
+      const key = c.no_efataid || c.nama.toLowerCase();
+      const m = cgmState.cgmMap[key] || {};
+      html += `
+        <div style="margin-bottom:4px;">
+          <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Anak</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
+            <input type="checkbox" ${m.hadir_anak ? 'checked' : ''} 
+              onchange="toggleCGM('${escHtml(key)}','hadir_anak',this.checked)"
+              style="width:20px;height:20px;accent-color:var(--green);cursor:pointer;">
+            <span style="font-weight:600;font-size:.88rem;color:${m.hadir_anak ? 'var(--green)' : 'var(--text)'};">${escHtml(c.nama)}</span>
+          </label>
+        </div>`;
+    });
+
+    // Parents section
+    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
+      <div style="font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Orang Tua</div>`;
+
+    if (fam.ayah && fam.ayah !== '-') {
+      html += `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
+          <input type="checkbox" ${ayahHadir ? 'checked' : ''}
+            onchange="toggleCGMParent('${escHtml(firstKey)}','hadir_ayah',this.checked,'${escHtml(fam.ayah)}|${escHtml(fam.ibu)}')"
+            style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;">
+          <span style="font-size:.85rem;color:${ayahHadir ? 'var(--accent)' : 'var(--text2)'};">${escHtml(fam.ayah)}</span>
+        </label>`;
+    } else {
+      html += `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`;
+    }
+
+    if (fam.ibu && fam.ibu !== '-') {
+      html += `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
+          <input type="checkbox" ${ibuHadir ? 'checked' : ''}
+            onchange="toggleCGMParent('${escHtml(firstKey)}','hadir_ibu',this.checked,'${escHtml(fam.ayah)}|${escHtml(fam.ibu)}')"
+            style="width:20px;height:20px;accent-color:var(--accent3);cursor:pointer;">
+          <span style="font-size:.85rem;color:${ibuHadir ? 'var(--accent3)' : 'var(--text2)'};">${escHtml(fam.ibu)}</span>
+        </label>`;
+    } else {
+      html += `<div style="font-size:.8rem;color:var(--text3);padding:4px 0;">-</div>`;
+    }
+
+    html += `</div></div>`;
+  });
+
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+
+// ── CGM: Toggle functions ────────────────────────
+function toggleCGM(key, field, val) {
+  if (!cgmState.cgmMap[key]) cgmState.cgmMap[key] = { hadir_anak: false, hadir_ayah: false, hadir_ibu: false };
+  cgmState.cgmMap[key][field] = val;
+  renderCGMSummary();
+}
+
+function toggleCGMParent(primaryKey, field, val, parentIdStr) {
+  // Set parent hadir for all children with same parents
+  const [ayahName, ibuName] = parentIdStr.split('|');
+  cgmState.anggotaData.forEach(a => {
+    if ((a.nama_ayah||'').trim() === ayahName && (a.nama_ibu||'').trim() === ibuName) {
+      const k = a.no_efataid || a.nama.toLowerCase();
+      if (!cgmState.cgmMap[k]) cgmState.cgmMap[k] = { hadir_anak: false, hadir_ayah: false, hadir_ibu: false };
+      cgmState.cgmMap[k][field] = val;
+    }
+  });
+  renderCGMSummary();
+}
+
+function cgmHadirSemua() {
+  if (!confirm('Set SEMUA hadir (anak + orang tua)?')) return;
+  Object.keys(cgmState.cgmMap).forEach(key => {
+    cgmState.cgmMap[key] = { hadir_anak: true, hadir_ayah: true, hadir_ibu: true };
+  });
+  renderCGMSummary();
+  renderCGMFamilyCards();
+}
+
+function cgmResetSemua() {
+  if (!confirm('Reset semua kehadiran CGM?')) return;
+  Object.keys(cgmState.cgmMap).forEach(key => {
+    cgmState.cgmMap[key] = { hadir_anak: false, hadir_ayah: false, hadir_ibu: false };
+  });
+  renderCGMSummary();
+  renderCGMFamilyCards();
+}
+
+// ── CGM: Simpan via Sidang Batch ─────────────────
+async function simpanCGM() {
+  if (!cgmState.sudahLoad || !cgmState.anggotaData.length) return toast('⚠️ Muat data dulu');
+  const kelasId = cgmState.selectedKelas;
+  const tgl = cgmState.tanggal;
+  if (!kelasId || !tgl) return toast('⚠️ Kelas & tanggal wajib');
+
+  const items = cgmState.anggotaData.map(a => {
+    const key = a.no_efataid || a.nama.toLowerCase();
+    const m = cgmState.cgmMap[key] || {};
+    return {
+      no_efataid: a.no_efataid || '',
+      nama: a.nama || '',
+      kategori: 'anak',
+      hadir: m.hadir_anak ? 'y' : 'n',
+      ayah_hadir: m.hadir_ayah ? 'y' : 'n',
+      ibu_hadir: m.hadir_ibu ? 'y' : 'n',
+    };
+  });
+
+  const params = new URLSearchParams({
+    action: 'simpan_batch_sidang',
+    jenis_sidang: 'CGM',
+    sub_gugus: kelasId,
+    tanggal_absen: tgl,
+    replace_tanggal: 'y',
+    dicatat_oleh: currentUser?.username || '',
+    no_efataid_pencatat: currentUser?.no_efataid || currentUser?.no_efata_id || '',
+    level_user: getLevelCode(),
+    data: JSON.stringify(items),
+  });
+
+  try {
+    toast('⏳ Menyimpan CGM...');
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      toast(`✅ CGM tersimpan! ${result.inserted || items.length} data`);
+      logHistory('CGM', 'simpan CGM', `${items.length} anak, tgl: ${tgl}`);
+    } else {
+      toast('❌ ' + (result.message || 'Gagal'));
+    }
+  } catch(e) {
+    toast('⚠️ ' + e.message);
+  }
 }
 
 // ── LOAD KELAS ─────────────────────────────────────────────────
