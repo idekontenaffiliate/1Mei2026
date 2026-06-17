@@ -999,7 +999,11 @@ function setupNavigation(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
   const menus=(currentUser?.tipe||'').split(',').map(s=>s.trim()).filter(Boolean);
   // Hilangkan menu Quiz dan Link
-  const filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link');
+  let filteredMenus=menus.filter(m=>m!=='Quiz'&&m!=='Link');
+  // ★ Gembala: sembunyikan Absensi KTM (hanya Admin, Penatua, Gembala Distrik)
+  if (!bolehAbsenKTM()) {
+    filteredMenus = filteredMenus.filter(m => m !== 'Absensi KTM');
+  }
   // Auto-inject untuk Administrator: Manajemen Kelas jika belum ada
   if(isLevelAdmin()){
     if(!filteredMenus.some(m=>m==='Manajemen Kelas')) filteredMenus.push('Manajemen Kelas');
@@ -6780,12 +6784,18 @@ function lapSetTab(tab) {
   laporanAbsenState.dataAnak = null;
   renderLaporanAbsensi();
  
-  // ★ AUTO-SHOW: Untuk tab anak & CGM, langsung tampilkan tombol sub-view
+  // ★ AUTO-SHOW: Untuk tab anak & CGM, langsung tampilkan
   if (tab === 'anak') {
+    // Langsung tampilkan dashboard
+    laporanAbsenState.anakSubView = 'dashboard';
     setTimeout(() => lapAutoShowAnakButtons(), 100);
   }
   if (tab === 'cgm') {
     setTimeout(() => lapAutoShowCGMButtons(), 100);
+  }
+  if (tab === 'sidang') {
+    // Tampilkan info absensi minggu ini
+    setTimeout(() => showThisWeekAbsenInfo(), 200);
   }
 }
 
@@ -11686,9 +11696,10 @@ function kmJenisChanged(val) {
 // SETTING HADIAH TAHUNAN — tampil & edit
 // ══════════════════════════════════════════════════
 async function showSettingHadiah() {
+  if (!isAdminUser()) return toast('🔒 Hanya Administrator, Penatua, dan Gembala Distrik.');
   const tahun = absenAnakState.tahun || String(new Date().getFullYear());
-  const wrap = document.getElementById('anak-list-wrap');
-  if (!wrap) return;
+  const wrap = document.getElementById('anak-list-wrap') || document.getElementById('anak-tab-content');
+  if (!wrap) return toast('⚠️ Container tidak ditemukan. Muat data dulu.');
   wrap.innerHTML = '<div class="loading-shimmer"></div>';
   try {
     const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_setting_hadiah&tahun=' + tahun);
@@ -13916,6 +13927,103 @@ async function renderDashboardAnak(el) {
 }
 
 console.log('✅ PATCH Action Menu + Detil/Edit/Hapus + Dashboard Anak loaded');
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH: LEVEL CONTROL + AUTO-DASHBOARD + WEEK INFO          ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── Minggu ini sudah absen apa saja ─────────────────────────
+async function showThisWeekAbsenInfo() {
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - dayOfWeek); // start from Sunday
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+  const pad = x => String(x).padStart(2, '0');
+  const tglAwal = `${pad(startOfWeek.getDate())}/${pad(startOfWeek.getMonth()+1)}/${startOfWeek.getFullYear()}`;
+  const tglAkhir = `${pad(endOfWeek.getDate())}/${pad(endOfWeek.getMonth()+1)}/${endOfWeek.getFullYear()}`;
+
+  el.innerHTML = `<div class="loading-shimmer"></div>
+    <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:6px;">⏳ Memuat info minggu ini...</div>`;
+
+  try {
+    const params = new URLSearchParams({ action:'get_laporan_detail', tgl_awal:tglAwal, tgl_akhir:tglAkhir });
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?' + params.toString());
+    const result = JSON.parse(await resp.text());
+    const data = result?.data || {};
+
+    const sidangList = Object.keys(data);
+    if (!sidangList.length) {
+      el.innerHTML = `<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:.8rem;font-weight:700;color:var(--yellow);margin-bottom:4px;">📅 Minggu Ini (${formatTglDisplay(tglAwal)} — ${formatTglDisplay(tglAkhir)})</div>
+        <div style="font-size:.78rem;color:var(--text2);">Belum ada absensi sidang minggu ini.</div>
+      </div>`;
+      return;
+    }
+
+    let html = `<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:8px;">
+        ✅ Sudah Absen Minggu Ini (${formatTglDisplay(tglAwal)} — ${formatTglDisplay(tglAkhir)})
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+
+    sidangList.forEach(jenis => {
+      const sd = data[jenis];
+      const tglList = sd.tanggal_list || [];
+      const totalHadir = (sd.orang||[]).reduce((sum, o) => sum + (o.hadir_tanggal||[]).length, 0);
+      html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--accent);">⛪ ${escHtml(jenis)}</div>
+        <div style="font-size:.65rem;color:var(--text3);">${tglList.map(t => formatTglDisplay(t)).join(', ')}</div>
+        <div style="font-size:.68rem;color:var(--green);margin-top:2px;">${totalHadir} kehadiran</div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--text3);font-size:.78rem;padding:10px;">Info minggu ini tidak tersedia.</div>`;
+  }
+}
+
+// ── Override lapAutoShowAnakButtons to default dashboard ─────
+const _origLapAutoShowAnak = lapAutoShowAnakButtons;
+lapAutoShowAnakButtons = async function() {
+  await _origLapAutoShowAnak();
+  // After buttons shown, auto-switch to dashboard
+  if (laporanAbsenState.anakSubView === 'dashboard') {
+    setTimeout(() => {
+      if (typeof lapAnakSetSubView === 'function') lapAnakSetSubView('dashboard');
+    }, 300);
+  }
+};
+
+// ── Level-based menu control in Absensi Anak ────────────────
+// Hide KTM menu for Gembala level (only Admin/Penatua/Gembala Distrik)
+const _origRenderMenu = typeof renderMenuAbsensi === 'function' ? renderMenuAbsensi : null;
+// Patch the sidebar/menu to hide KTM for Gembala
+
+// ── bolehSettingHadiah: hanya Admin, Penatua, Gembala Distrik
+function bolehSettingHadiah() {
+  return isAdminUser(); // Admin, Penatua, Gembala Distrik
+}
+
+// ── Check if user is Gembala (not Gembala Distrik)
+function isGembalaOnly() {
+  const l = getLevelCode();
+  return l === 'Gembala';
+}
+
+// ── bolehLihatKTM: not Gembala
+function bolehLihatKTMMenu() {
+  return isAdminUser(); // Admin, Penatua, Gembala Distrik only
+}
+
+console.log('✅ PATCH Level Control + Auto-Dashboard + Week Info loaded');
 </script>
 </body>
 </html>
