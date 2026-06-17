@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 25 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 125 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10147,6 +10147,9 @@ let absenAnakState = {
   searchQuery: '',
   viewMode: 'grid',       // grid | text | prestasi
   activeTab: 'anak',      // 'anak' | 'cgm'
+  anakPageMode: 'history', // 'history' | 'entry'
+  historyData: null,
+  historyPage: 1,
 };
 
 // CGM State
@@ -10159,6 +10162,9 @@ let cgmState = {
   cgmMap: {},             // key → {hadir_anak, hadir_ayah, hadir_ibu}
   sudahLoad: false,
   searchQuery: '',
+  cgmPageMode: 'history', // 'history' | 'entry'
+  historyData: null,
+  historyPage: 1,
 };
 
 let kelasManageState = {
@@ -10243,11 +10249,170 @@ function switchAnakTab(tab) {
 }
 
 // ══════════════════════════════════════════════════
-// TAB 1: ABSENSI ANAK (POIN + HAFALAN) — existing
+// TAB 1: ABSENSI ANAK (POIN + HAFALAN)
 // ══════════════════════════════════════════════════
 async function renderAnakPoinContent() {
   const container = document.getElementById('anak-tab-content');
   if (!container) return;
+
+  if (absenAnakState.anakPageMode === 'entry') {
+    renderAnakEntryForm(container);
+    return;
+  }
+
+  // ★ DEFAULT: HISTORY VIEW — show summary table like reference screenshot
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--accent);">👦👧 Sidang Anak-Anak</div>
+        <button onclick="absenAnakState.anakPageMode='entry';renderAnakPoinContent()" class="btn-action accent"
+          style="padding:8px 16px;font-weight:700;font-size:.78rem;">➕ Tambah Data</button>
+      </div>
+      <div id="anak-history-wrap"><div class="loading-shimmer"></div>
+        <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat riwayat absensi...</div>
+      </div>
+    </div>`;
+
+  await loadAnakHistory();
+}
+
+async function loadAnakHistory() {
+  const wrap = document.getElementById('anak-history-wrap');
+  if (!wrap) return;
+  try {
+    // Fetch recent 3 months of data
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const tglAwal = `${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}/${start.getFullYear()}`;
+    const tglAkhir = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+
+    const params = new URLSearchParams({
+      action: 'get_laporan_detail', tgl_awal: tglAwal, tgl_akhir: tglAkhir, jenis_sidang: 'Anak-anak'
+    });
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?' + params.toString());
+    const result = JSON.parse(await resp.text());
+
+    if (result.status !== 'ok' || !result.data || !result.data['Anak-anak']) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data absensi anak-anak.</p></div>`;
+      return;
+    }
+
+    const sd = result.data['Anak-anak'];
+    // Group by tanggal + sub_gugus (kelas)
+    const rows = [];
+    const tglList = sd.tanggal_list || [];
+    const orang = sd.orang || [];
+    const subGugusList = sd.sub_gugus_list || [];
+
+    tglList.forEach(tgl => {
+      const kelasSet = subGugusList.length > 0 ? subGugusList : [''];
+      kelasSet.forEach(kelas => {
+        let total = 0, hadir = 0, tamu = 0;
+        orang.forEach(o => {
+          if (kelas && o.sub_gugus !== kelas) return;
+          total++;
+          if ((o.hadir_tanggal || []).includes(tgl)) {
+            hadir++;
+            if (!o.no_efataid) tamu++;
+          }
+        });
+        if (total > 0 || hadir > 0) {
+          rows.push({ tanggal: tgl, kelas: kelas || '-', hadir, total, tamu, belum: total - hadir });
+        }
+      });
+    });
+
+    // Sort by date desc
+    rows.sort((a, b) => {
+      const pa = a.tanggal.split('/'), pb = b.tanggal.split('/');
+      return new Date(`${pb[2]}-${pb[1]}-${pb[0]}`) - new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
+    });
+
+    absenAnakState.historyData = rows;
+    renderAnakHistoryTable(wrap, rows);
+
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p>
+      <button onclick="loadAnakHistory()" class="btn-action accent" style="margin-top:8px;">🔄 Coba Lagi</button></div>`;
+  }
+}
+
+function renderAnakHistoryTable(wrap, rows) {
+  const page = absenAnakState.historyPage || 1;
+  const perPage = 10;
+  const totalPages = Math.ceil(rows.length / perPage);
+  const pageRows = rows.slice((page - 1) * perPage, page * perPage);
+
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${rows.length} data ditemukan</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.75rem;min-width:420px;">
+        <thead><tr style="border-bottom:2px solid var(--accent);">
+          <th style="padding:8px 6px;text-align:center;font-size:.65rem;color:var(--text3);width:30px;">#</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.65rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.65rem;color:var(--text3);">Kelas</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.65rem;color:var(--text3);">Jumlah Kehadiran</th>
+          <th style="padding:8px 6px;text-align:center;font-size:.65rem;color:var(--text3);width:30px;"></th>
+        </tr></thead><tbody>`;
+
+  pageRows.forEach((r, idx) => {
+    const no = (page - 1) * perPage + idx + 1;
+    const bg = idx % 2 === 1 ? 'background:var(--surface2);' : '';
+    const pct = r.total > 0 ? Math.round(r.hadir / r.total * 100) : 0;
+    const pctColor = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+
+    // Parse day name
+    const parts = r.tanggal.split('/');
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[d.getDay()] || '';
+
+    html += `<tr style="${bg}border-bottom:1px solid var(--border);">
+      <td style="padding:8px 6px;text-align:center;color:var(--text3);font-size:.68rem;">${no}</td>
+      <td style="padding:8px 6px;font-size:.72rem;">${dayName}, ${formatTglDisplay(r.tanggal)}</td>
+      <td style="padding:8px 6px;font-weight:600;color:var(--accent);font-size:.72rem;">${escHtml(r.kelas)}</td>
+      <td style="padding:8px 6px;font-size:.7rem;line-height:1.5;">
+        <span style="color:var(--green);font-weight:600;">JA: ${r.hadir} / ${r.total}</span><br>
+        <span style="color:var(--yellow);">TA: ${r.tamu}</span><br>
+        <span style="color:var(--red);">BL: ${r.belum}</span><br>
+        <span style="color:${pctColor};font-weight:600;">IK: ${pct}%</span>
+      </td>
+      <td style="padding:8px 6px;text-align:center;">
+        <button onclick="openAnakEntry('${escHtml(r.kelas)}','${r.tanggal}')"
+          style="background:none;border:none;cursor:pointer;font-size:1rem;" title="Edit">📝</button>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Pagination
+  if (totalPages > 1) {
+    html += `<div style="display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;">
+      <button onclick="absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏮</button>
+      <button onclick="absenAnakState.historyPage--;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>◀</button>
+      <span style="font-size:.72rem;color:var(--text);align-self:center;font-weight:600;">${page} / ${totalPages}</span>
+      <button onclick="absenAnakState.historyPage++;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>▶</button>
+      <button onclick="absenAnakState.historyPage=${totalPages};renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏭</button>
+    </div>`;
+  }
+
+  wrap.innerHTML = html;
+}
+
+function openAnakEntry(kelas, tanggal) {
+  // Find kelas id from name
+  const kelasObj = absenAnakState.kelasData.find(k => k.nama_kelas === kelas);
+  if (kelasObj) absenAnakState.selectedKelas = kelasObj.id_kelas;
+  absenAnakState.tanggal = tanggal;
+  absenAnakState.anakPageMode = 'entry';
+  renderAnakPoinContent();
+}
+
+// ── ENTRY FORM (original form, now in sub-mode) ──────────────
+function renderAnakEntryForm(container) {
 
   const now = new Date();
   const pad = x => String(x).padStart(2, '0');
@@ -10257,6 +10422,11 @@ async function renderAnakPoinContent() {
     absenAnakState.tahun = String(now.getFullYear());
 
   container.innerHTML = `
+    <!-- Back Button -->
+    <button onclick="absenAnakState.anakPageMode='history';absenAnakState.sudahLoad=false;renderAnakPoinContent()"
+      class="btn-action" style="margin-bottom:10px;font-size:.78rem;padding:8px 14px;">
+      ◀ Kembali ke Riwayat</button>
+
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:10px;">
         👦👧 Absensi Sidang Anak + Poin Hafalan
@@ -10361,6 +10531,177 @@ function renderCGMContent() {
   const container = document.getElementById('anak-tab-content');
   if (!container) return;
 
+  if (cgmState.cgmPageMode === 'entry') {
+    renderCGMEntryForm(container);
+    return;
+  }
+
+  // ★ DEFAULT: HISTORY VIEW — like reference screenshot
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--accent3);">👨‍👩‍👧 Absensi CGM</div>
+        <button onclick="cgmState.cgmPageMode='entry';renderCGMContent()" class="btn-action accent"
+          style="padding:8px 16px;font-weight:700;font-size:.78rem;">➕ Tambah Data</button>
+      </div>
+      <div id="cgm-history-wrap"><div class="loading-shimmer"></div>
+        <div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">⏳ Memuat riwayat CGM...</div>
+      </div>
+    </div>`;
+
+  loadCGMHistory();
+}
+
+async function loadCGMHistory() {
+  const wrap = document.getElementById('cgm-history-wrap');
+  if (!wrap) return;
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const tglAwal = `${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}/${start.getFullYear()}`;
+    const tglAkhir = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+
+    const params = new URLSearchParams({
+      action: 'get_laporan_detail', tgl_awal: tglAwal, tgl_akhir: tglAkhir, jenis_sidang: 'CGM'
+    });
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?' + params.toString());
+    const result = JSON.parse(await resp.text());
+
+    if (result.status !== 'ok' || !result.data || !result.data['CGM']) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data absensi CGM.</p></div>`;
+      return;
+    }
+
+    const sd = result.data['CGM'];
+    const tglList = sd.tanggal_list || [];
+    const orang = sd.orang || [];
+    const subGugusList = sd.sub_gugus_list || [];
+    const rows = [];
+
+    tglList.forEach(tgl => {
+      const lokasiSet = subGugusList.length > 0 ? subGugusList : [''];
+      lokasiSet.forEach(lokasi => {
+        let totalAnak = 0, hadirAnak = 0, tamuAnak = 0;
+        let totalOrtu = 0, hadirOrtu = 0, tamuOrtu = 0;
+
+        orang.forEach(o => {
+          if (lokasi && o.sub_gugus !== lokasi) return;
+          const kat = (o.kategori || '').toLowerCase();
+          const isAnak = kat === 'anak' || kat === '';
+          const hadirTgl = (o.hadir_tanggal || []).includes(tgl);
+
+          if (isAnak || kat === '') {
+            totalAnak++;
+            if (hadirTgl) { hadirAnak++; if (!o.no_efataid) tamuAnak++; }
+          }
+          // Count parents as anyone not 'anak'
+          if (kat === 'ayah' || kat === 'ibu' || kat === 'ortu' || kat === 'orangtua') {
+            totalOrtu++;
+            if (hadirTgl) { hadirOrtu++; if (!o.no_efataid) tamuOrtu++; }
+          }
+        });
+
+        // Fallback: if no parent category, estimate from anak data
+        if (totalOrtu === 0) { totalOrtu = totalAnak; hadirOrtu = 0; }
+
+        if (totalAnak > 0 || hadirAnak > 0) {
+          const ikPct = totalOrtu > 0 ? Math.round(hadirOrtu / totalOrtu * 100) : 0;
+          rows.push({ tanggal: tgl, lokasi: lokasi || '-', hadirAnak, totalAnak, tamuAnak,
+            belumAnak: totalAnak - hadirAnak, hadirOrtu, totalOrtu, tamuOrtu, ikPct });
+        }
+      });
+    });
+
+    rows.sort((a, b) => {
+      const pa = a.tanggal.split('/'), pb = b.tanggal.split('/');
+      return new Date(`${pb[2]}-${pb[1]}-${pb[0]}`) - new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
+    });
+
+    cgmState.historyData = rows;
+    renderCGMHistoryTable(wrap, rows);
+
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${escHtml(e.message)}</p>
+      <button onclick="loadCGMHistory()" class="btn-action accent" style="margin-top:8px;">🔄 Coba Lagi</button></div>`;
+  }
+}
+
+function renderCGMHistoryTable(wrap, rows) {
+  const page = cgmState.historyPage || 1;
+  const perPage = 10;
+  const totalPages = Math.ceil(rows.length / perPage);
+  const pageRows = rows.slice((page - 1) * perPage, page * perPage);
+
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${rows.length} data ditemukan</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:560px;">
+        <thead><tr style="border-bottom:2px solid var(--accent3);">
+          <th style="padding:8px 4px;text-align:center;font-size:.6rem;color:var(--text3);width:25px;">#</th>
+          <th style="padding:8px 4px;text-align:left;font-size:.6rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:8px 4px;text-align:left;font-size:.6rem;color:var(--text3);">CGM</th>
+          <th style="padding:8px 4px;text-align:left;font-size:.6rem;color:var(--text3);">Jumlah Kehadiran Anak</th>
+          <th style="padding:8px 4px;text-align:left;font-size:.6rem;color:var(--text3);">Jumlah Kehadiran Orangtua</th>
+          <th style="padding:8px 4px;text-align:center;font-size:.6rem;color:var(--text3);width:30px;"></th>
+        </tr></thead><tbody>`;
+
+  pageRows.forEach((r, idx) => {
+    const no = (page - 1) * perPage + idx + 1;
+    const bg = idx % 2 === 1 ? 'background:var(--surface2);' : '';
+    const parts = r.tanggal.split('/');
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[d.getDay()] || '';
+    const ikColor = r.ikPct >= 50 ? 'var(--green)' : r.ikPct > 0 ? 'var(--yellow)' : 'var(--red)';
+
+    html += `<tr style="${bg}border-bottom:1px solid var(--border);">
+      <td style="padding:8px 4px;text-align:center;color:var(--text3);font-size:.65rem;">${no}</td>
+      <td style="padding:8px 4px;font-size:.7rem;">${dayName}, ${formatTglDisplay(r.tanggal)}</td>
+      <td style="padding:8px 4px;font-weight:600;color:var(--accent3);font-size:.7rem;">${escHtml(r.lokasi)}</td>
+      <td style="padding:8px 4px;font-size:.68rem;line-height:1.5;">
+        <span style="color:var(--green);font-weight:600;">JA: ${r.hadirAnak} / ${r.totalAnak}</span><br>
+        <span style="color:var(--yellow);">TA: ${r.tamuAnak}</span><br>
+        <span style="color:var(--red);">BL: ${r.belumAnak}</span>
+      </td>
+      <td style="padding:8px 4px;font-size:.68rem;line-height:1.5;">
+        <span style="color:var(--accent);font-weight:600;">JO: ${r.hadirOrtu} / ${r.totalOrtu}</span><br>
+        <span style="color:var(--yellow);">TO: ${r.tamuOrtu}</span><br>
+        <span style="color:${ikColor};font-weight:600;">IK: ${r.ikPct}%</span>
+      </td>
+      <td style="padding:8px 4px;text-align:center;">
+        <button onclick="openCGMEntry('${escHtml(r.lokasi)}','${r.tanggal}')"
+          style="background:none;border:none;cursor:pointer;font-size:1rem;" title="Edit">📝</button>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  if (totalPages > 1) {
+    html += `<div style="display:flex;justify-content:center;gap:6px;margin-top:10px;">
+      <button onclick="cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏮</button>
+      <button onclick="cgmState.historyPage--;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>◀</button>
+      <span style="font-size:.72rem;color:var(--text);align-self:center;font-weight:600;">${page} / ${totalPages}</span>
+      <button onclick="cgmState.historyPage++;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>▶</button>
+      <button onclick="cgmState.historyPage=${totalPages};renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏭</button>
+    </div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function openCGMEntry(lokasi, tanggal) {
+  const kelasObj = cgmState.kelasData.find(k => k.nama_kelas === lokasi);
+  if (kelasObj) cgmState.selectedKelas = kelasObj.id_kelas;
+  cgmState.tanggal = tanggal;
+  cgmState.cgmPageMode = 'entry';
+  renderCGMContent();
+}
+
+// ── CGM ENTRY FORM (original, now sub-mode) ──────────────────
+function renderCGMEntryForm(container) {
+
   const now = new Date();
   const pad = x => String(x).padStart(2, '0');
   if (!cgmState.tanggal)
@@ -10369,6 +10710,11 @@ function renderCGMContent() {
     cgmState.tahun = String(now.getFullYear());
 
   container.innerHTML = `
+    <!-- Back Button -->
+    <button onclick="cgmState.cgmPageMode='history';cgmState.sudahLoad=false;renderCGMContent()"
+      class="btn-action" style="margin-bottom:10px;font-size:.78rem;padding:8px 14px;">
+      ◀ Kembali ke Riwayat</button>
+
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;">
       <div style="font-size:.82rem;font-weight:700;color:var(--accent3);margin-bottom:10px;">
         👨‍👩‍👧‍👦 Absensi CGM (Cell Group Meeting)
