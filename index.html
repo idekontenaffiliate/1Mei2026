@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 75 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 17-06-2026 16.34 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -1622,6 +1622,20 @@ let html = `
       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
       ⛶ Fullscreen Dashboard
     </button>
+
+    <!-- ★ TAB DASHBOARD: Sidang Umum / Sidang Anak -->
+    <div style="display:flex;gap:4px;margin-bottom:10px;">
+      <button onclick="switchDashTab('umum')" id="dash-tab-umum" class="btn-action accent"
+        style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
+        ⛪ Sidang Umum
+      </button>
+      <button onclick="switchDashTab('anak')" id="dash-tab-anak" class="btn-action"
+        style="flex:1;padding:9px;font-size:.8rem;font-weight:700;">
+        👦 Sidang Anak
+      </button>
+    </div>
+    <div id="dash-anak-container" style="display:none;"></div>
+    <div id="dash-umum-container">
          
     <div class="clock-card">
       <div class="clock-big" id="dash-clock">--:--:--</div>
@@ -1755,6 +1769,8 @@ let html = `
     }
   }
 
+  // Close dash-umum-container
+  html += `</div>`; // close #dash-umum-container
   content.innerHTML = html;
 
   const laporanToggleHtml = `
@@ -12277,8 +12293,9 @@ dispatchRender = function(name) {
 // ╚══════════════════════════════════════════════════════════════╝
 
 async function loadSettingHadiahCGM() {
+  if (!isAdminUser()) return toast('🔒 Hanya Administrator, Penatua, dan Gembala Distrik.');
   const wrap = document.getElementById('anak-list-wrap') || document.getElementById('anak-tab-content');
-  if (!wrap) return;
+  if (!wrap) return toast('⚠️ Container tidak ditemukan.');
   wrap.innerHTML = '<div class="loading-shimmer"></div>';
   const tahun = absenAnakState.tahun || String(new Date().getFullYear());
 
@@ -12740,17 +12757,20 @@ function patchCopySearch(type, mode) {
 const _patchOrigAnakPoin = renderAnakPoinContent;
 renderAnakPoinContent = async function() {
   await _patchOrigAnakPoin();
+  // ★ Setting Hadiah: HANYA Administrator, Penatua, Gembala Distrik
+  //   BUKAN Gembala biasa
   setTimeout(() => {
-    if (!isLevelAdmin() && getLevelCode() !== 'Gembala') return;
+    if (!isAdminUser()) return; // isAdminUser = Admin/Penatua/Gembala Distrik only
     const ct = document.getElementById('anak-tab-content'); if(!ct) return;
-    if (document.getElementById('patch-btn-hadiah')) return;
+    // Hapus dulu jika ada (avoid duplicate)
+    const existing = document.getElementById('patch-btn-hadiah');
+    if (existing) existing.remove();
     const wrap = document.createElement('div');
     wrap.id = 'patch-btn-hadiah';
     wrap.style.cssText = 'display:flex;gap:5px;margin-bottom:10px;';
     wrap.innerHTML = `
       <button onclick="showSettingHadiah()" class="btn-action" style="flex:1;padding:9px;font-size:.76rem;font-weight:600;">🎁 Setting Hadiah Anak</button>
       <button onclick="loadSettingHadiahCGM()" class="btn-action" style="flex:1;padding:9px;font-size:.76rem;font-weight:600;border-color:var(--accent3);color:var(--accent3);">🏆 Setting Hadiah CGM</button>`;
-    // Taruh di awal setelah tab
     const firstChild = ct.firstElementChild;
     if (firstChild) ct.insertBefore(wrap, firstChild);
     else ct.appendChild(wrap);
@@ -14024,6 +14044,33 @@ function bolehLihatKTMMenu() {
 }
 
 console.log('✅ PATCH Level Control + Auto-Dashboard + Week Info loaded');
+
+// ── Dashboard Tab Switcher ──────────────────────────────────
+let _dashAnakLoaded = false;
+function switchDashTab(tab) {
+  const umum = document.getElementById('dash-umum-container');
+  const anak = document.getElementById('dash-anak-container');
+  const btnUmum = document.getElementById('dash-tab-umum');
+  const btnAnak = document.getElementById('dash-tab-anak');
+
+  if (!umum || !anak) return;
+
+  if (tab === 'anak') {
+    umum.style.display = 'none';
+    anak.style.display = 'block';
+    if (btnUmum) { btnUmum.classList.remove('accent'); }
+    if (btnAnak) { btnAnak.classList.add('accent'); }
+    if (!_dashAnakLoaded) {
+      _dashAnakLoaded = true;
+      renderDashboardAnak(anak);
+    }
+  } else {
+    umum.style.display = 'block';
+    anak.style.display = 'none';
+    if (btnUmum) { btnUmum.classList.add('accent'); }
+    if (btnAnak) { btnAnak.classList.remove('accent'); }
+  }
+}
 </script>
 </body>
 </html>
