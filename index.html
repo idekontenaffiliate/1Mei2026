@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 17-07-2026 22:07 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 17-07-2026 22:33 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbwSt
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbzJ6TwkXrR93rd4UPdqvlpW4G9geYRf7FaTie6bo4pXz0w3J--mL_BKcXHLnHy2rtJ3/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbzASQgSbsrHBH0M7OKdIOb7eFxRIrbSjpfHcQ-00Zg0I9154YxReU6WdGVdixaZo93m/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -10370,12 +10370,51 @@ async function loadAnakHistory() {
 function renderAnakHistoryTable(wrap, rows) {
   const page = absenAnakState.historyPage || 1;
   const perPage = 10;
-  const totalPages = Math.ceil(rows.length / perPage);
-  const pageRows = rows.slice((page - 1) * perPage, page * perPage);
+
+  // ★ FILTER LOGIC
+  const fTgl = (absenAnakState._filterTgl || '').trim();
+  const fKelas = (absenAnakState._filterKelas || '').trim().toLowerCase();
+  const fNama = (absenAnakState._filterNama || '').trim().toLowerCase();
+
+  let filtered = rows;
+  if (fTgl) {
+    // fTgl format: yyyy-mm-dd → convert to dd/mm/yyyy for comparison
+    const parts = fTgl.split('-');
+    const filterDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+    filtered = filtered.filter(r => r.tanggal === filterDate);
+  }
+  if (fKelas) filtered = filtered.filter(r => (r.kelas||'').toLowerCase().includes(fKelas));
+  if (fNama) filtered = filtered.filter(r => (r.kelas||'').toLowerCase().includes(fNama));
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+
+  // ★ Unique kelas list for dropdown
+  const uniqueKelas = [...new Set(rows.map(r => r.kelas))].sort();
 
   let html = `
+    <!-- ★ FILTER BAR -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:110px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📅 Tanggal</div>
+        <input type="date" id="anak-hist-filter-tgl" class="k-input" value="${fTgl}"
+          onchange="absenAnakState._filterTgl=this.value;absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <div style="flex:1;min-width:110px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">🏫 Kelas</div>
+        <select id="anak-hist-filter-kelas" class="k-input"
+          onchange="absenAnakState._filterKelas=this.value;absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+          <option value="">Semua</option>
+          ${uniqueKelas.map(k => `<option value="${escHtml(k)}" ${fKelas === k.toLowerCase() ? 'selected' : ''}>${escHtml(k)}</option>`).join('')}
+        </select>
+      </div>
+      <button onclick="absenAnakState._filterTgl='';absenAnakState._filterKelas='';absenAnakState._filterNama='';absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+        class="btn-action red" style="font-size:.65rem;padding:6px 10px;white-space:nowrap;">🗑 Reset</button>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-size:.7rem;color:var(--text3);">📊 ${rows.length} data ditemukan</span>
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${filtered.length} data ditemukan</span>
     </div>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:.75rem;min-width:420px;">
@@ -10452,6 +10491,7 @@ function openAnakEntry(kelas, tanggal) {
   if (kelasObj) absenAnakState.selectedKelas = kelasObj.id_kelas;
   absenAnakState.tanggal = tanggal;
   absenAnakState.anakPageMode = 'entry';
+  absenAnakState._autoLoad = true; // ★ flag auto-load
   renderAnakPoinContent();
 }
 
@@ -10555,6 +10595,17 @@ function renderAnakEntryForm(container) {
   loadDaftarKelasAnak();
   // Show Sunday warning if current date is not Sunday
   setTimeout(() => checkSundayWarning('anak-tanggal', 'anak-sunday-warn'), 200);
+
+  // ★ Auto-load jika dipanggil dari Atur Nilai
+  if (absenAnakState._autoLoad) {
+    absenAnakState._autoLoad = false;
+    setTimeout(() => {
+      // Set select value
+      const sel = document.getElementById('anak-kelas');
+      if (sel && absenAnakState.selectedKelas) sel.value = absenAnakState.selectedKelas;
+      loadAbsensiAnak();
+    }, 600);
+  }
 }
 
 // ── SUNDAY WARNING HELPER ─────────────────────────────────────
@@ -10674,12 +10725,48 @@ async function loadCGMHistory() {
 function renderCGMHistoryTable(wrap, rows) {
   const page = cgmState.historyPage || 1;
   const perPage = 10;
-  const totalPages = Math.ceil(rows.length / perPage);
-  const pageRows = rows.slice((page - 1) * perPage, page * perPage);
+
+  // ★ FILTER LOGIC
+  const fTgl = (cgmState._filterTgl || '').trim();
+  const fLokasi = (cgmState._filterLokasi || '').trim().toLowerCase();
+
+  let filtered = rows;
+  if (fTgl) {
+    const parts = fTgl.split('-');
+    const filterDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+    filtered = filtered.filter(r => r.tanggal === filterDate);
+  }
+  if (fLokasi) filtered = filtered.filter(r => (r.lokasi||'').toLowerCase().includes(fLokasi));
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+
+  // ★ Unique lokasi list
+  const uniqueLokasi = [...new Set(rows.map(r => r.lokasi))].sort();
 
   let html = `
+    <!-- ★ FILTER BAR -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:110px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📅 Tanggal</div>
+        <input type="date" id="cgm-hist-filter-tgl" class="k-input" value="${fTgl}"
+          onchange="cgmState._filterTgl=this.value;cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <div style="flex:1;min-width:110px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📍 Lokasi CGM</div>
+        <select id="cgm-hist-filter-lokasi" class="k-input"
+          onchange="cgmState._filterLokasi=this.value;cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+          <option value="">Semua</option>
+          ${uniqueLokasi.map(l => `<option value="${escHtml(l)}" ${fLokasi === l.toLowerCase() ? 'selected' : ''}>${escHtml(l)}</option>`).join('')}
+        </select>
+      </div>
+      <button onclick="cgmState._filterTgl='';cgmState._filterLokasi='';cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+        class="btn-action red" style="font-size:.65rem;padding:6px 10px;white-space:nowrap;">🗑 Reset</button>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-size:.7rem;color:var(--text3);">📊 ${rows.length} data ditemukan</span>
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${filtered.length} data ditemukan</span>
     </div>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:.7rem;min-width:560px;">
@@ -10764,6 +10851,7 @@ function openCGMEntry(lokasi, tanggal) {
   if (kelasObj) cgmState.selectedKelas = kelasObj.id_kelas;
   cgmState.tanggal = tanggal;
   cgmState.cgmPageMode = 'entry';
+  cgmState._autoLoad = true; // ★ flag auto-load
   renderCGMContent();
 }
 
@@ -10842,6 +10930,16 @@ function renderCGMEntryForm(container) {
 
   loadDaftarKelasCGM();
   setTimeout(() => checkSundayWarning('cgm-tanggal', 'cgm-sunday-warn'), 200);
+
+  // ★ Auto-load jika dipanggil dari Atur Nilai
+  if (cgmState._autoLoad) {
+    cgmState._autoLoad = false;
+    setTimeout(() => {
+      const sel = document.getElementById('cgm-kelas');
+      if (sel && cgmState.selectedKelas) sel.value = cgmState.selectedKelas;
+      loadCGM();
+    }, 600);
+  }
 }
 
 // ── CGM: Load Lokasi CGM (bukan kelas) ───────────
@@ -10921,6 +11019,22 @@ async function loadCGM() {
     // ★ Render tamu section for CGM
     const lokasiNama = cgmState.kelasData.find(k => k.id_kelas === cgmState.selectedKelas)?.nama_kelas || '';
     resetTamuState();
+    
+    // ★ Load existing tamu from backend
+    try {
+      const tamuResp = await fetch(APPS_SCRIPT_KELAS + '?action=get_tamu_absen_cgm&id_cgm=' + encodeURIComponent(idKelas) + '&tanggal=' + encodeURIComponent(cgmState.tanggal));
+      const tamuResult = await tamuResp.json();
+      if (tamuResult.status === 'ok' && tamuResult.data) {
+        (tamuResult.data || []).forEach(t => {
+          if (t.tipe_tamu === 'TD') {
+            _tamuDistrikData.push({ nama: t.nama, no_efataid: t.no_efataid||'', nama_ayah: t.nama_ayah||'', nama_ibu: t.nama_ibu||'', distrik_asal: t.distrik_asal||'', tipe_tamu: 'TD' });
+          } else {
+            _tamuBaruData.push({ nama: t.nama, no_efataid: '', nama_ayah: t.nama_ayah||'', nama_ibu: t.nama_ibu||'', distrik_asal: '', tipe_tamu: 'TB' });
+          }
+        });
+      }
+    } catch(e) { /* ignore */ }
+    
     renderTamuSection('cgm-tamu-section', 'CGM', lokasiNama);
 
   } catch(e) {
@@ -11100,6 +11214,9 @@ async function simpanCGM() {
     };
   });
 
+  // ★ Gabungkan data tamu
+  const tamuItems = getTamuItemsForSave();
+
   const params = new URLSearchParams({
     action: 'simpan_cgm_absen_batch',
     id_cgm: kelasId,
@@ -11107,6 +11224,7 @@ async function simpanCGM() {
     tahun: cgmState.tahun || String(new Date().getFullYear()),
     dicatat_oleh: currentUser?.username || '',
     data: JSON.stringify(items),
+    tamu_data: JSON.stringify(tamuItems),
   });
 
   try {
@@ -11210,6 +11328,22 @@ async function loadAbsensiAnak() {
     // ★ Render tamu section
     const kelasNama = absenAnakState.kelasData.find(k => k.id_kelas === absenAnakState.selectedKelas)?.nama_kelas || '';
     resetTamuState();
+    
+    // ★ Load existing tamu from backend
+    try {
+      const tamuResp = await fetch(APPS_SCRIPT_KELAS + '?action=get_tamu_absen_anak&id_kelas=' + encodeURIComponent(idKelas) + '&tanggal=' + encodeURIComponent(absenAnakState.tanggal));
+      const tamuResult = await tamuResp.json();
+      if (tamuResult.status === 'ok' && tamuResult.data) {
+        (tamuResult.data || []).forEach(t => {
+          if (t.tipe_tamu === 'TD') {
+            _tamuDistrikData.push({ nama: t.nama, no_efataid: t.no_efataid||'', nama_ayah: t.nama_ayah||'', nama_ibu: t.nama_ibu||'', distrik_asal: t.distrik_asal||'', tipe_tamu: 'TD' });
+          } else {
+            _tamuBaruData.push({ nama: t.nama, no_efataid: '', nama_ayah: t.nama_ayah||'', nama_ibu: t.nama_ibu||'', distrik_asal: '', tipe_tamu: 'TB' });
+          }
+        });
+      }
+    } catch(e) { /* ignore */ }
+    
     renderTamuSection('anak-tamu-section', 'Anak-anak', kelasNama);
 
   } catch(e) {
@@ -11552,6 +11686,9 @@ async function simpanSemuaPoinAnak() {
     };
   });
 
+  // ★ Gabungkan data tamu
+  const tamuItems = getTamuItemsForSave();
+
   const params = new URLSearchParams({
     action: 'simpan_poin_batch',
     id_kelas: absenAnakState.selectedKelas,
@@ -11560,6 +11697,7 @@ async function simpanSemuaPoinAnak() {
     tahun: absenAnakState.tahun,
     dicatat_oleh: currentUser?.username || '-',
     data: JSON.stringify(items),
+    tamu_data: JSON.stringify(tamuItems),
   });
 
   try {
@@ -13909,12 +14047,18 @@ async function renderDashboardAnak(el) {
 
     <!-- PER KELAS -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;">
-      <div style="font-size:.7rem;font-weight:700;margin-bottom:8px;">📊 Jumlah Anak per Tingkatan (${tahunAjaran})</div>
-      <div style="display:flex;align-items:flex-end;gap:6px;height:80px;">
+      <div style="font-size:.7rem;font-weight:700;margin-bottom:10px;">📊 Jumlah Anak per Tingkatan (${tahunAjaran})</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
         ${Object.entries(kelasCount).sort().map(([k,v]) => {
           const maxV = Math.max(...Object.values(kelasCount),1);
-          const h = Math.max(6, v / maxV * 70);
-          return `<div style="flex:1;text-align:center;"><div style="background:var(--accent3);border-radius:3px 3px 0 0;height:${h}px;margin:0 auto;width:85%;"></div><div style="font-size:.45rem;color:var(--text3);margin-top:2px;word-break:break-word;">${escHtml(k.split(' ').pop())}</div><div style="font-size:.55rem;font-weight:700;color:var(--accent3);">${v}</div></div>`;
+          const pct = Math.max(5, v / maxV * 100);
+          return `<div style="display:flex;align-items:center;gap:8px;">
+            <div style="min-width:90px;max-width:120px;font-size:.6rem;color:var(--text2);font-weight:600;text-align:right;word-break:break-word;line-height:1.3;">${escHtml(k)}</div>
+            <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent3),#c4b5fd);border-radius:4px;transition:width .4s;"></div>
+            </div>
+            <div style="min-width:24px;font-size:.65rem;font-weight:700;color:var(--accent3);text-align:right;">${v}</div>
+          </div>`;
         }).join('')}
       </div>
     </div>
