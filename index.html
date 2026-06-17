@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 17-06-2026 16.34 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 17-07-2026 22:07 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -666,7 +666,7 @@ const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz1AjcNw9mmNHL7Vg
 const APPS_SCRIPT_JEMAAT="https://script.google.com/macros/s/AKfycbwHrBsYjYcZ_lwqqp8zvgTQwazzHDTlsNA1cvuuKSldsinW24uRDel0sHAM2dlJV7104g/exec";
 const APPS_SCRIPT_AWAL="https://script.google.com/macros/s/AKfycbw6kOQBUDpnhVxQFK2c0tf1x8suIMvtxyGl1Y24Wqtpq4ZWQzfFSBoNT8R0swUiIruZzg/exec";
 const APPS_SCRIPT_ABSENSI_KTM = "https://script.google.com/macros/s/AKfycbzojDvr24ebe5NAalSqxoNOzbStPKWbv3Cd9Wg6_TxCA_G8v4NiLKFXO4bPek5KzK7YKA/exec";
-const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyQKtJDhctjqD8z3iVQfDQV-yX7VuCRtDljZNa2o7IfhS4YNDy_S5FXEgJdDKBVIwtdFA/exec";
+const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbwStE2rV3kVe8lVtl_4BlFezbA4gISqZ9OUbI8S9PRrdHmvq4WEFYGGPoDdrK8UKZjY_w/exec";
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
@@ -10549,6 +10549,7 @@ function renderAnakEntryForm(container) {
     <div id="anak-list-wrap">
       <div class="empty-state"><div class="icon">👦</div><p>Pilih kelas & tanggal (Minggu), lalu klik Muat.</p></div>
     </div>
+    <div id="anak-tamu-section"></div>
   `;
 
   loadDaftarKelasAnak();
@@ -10836,6 +10837,7 @@ function renderCGMEntryForm(container) {
     <div id="cgm-family-wrap">
       <div class="empty-state"><div class="icon">👨‍👩‍👧</div><p>Pilih kelas & tanggal (Minggu), lalu klik Muat.</p></div>
     </div>
+    <div id="cgm-tamu-section"></div>
   `;
 
   loadDaftarKelasCGM();
@@ -10915,6 +10917,11 @@ async function loadCGM() {
     toast(`✅ ${cgmState.anggotaData.length} anak dimuat (CGM)`);
     renderCGMSummary();
     renderCGMFamilyCards();
+
+    // ★ Render tamu section for CGM
+    const lokasiNama = cgmState.kelasData.find(k => k.id_kelas === cgmState.selectedKelas)?.nama_kelas || '';
+    resetTamuState();
+    renderTamuSection('cgm-tamu-section', 'CGM', lokasiNama);
 
   } catch(e) {
     if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
@@ -11199,6 +11206,11 @@ async function loadAbsensiAnak() {
     toast(`✅ ${absenAnakState.anggotaData.length} anak dimuat`);
     renderAnakSummary();
     renderAnakList();
+
+    // ★ Render tamu section
+    const kelasNama = absenAnakState.kelasData.find(k => k.id_kelas === absenAnakState.selectedKelas)?.nama_kelas || '';
+    resetTamuState();
+    renderTamuSection('anak-tamu-section', 'Anak-anak', kelasNama);
 
   } catch(e) {
     if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal: ${e.message}</p></div>`;
@@ -14071,6 +14083,252 @@ function switchDashTab(tab) {
     if (btnAnak) { btnAnak.classList.remove('accent'); }
   }
 }
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH: TAMU MANAGEMENT — Distrik + Tamu Baru               ║
+// ║  Untuk Absensi Anak dan CGM                                  ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+let _distrikList = null;
+let _tamuDistrikData = []; // anak dari distrik lain yang ditambahkan
+let _tamuBaruData = [];    // tamu baru insidentil
+
+// ── Load daftar distrik dari server ─────────────────────────
+async function loadDaftarDistrik() {
+  if (_distrikList) return _distrikList;
+  try {
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=get_daftar_distrik');
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      _distrikList = result.data || [];
+      return _distrikList;
+    }
+  } catch(e) { console.warn('Gagal load distrik:', e); }
+  // Fallback: ambil dari jemaat
+  const distrikSet = new Set();
+  (db.Jemaat || []).forEach(j => {
+    const d = (j['Distrik'] || j['distrik'] || '').trim();
+    if (d && d.toLowerCase() !== 'all') distrikSet.add(d);
+  });
+  _distrikList = Array.from(distrikSet).sort();
+  return _distrikList;
+}
+
+// ── Render Tamu Section (dipanggil dari entry form) ─────────
+async function renderTamuSection(containerId, jenisSidang, subGugus) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  const distrikList = await loadDaftarDistrik();
+  // Distrik user saat ini
+  const userDistrik = currentUser?.distrik || '';
+
+  const distrikOptions = distrikList
+    .filter(d => d.toLowerCase() !== userDistrik.toLowerCase())
+    .map(d => `<option value="${escHtml(d)}">${escHtml(d)}</option>`)
+    .join('');
+
+  el.innerHTML = `
+    <div style="margin-top:14px;">
+      <div style="font-size:.85rem;font-weight:700;color:var(--red);margin-bottom:8px;">Absensi Tamu</div>
+
+      <!-- Tamu dari Distrik Lain (TD) -->
+      <div id="tamu-distrik-list"></div>
+
+      <div style="background:rgba(239,68,68,.06);border:2px solid rgba(239,68,68,.3);border-radius:12px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:.8rem;font-weight:700;color:#fff;background:var(--red);padding:8px 12px;border-radius:8px;margin:-14px -14px 10px;margin-bottom:10px;">
+          Tambah Tamu Dari Distrik Lain
+        </div>
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;">
+          • Pilih distrik kemudian pilih anak dan klik "Tambahkan" untuk menambahkan tamu.<br>
+          • Jika data anak belum ada atau tidak ditemukan maka silahkan buat tamu baru.
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="tamu-distrik-select" class="k-input" style="min-width:150px;" onchange="loadAnakDistrik(this.value)">
+            <option value="">Pilih Distrik</option>
+            ${distrikOptions}
+          </select>
+          <select id="tamu-anak-select" class="k-input" style="min-width:180px;display:none;">
+            <option value="">Pilih Anak</option>
+          </select>
+          <button onclick="tambahTamuDistrik('${escHtml(jenisSidang)}','${escHtml(subGugus)}')"
+            class="btn-action" style="padding:8px 16px;background:var(--yellow);color:#000;border-color:var(--yellow);font-weight:700;">
+            Tambahkan
+          </button>
+        </div>
+      </div>
+
+      <!-- Tamu Baru (TB) -->
+      <div id="tamu-baru-list"></div>
+
+      <div style="background:rgba(239,68,68,.06);border:2px solid rgba(239,68,68,.3);border-radius:12px;padding:14px;">
+        <div style="font-size:.8rem;font-weight:700;color:#fff;background:var(--red);padding:8px 12px;border-radius:8px;margin:-14px -14px 10px;margin-bottom:10px;">
+          Tambah Tamu Baru
+        </div>
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;">
+          • Isi nama anak${jenisSidang === 'CGM' ? ', ayah, dan ibu' : ''} lalu klik "Tambahkan" untuk menambahkan tamu baru.<br>
+          • Tamu baru hanya untuk mencatat absensi saja dan tidak akan masuk ke dalam penilaian/perhitungan.
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="tamu-baru-nama" class="k-input" placeholder="Nama Anak" style="min-width:140px;">
+          ${jenisSidang === 'CGM' ? `
+            <input type="text" id="tamu-baru-ayah" class="k-input" placeholder="Nama Ayah" style="min-width:120px;">
+            <input type="text" id="tamu-baru-ibu" class="k-input" placeholder="Nama Ibu" style="min-width:120px;">
+          ` : ''}
+          <button onclick="tambahTamuBaru('${escHtml(jenisSidang)}','${escHtml(subGugus)}')"
+            class="btn-action" style="padding:8px 16px;background:var(--yellow);color:#000;border-color:var(--yellow);font-weight:700;">
+            Tambahkan
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  renderTamuDistrikList();
+  renderTamuBaruList();
+}
+
+// ── Load anak dari distrik tertentu ─────────────────────────
+async function loadAnakDistrik(distrik) {
+  const select = document.getElementById('tamu-anak-select');
+  if (!select) return;
+  if (!distrik) { select.style.display = 'none'; return; }
+
+  select.style.display = '';
+  select.innerHTML = '<option value="">⏳ Memuat...</option>';
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=get_anak_dari_distrik&distrik=' + encodeURIComponent(distrik));
+    const result = await resp.json();
+    if (result.status === 'ok' && result.data?.length > 0) {
+      select.innerHTML = '<option value="">Pilih Anak</option>'
+        + result.data.map(a => `<option value="${escHtml(JSON.stringify(a))}">${escHtml(a.nama)} (${escHtml(a.no_efataid||'-')})</option>`).join('');
+    } else {
+      select.innerHTML = '<option value="">Tidak ada anak di distrik ini</option>';
+    }
+  } catch(e) {
+    select.innerHTML = '<option value="">Gagal memuat</option>';
+  }
+}
+
+// ── Tambah Tamu dari Distrik (TD) ───────────────────────────
+function tambahTamuDistrik(jenisSidang, subGugus) {
+  const distrikSelect = document.getElementById('tamu-distrik-select');
+  const anakSelect = document.getElementById('tamu-anak-select');
+  const distrik = distrikSelect?.value;
+  const anakJson = anakSelect?.value;
+
+  if (!distrik) return toast('⚠️ Pilih distrik dulu');
+  if (!anakJson) return toast('⚠️ Pilih anak dulu');
+
+  try {
+    const anak = JSON.parse(anakJson);
+    // Cek duplikat
+    if (_tamuDistrikData.find(t => t.nama === anak.nama)) return toast('⚠️ Anak sudah ditambahkan');
+
+    _tamuDistrikData.push({
+      nama: anak.nama,
+      no_efataid: anak.no_efataid || '',
+      nama_ayah: anak.nama_ayah || '',
+      nama_ibu: anak.nama_ibu || '',
+      distrik_asal: distrik,
+      tipe_tamu: 'TD',
+    });
+    renderTamuDistrikList();
+    toast('✅ Tamu dari ' + distrik + ' ditambahkan: ' + anak.nama);
+  } catch(e) {
+    toast('⚠️ Gagal menambahkan');
+  }
+}
+
+// ── Tambah Tamu Baru (TB) ───────────────────────────────────
+function tambahTamuBaru(jenisSidang, subGugus) {
+  const nama = document.getElementById('tamu-baru-nama')?.value?.trim();
+  if (!nama) return toast('⚠️ Isi nama anak');
+
+  const ayah = document.getElementById('tamu-baru-ayah')?.value?.trim() || '';
+  const ibu = document.getElementById('tamu-baru-ibu')?.value?.trim() || '';
+
+  if (_tamuBaruData.find(t => t.nama.toLowerCase() === nama.toLowerCase())) return toast('⚠️ Tamu sudah ditambahkan');
+
+  _tamuBaruData.push({
+    nama: nama,
+    no_efataid: '',
+    nama_ayah: ayah,
+    nama_ibu: ibu,
+    distrik_asal: '',
+    tipe_tamu: 'TB',
+  });
+  renderTamuBaruList();
+  toast('✅ Tamu baru ditambahkan: ' + nama);
+
+  // Clear inputs
+  const namaInput = document.getElementById('tamu-baru-nama');
+  if (namaInput) namaInput.value = '';
+  const ayahInput = document.getElementById('tamu-baru-ayah');
+  if (ayahInput) ayahInput.value = '';
+  const ibuInput = document.getElementById('tamu-baru-ibu');
+  if (ibuInput) ibuInput.value = '';
+}
+
+// ── Render Tamu Distrik List ────────────────────────────────
+function renderTamuDistrikList() {
+  const el = document.getElementById('tamu-distrik-list');
+  if (!el || !_tamuDistrikData.length) { if (el) el.innerHTML = ''; return; }
+
+  let html = `<div style="margin-bottom:10px;">`;
+  _tamuDistrikData.forEach((t, idx) => {
+    html += `<div style="background:var(--surface);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px;margin-bottom:6px;display:inline-block;margin-right:6px;">
+      <div style="font-size:.7rem;font-weight:600;">Anak</div>
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:4px;">${escHtml(t.nama)}</div>
+      <div style="font-size:.62rem;color:var(--text3);">Dari: <strong style="color:var(--accent);">${escHtml(t.distrik_asal)}</strong></div>
+      ${t.no_efataid ? `<div style="font-size:.6rem;color:var(--text3);font-family:'JetBrains Mono',monospace;">${escHtml(t.no_efataid)}</div>` : ''}
+      <button onclick="_tamuDistrikData.splice(${idx},1);renderTamuDistrikList()" class="btn-action red"
+        style="font-size:.65rem;padding:4px 10px;margin-top:4px;width:100%;">🗑 Hapus</button>
+    </div>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+// ── Render Tamu Baru List ───────────────────────────────────
+function renderTamuBaruList() {
+  const el = document.getElementById('tamu-baru-list');
+  if (!el || !_tamuBaruData.length) { if (el) el.innerHTML = ''; return; }
+
+  let html = `<div style="margin-bottom:10px;">`;
+  _tamuBaruData.forEach((t, idx) => {
+    html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;display:inline-block;margin-right:6px;">
+      <div style="font-size:.7rem;font-weight:600;">Anak</div>
+      <div style="font-size:.82rem;font-weight:700;">${escHtml(t.nama)}</div>
+      <button onclick="_tamuBaruData.splice(${idx},1);renderTamuBaruList()" class="btn-action red"
+        style="font-size:.65rem;padding:4px 10px;margin-top:4px;width:100%;">🗑 Hapus</button>
+    </div>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+// ── Helper: Get all tamu items for batch save ───────────────
+function getTamuItemsForSave() {
+  return [..._tamuDistrikData, ..._tamuBaruData].map(t => ({
+    no_efataid: t.no_efataid || '',
+    nama: t.nama,
+    hadir: 'y',
+    kategori: 'tamu',
+    ayah_hadir: t.nama_ayah ? 'y' : '',
+    ibu_hadir: t.nama_ibu ? 'y' : '',
+    distrik_asal: t.distrik_asal || '',
+    tipe_tamu: t.tipe_tamu || 'TB',
+  }));
+}
+
+// ── Reset tamu state ────────────────────────────────────────
+function resetTamuState() {
+  _tamuDistrikData = [];
+  _tamuBaruData = [];
+}
+
+console.log('✅ PATCH Tamu Management loaded — Distrik + Tamu Baru');
 </script>
 </body>
 </html>
