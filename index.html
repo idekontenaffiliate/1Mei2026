@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 125 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 66 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -3053,6 +3053,9 @@ function formatTglDisplay(tgl) {
 }
 
 // ── LOAD DATA KTM ──────────────────────────────────────────────────────
+// ★ FIX: Jika data sudah ada untuk tanggal di sheet KTM,
+//   langsung ambil dari situ, TANPA fetch ulang dari Jemaat.
+//   Hanya fetch dari Jemaat jika tanggal baru (belum ada data).
 async function loadAbsensiKTM(){
   absenKTMState.bulan   = document.getElementById('absen-bulan')?.value || absenKTMState.bulan;
   absenKTMState.tahun   = document.getElementById('absen-tahun')?.value || absenKTMState.tahun;
@@ -3088,14 +3091,12 @@ async function loadAbsensiKTM(){
   absenKTMState.absenMap  = {};
   absenKTMState.tamuList  = absenKTMState.tamuList || [];
 
-  // Filter data server untuk tanggal aktif
   const dataUntukTgl = serverData.filter(row => {
     const rowTgl = String(row.tanggal_absen || '').trim();
     return rowTgl === tgl;
   });
   const hasExisting = dataUntukTgl.length > 0;
 
-  // Populate absenMap & tamuList dari server
   absenKTMState.tamuList = [];
   dataUntukTgl.forEach(row => {
     const ef       = (row.no_efataid || '').trim();
@@ -3103,7 +3104,6 @@ async function loadAbsensiKTM(){
     const isTamu   = !ef || (row.is_tamu || '').trim() === 'y';
 
     if (isTamu) {
-      // Tamu — tidak punya EfataID
       const existing = absenKTMState.tamuList.find(t => t.nama === nm);
       if (!existing) {
         absenKTMState.tamuList.push({
@@ -3115,7 +3115,6 @@ async function loadAbsensiKTM(){
         });
       }
     } else {
-      // Jemaat regular
       absenKTMState.absenMap[ef] = {
         hadir        : row.hadir || 'n',
         dicatat_oleh : row.dicatat_oleh || '',
@@ -3125,40 +3124,89 @@ async function loadAbsensiKTM(){
     }
   });
 
-  // STEP 3: Load master Jemaat (KTM=y atau KTM_Tahir=y)
-  const fieldKey = absenKTMState.jenis === 'KTM_Tahir' ? 'KTM Tahir' : 'KTM';
-  if (!db.Jemaat) {
-    await new Promise(r => Papa.parse(URLS.Jemaat, {
-      download: true, header: true,
-      complete: res => { db.Jemaat = res.data; r(); }
-    }));
+  // ═══════════════════════════════════════════════════════════
+  // STEP 3 — FIX LOGIKA:
+  //   hasExisting=true  → ambil langsung dari sheet KTM
+  //   hasExisting=false → tanggal baru, load dari Jemaat
+  // ═══════════════════════════════════════════════════════════
+  if (hasExisting) {
+    // ★ Data sudah ada → langsung dari server, TANPA fetch Jemaat
+    const masterFromServer = {};
+    dataUntukTgl.forEach(row => {
+      const ef = (row.no_efataid || '').trim();
+      if (!ef) return;
+      if (masterFromServer[ef]) return;
+      masterFromServer[ef] = {
+        no_efataid     : ef,
+        nama           : (row.nama || '').trim(),
+        nama_panggilan : '',
+        gender         : '',
+      };
+    });
+
+    // Jika jemaat sudah pernah dimuat sebelumnya, enrich data
+    // dan tambahkan jemaat KTM=y yang belum tercatat
+    if (db.Jemaat && db.Jemaat.length) {
+      const fieldKey = absenKTMState.jenis === 'KTM_Tahir' ? 'KTM Tahir' : 'KTM';
+      db.Jemaat.forEach(j => {
+        const ef = (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim();
+        if (!ef) return;
+        if (masterFromServer[ef]) {
+          masterFromServer[ef].nama_panggilan = (j['Nama Panggilan'] || '').trim();
+          masterFromServer[ef].gender = (j['Gender'] || '').trim();
+          const namaLengkap = (j['Nama Lengkap'] || '').trim();
+          if (namaLengkap) masterFromServer[ef].nama = namaLengkap;
+        }
+        const val = (j[fieldKey] || j[fieldKey.toLowerCase()] || '').trim().toLowerCase();
+        if (val === 'y' && !masterFromServer[ef]) {
+          masterFromServer[ef] = {
+            no_efataid     : ef,
+            nama           : (j['Nama Lengkap'] || j['Nama Panggilan'] || '-').trim(),
+            nama_panggilan : (j['Nama Panggilan'] || '').trim(),
+            gender         : (j['Gender'] || '').trim(),
+          };
+        }
+      });
+    }
+
+    absenKTMState.masterList = Object.values(masterFromServer);
+    console.log(`✅ KTM: Data ada untuk ${tgl} (${dataUntukTgl.length} record). Langsung dari sheet KTM.`);
+
+  } else {
+    // ★ Tanggal baru — Load master Jemaat (KTM=y atau KTM_Tahir=y)
+    const fieldKey = absenKTMState.jenis === 'KTM_Tahir' ? 'KTM Tahir' : 'KTM';
+    if (!db.Jemaat) {
+      await new Promise(r => Papa.parse(URLS.Jemaat, {
+        download: true, header: true,
+        complete: res => { db.Jemaat = res.data; r(); }
+      }));
+    }
+    const masterRaw = (db.Jemaat || []).filter(j => {
+      const val = (j[fieldKey] || j[fieldKey.toLowerCase()] || '').trim().toLowerCase();
+      return val === 'y';
+    });
+    absenKTMState.masterList = masterRaw.map(j => ({
+      no_efataid     : (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim(),
+      nama           : (j['Nama Lengkap'] || j['Nama Panggilan'] || '-').trim(),
+      nama_panggilan : (j['Nama Panggilan'] || '').trim(),
+      gender         : (j['Gender'] || '').trim(),
+    })).filter(j => j.no_efataid);
+    console.log(`📋 KTM: Tanggal baru ${tgl}, load dari Jemaat (${absenKTMState.masterList.length} orang).`);
   }
-  const masterRaw = (db.Jemaat || []).filter(j => {
-    const val = (j[fieldKey] || j[fieldKey.toLowerCase()] || '').trim().toLowerCase();
-    return val === 'y';
-  });
-  absenKTMState.masterList = masterRaw.map(j => ({
-    no_efataid     : (j['No_EfataID'] || j['no_EfataID'] || j['no_Efataid'] || '').trim(),
-    nama           : (j['Nama Lengkap'] || j['Nama Panggilan'] || '-').trim(),
-    nama_panggilan : (j['Nama Panggilan'] || '').trim(),
-    gender         : (j['Gender'] || '').trim(),
-  })).filter(j => j.no_efataid);
 
   absenKTMState.sudahLoad   = true;
   absenKTMState.searchQuery = '';
 
-  // Tampilkan toolbar & summary
   const toolbar = document.getElementById('absen-toolbar');
   if (toolbar) toolbar.style.display = 'block';
   const summary = document.getElementById('absen-summary');
   if (summary) summary.style.display = 'block';
 
-  // Notifikasi jika ada data existing
   if (hasExisting && wrap) {
     const notif = document.createElement('div');
     notif.style.cssText = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.8rem;color:var(--green);';
-    notif.innerHTML = `✅ <strong>Data Dimuat:</strong> ${dataUntukTgl.length} record`
-      + ` pada tanggal ${formatTglDisplay(tgl)} berhasil dimuat dari server.`
+    notif.innerHTML = `✅ <strong>Data Dimuat Langsung:</strong> ${dataUntukTgl.length} record`
+      + ` pada tanggal ${formatTglDisplay(tgl)} dari sheet KTM.`
       + ` ${absenKTMState.tamuList.length > 0 ? `(${absenKTMState.tamuList.length} tamu)` : ''}`;
     const toolbarEl = document.getElementById('absen-toolbar');
     if (toolbarEl?.parentNode) toolbarEl.parentNode.insertBefore(notif, toolbarEl);
@@ -6408,27 +6456,29 @@ function getJemaatLookup() {
   const efaVariants = ['no_EfataID','No_EfataID','no_efataid','No_Efataid','no_Efataid','No EfataID','no efataid','EfataID','efataid'];
   const alamatVariants = ['Alamat','alamat','ALAMAT','alamat lengkap','Alamat Lengkap','Address','address'];
   const telpVariants = ['No_HP','no_hp','No HP','no hp','Telepon','telepon','Telpon','telpon','HP','hp','Phone','phone','No Telepon','no_telepon','No_Telepon','Nomor HP','nomor_hp'];
-  const namaVariants = ['Nama Lengkap','nama lengkap','Nama Panggilan','nama panggilan'];
+  const namaLengkapVariants = ['Nama Lengkap','nama lengkap','NAMA LENGKAP','Nama_Lengkap'];
+  const namaPanggilanVariants = ['Nama Panggilan','nama panggilan','NAMA PANGGILAN','Nama_Panggilan'];
 
   jemaat.forEach(j => {
-    // Cari kolom EfataID
     let efataId = '';
     for (const v of efaVariants) { if (j[v]) { efataId = String(j[v]).trim(); break; } }
     if (!efataId) return;
 
-    // Cari kolom Alamat
     let alamat = '';
     for (const v of alamatVariants) { if (j[v]) { alamat = String(j[v]).trim(); break; } }
 
-    // Cari kolom Telpon
     let telpon = '';
     for (const v of telpVariants) { if (j[v]) { telpon = String(j[v]).trim(); break; } }
 
-    // Cari Nama
-    let nama = '';
-    for (const v of namaVariants) { if (j[v]) { nama = String(j[v]).trim(); break; } }
+    let nama_lengkap = '';
+    for (const v of namaLengkapVariants) { if (j[v]) { nama_lengkap = String(j[v]).trim(); break; } }
 
-    map[efataId.toLowerCase()] = { alamat, telpon, nama };
+    let nama_panggilan = '';
+    for (const v of namaPanggilanVariants) { if (j[v]) { nama_panggilan = String(j[v]).trim(); break; } }
+
+    const nama = nama_lengkap || nama_panggilan || '';
+
+    map[efataId.toLowerCase()] = { alamat, telpon, nama, nama_lengkap, nama_panggilan };
   });
 
   _jemaatLookupCache = map;
@@ -6641,6 +6691,8 @@ function renderLaporanAbsensi() {
           class="view-toggle-btn${av === 'weekly' ? ' active' : ''}">📅 52 Minggu</button>
         <button onclick="lapSetView('perperson')" id="lap-vbtn-perperson"
           class="view-toggle-btn${av === 'perperson' ? ' active' : ''}">👤 Per Orang</button>
+        <button onclick="lapSetView('searchperson')" id="lap-vbtn-searchperson"
+          class="view-toggle-btn${av === 'searchperson' ? ' active' : ''}">🔍 Cari Orang</button>
         ` : ''}
       </div>
  
@@ -6805,8 +6857,7 @@ async function lapAutoShowCGMButtons() {
 function lapSetView(view) {
   laporanAbsenState.activeView = view;
   lapRenderCurrentData();
-  // Update toggle buttons
-  ['summary', 'weekly', 'perperson'].forEach(v => {
+  ['summary', 'weekly', 'perperson', 'searchperson'].forEach(v => {
     const btn = document.getElementById('lap-vbtn-' + v);
     if (btn) btn.classList.toggle('active', v === view);
   });
@@ -7564,6 +7615,7 @@ function lapRenderCurrentData() {
     switch (laporanAbsenState.activeView) {
       case 'weekly': lapRenderWeekly(el, data, 'KTM'); break;
       case 'perperson': lapRenderPerPerson(el, data, 'KTM'); break;
+      case 'searchperson': lapRenderSearchPerson(el, data, 'KTM'); break;
       default: lapRenderSummaryKTM(el, data); break;
     }
   } else if (laporanAbsenState.activeTab === 'anak') {
@@ -7577,6 +7629,7 @@ function lapRenderCurrentData() {
     switch (laporanAbsenState.activeView) {
       case 'weekly': lapRenderWeekly(el, data, 'Sidang'); break;
       case 'perperson': lapRenderPerPerson(el, data, 'Sidang'); break;
+      case 'searchperson': lapRenderSearchPerson(el, data, 'Sidang'); break;
       default: lapRenderSummarySidang(el, data); break;
     }
   }
@@ -12458,6 +12511,428 @@ if (!db.Jemaat && typeof URLS !== 'undefined' && URLS.Jemaat && !URLS.Jemaat.inc
 }
 
 console.log('✅ PATCH v4 loaded: Export Anak/CGM, Autocomplete Jemaat, Cache-bust fix');
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH: CARI PER ORANG — Laporan Sidang & KTM              ║
+// ║  Fungsi pencarian kehadiran per orang + export              ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── STATE CARI PER ORANG ────────────────────────────────────
+let _searchPersonQuery = '';
+let _searchPersonResults = [];
+let _searchPersonTeks = '';
+
+// ── RENDER SEARCH PERSON VIEW ───────────────────────────────
+function lapRenderSearchPerson(el, data, tipe) {
+  if (!bolehLihatPerNama()) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔒</div>
+      <p>Hanya Penatua, Gembala Distrik, dan Administrator.</p></div>`;
+    return;
+  }
+
+  const qVal = escHtml(_searchPersonQuery || '');
+
+  let html = `
+    <div style="background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text3);margin-bottom:10px;
+        text-transform:uppercase;letter-spacing:.8px;">
+        🔍 Cari Kehadiran Per Orang — ${tipe}
+      </div>
+      <div style="font-size:.68rem;color:var(--text3);margin-bottom:8px;">
+        Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <input type="text" id="search-person-input" class="k-input"
+          placeholder="Ketik nama orang..." value="${qVal}"
+          style="flex:1;" oninput="_searchPersonDebounce(this.value,'${tipe}')"
+          onkeydown="if(event.key==='Enter')lapDoSearchPerson('${tipe}')">
+        <button onclick="lapDoSearchPerson('${tipe}')" class="btn-action accent"
+          style="padding:8px 16px;font-weight:700;">🔍 Cari</button>
+      </div>
+      <div id="search-person-result"></div>
+    </div>`;
+
+  el.innerHTML = html;
+
+  // Jika sudah ada query sebelumnya, langsung cari
+  if (_searchPersonQuery) {
+    setTimeout(() => lapDoSearchPerson(tipe), 100);
+  }
+}
+
+// ── DEBOUNCE ────────────────────────────────────────────────
+let _spDebounceTimer = null;
+function _searchPersonDebounce(val, tipe) {
+  _searchPersonQuery = val;
+  clearTimeout(_spDebounceTimer);
+  _spDebounceTimer = setTimeout(() => {
+    if (val.length >= 2) lapDoSearchPerson(tipe);
+  }, 400);
+}
+
+// ── EKSEKUSI PENCARIAN ──────────────────────────────────────
+function lapDoSearchPerson(tipe) {
+  const input = document.getElementById('search-person-input');
+  const query = (input?.value || _searchPersonQuery || '').trim().toLowerCase();
+  _searchPersonQuery = input?.value || _searchPersonQuery || '';
+
+  const resultEl = document.getElementById('search-person-result');
+  if (!resultEl) return;
+
+  if (!query || query.length < 2) {
+    resultEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:.8rem;">
+      Ketik minimal 2 huruf untuk mencari.</div>`;
+    return;
+  }
+
+  const data = tipe === 'KTM' ? laporanAbsenState.dataKTM : laporanAbsenState.dataSidang;
+  if (!data) {
+    resultEl.innerHTML = `<div class="empty-state"><div class="icon">📭</div>
+      <p>Data belum dimuat. Klik "Tampilkan Laporan" dulu.</p></div>`;
+    return;
+  }
+
+  const jemaatMap = getJemaatLookup();
+  const results = [];
+
+  Object.entries(data).forEach(([jenisSidang, sd]) => {
+    const orang = sd.orang || [];
+    orang.forEach(o => {
+      const nama = (o.nama || '').toLowerCase();
+      const efaId = (o.no_efataid || '').toLowerCase();
+
+      const jInfo = lookupJemaat(o.no_efataid, o.nama);
+      const namaLengkap = jInfo.nama_lengkap || o.nama || '';
+      const namaPanggilan = jInfo.nama_panggilan || '';
+
+      const cocok = nama.includes(query)
+        || namaLengkap.toLowerCase().includes(query)
+        || namaPanggilan.toLowerCase().includes(query)
+        || efaId.includes(query);
+
+      if (!cocok) return;
+
+      (o.hadir_tanggal || []).forEach(tgl => {
+        results.push({
+          tanggal: tgl,
+          jenis_sidang: jenisSidang,
+          nama_lengkap: namaLengkap,
+          nama_panggilan: namaPanggilan,
+          no_efataid: o.no_efataid || '',
+          kategori: o.kategori || '',
+          sub_gugus: o.sub_gugus || '',
+        });
+      });
+    });
+  });
+
+  // Sort by tanggal ascending
+  results.sort((a, b) => {
+    const pa = a.tanggal.split('/'), pb = b.tanggal.split('/');
+    return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+  });
+
+  _searchPersonResults = results;
+
+  if (!results.length) {
+    resultEl.innerHTML = `<div style="text-align:center;padding:20px;">
+      <div style="font-size:1.5rem;margin-bottom:6px;">🔍</div>
+      <div style="color:var(--text3);font-size:.82rem;">
+        Tidak ditemukan kehadiran untuk "<strong>${escHtml(_searchPersonQuery)}</strong>"
+        dalam rentang tanggal ini.
+      </div></div>`;
+    _searchPersonTeks = '';
+    return;
+  }
+
+  // Build teks laporan
+  const teksLines = [
+    `LAPORAN KEHADIRAN PER ORANG — ${tipe}`,
+    `Pencarian: "${_searchPersonQuery}"`,
+    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
+    `Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username || '-'}`,
+    `Total: ${results.length} record`,
+    '',
+    'Tanggal | Nama Sidang | Nama Lengkap | Nama Panggilan | No EfataID',
+    '-'.repeat(80),
+  ];
+
+  // Group by person
+  const personSummary = {};
+  results.forEach(r => {
+    const key = r.no_efataid || r.nama_lengkap;
+    if (!personSummary[key]) {
+      personSummary[key] = {
+        nama_lengkap: r.nama_lengkap,
+        nama_panggilan: r.nama_panggilan,
+        no_efataid: r.no_efataid,
+        sidang: {}
+      };
+    }
+    if (!personSummary[key].sidang[r.jenis_sidang]) {
+      personSummary[key].sidang[r.jenis_sidang] = [];
+    }
+    personSummary[key].sidang[r.jenis_sidang].push(r.tanggal);
+  });
+
+  // Build HTML — tampilan ke bawah per orang
+  let html = `
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+      <button onclick="spExportCopy()" class="btn-action green" style="font-size:.72rem;padding:6px 12px;">
+        📋 Copy Teks</button>
+      <button onclick="spExportExcel('${tipe}')" class="btn-action" style="font-size:.72rem;padding:6px 12px;">
+        📗 Excel</button>
+      <button onclick="spExportPDF('${tipe}')" class="btn-action" style="font-size:.72rem;padding:6px 12px;">
+        📄 PDF</button>
+      <span style="font-size:.7rem;color:var(--text3);align-self:center;margin-left:auto;">
+        ${results.length} record ditemukan
+      </span>
+    </div>`;
+
+  // Render per orang
+  Object.values(personSummary).forEach(person => {
+    html += `
+      <div style="background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="font-weight:700;font-size:.88rem;color:var(--text);">
+            👤 ${escHtml(person.nama_lengkap)}
+          </div>
+          ${person.nama_panggilan ? `<span class="tag" style="font-size:.62rem;">
+            ${escHtml(person.nama_panggilan)}</span>` : ''}
+          ${person.no_efataid ? `<span class="tag purple" style="font-size:.6rem;font-family:'JetBrains Mono',monospace;">
+            ${escHtml(person.no_efataid)}</span>` : ''}
+        </div>`;
+
+    Object.entries(person.sidang).sort().forEach(([jenis, tanggalList]) => {
+      const sortedTgl = tanggalList.slice().sort((a, b) => {
+        const pa = a.split('/'), pb = b.split('/');
+        return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+      });
+
+      html += `
+        <div style="margin-bottom:6px;">
+          <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:3px;">
+            ${tipe === 'KTM' ? '📋' : '⛪'} ${escHtml(jenis)}
+            <span style="color:var(--green);font-family:'JetBrains Mono',monospace;margin-left:4px;">
+              (${sortedTgl.length}×)</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+
+      sortedTgl.forEach(tgl => {
+        html += `<span style="font-size:.68rem;padding:3px 8px;border-radius:6px;
+          background:rgba(16,185,129,.1);color:var(--green);font-weight:500;
+          border:1px solid rgba(16,185,129,.2);">
+          ${escHtml(formatTglDisplay(tgl))}</span>`;
+      });
+
+      html += `</div></div>`;
+
+      teksLines.push(`${person.nama_lengkap} | ${person.nama_panggilan} | ${person.no_efataid}`);
+      teksLines.push(`  ${jenis}: ${sortedTgl.map(t => formatTglDisplay(t)).join(', ')}`);
+    });
+
+    html += `</div>`;
+    teksLines.push('');
+  });
+
+  // Tabel detail lengkap
+  html += `
+    <div style="margin-top:10px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;
+        text-transform:uppercase;letter-spacing:.6px;">
+        📋 Detail Lengkap (${results.length} record)
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:500px;">
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">No</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">Tanggal</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">Nama Sidang</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">Nama Lengkap</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">Nama Panggilan</th>
+            <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
+              font-size:.6rem;color:var(--text3);">No EfataID</th>
+          </tr></thead><tbody>`;
+
+  results.forEach((r, idx) => {
+    const bg = idx % 2 === 0 ? '' : 'background:var(--surface2);';
+    html += `<tr style="${bg}border-bottom:1px solid var(--border);">
+      <td style="padding:4px 7px;color:var(--text3);font-size:.65rem;">${idx + 1}</td>
+      <td style="padding:4px 7px;font-weight:500;">${escHtml(formatTglDisplay(r.tanggal))}</td>
+      <td style="padding:4px 7px;color:var(--accent);">${escHtml(r.jenis_sidang)}</td>
+      <td style="padding:4px 7px;">${escHtml(r.nama_lengkap)}</td>
+      <td style="padding:4px 7px;color:var(--text2);">${escHtml(r.nama_panggilan)}</td>
+      <td style="padding:4px 7px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--accent3);">
+        ${escHtml(r.no_efataid)}</td>
+    </tr>`;
+
+    teksLines.push(`${formatTglDisplay(r.tanggal)} | ${r.jenis_sidang} | ${r.nama_lengkap} | ${r.nama_panggilan} | ${r.no_efataid}`);
+  });
+
+  html += `</tbody></table></div></div>`;
+
+  _searchPersonTeks = teksLines.join('\n');
+  resultEl.innerHTML = html;
+}
+
+// ── EXPORT: COPY TEKS ──────────────────────────────────────
+function spExportCopy() {
+  if (!_searchPersonTeks) return toast('⚠️ Tidak ada data. Cari orang dulu.');
+  navigator.clipboard.writeText(_searchPersonTeks)
+    .then(() => toast('✅ Laporan per orang disalin ke clipboard!'));
+}
+
+// ── EXPORT: EXCEL ──────────────────────────────────────────
+function spExportExcel(tipe) {
+  if (!_searchPersonResults.length) return toast('⚠️ Tidak ada data.');
+
+  if (typeof XLSX === 'undefined') {
+    toast('⏳ Memuat pustaka Excel...');
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => _spGenerateExcel(tipe);
+    s.onerror = () => toast('⚠️ Gagal memuat pustaka Excel.');
+    document.head.appendChild(s);
+    return;
+  }
+  _spGenerateExcel(tipe);
+}
+
+function _spGenerateExcel(tipe) {
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Detail lengkap
+    const headerRow = ['No', 'Tanggal', 'Nama Sidang', 'Nama Lengkap', 'Nama Panggilan', 'No EfataID'];
+    const rows = [headerRow];
+    _searchPersonResults.forEach((r, idx) => {
+      rows.push([
+        idx + 1,
+        formatTglDisplay(r.tanggal),
+        r.jenis_sidang,
+        r.nama_lengkap,
+        r.nama_panggilan,
+        r.no_efataid
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 18 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Detail');
+
+    // Sheet 2: Ringkasan per orang per sidang
+    const summaryRows = [['Nama Lengkap', 'Nama Panggilan', 'No EfataID', 'Jenis Sidang', 'Jumlah Hadir', 'Tanggal Hadir']];
+    const personMap = {};
+    _searchPersonResults.forEach(r => {
+      const key = r.no_efataid || r.nama_lengkap;
+      if (!personMap[key]) personMap[key] = { ...r, sidang: {} };
+      if (!personMap[key].sidang[r.jenis_sidang]) personMap[key].sidang[r.jenis_sidang] = [];
+      personMap[key].sidang[r.jenis_sidang].push(r.tanggal);
+    });
+
+    Object.values(personMap).forEach(p => {
+      Object.entries(p.sidang).forEach(([jenis, tglList]) => {
+        summaryRows.push([
+          p.nama_lengkap, p.nama_panggilan, p.no_efataid,
+          jenis, tglList.length,
+          tglList.map(t => formatTglDisplay(t)).join(', ')
+        ]);
+      });
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryRows);
+    ws2['!cols'] = [
+      { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 60 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+    const filename = `Cari_PerOrang_${tipe}_${(_searchPersonQuery||'all').replace(/\s+/g,'_')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast('✅ Excel berhasil diunduh!');
+  } catch (e) {
+    toast('⚠️ Gagal buat Excel: ' + e.message);
+  }
+}
+
+// ── EXPORT: PDF ────────────────────────────────────────────
+function spExportPDF(tipe) {
+  if (!_searchPersonResults.length) return toast('⚠️ Tidak ada data.');
+
+  let tableRows = '';
+  _searchPersonResults.forEach((r, idx) => {
+    tableRows += `<tr${idx % 2 === 1 ? ' style="background:#f9fafb;"' : ''}>
+      <td style="padding:3px 5px;text-align:center;font-size:7pt;">${idx + 1}</td>
+      <td style="padding:3px 5px;font-size:8pt;">${formatTglDisplay(r.tanggal)}</td>
+      <td style="padding:3px 5px;font-size:8pt;">${escHtml(r.jenis_sidang)}</td>
+      <td style="padding:3px 5px;font-size:8pt;font-weight:500;">${escHtml(r.nama_lengkap)}</td>
+      <td style="padding:3px 5px;font-size:8pt;">${escHtml(r.nama_panggilan)}</td>
+      <td style="padding:3px 5px;font-size:7pt;font-family:monospace;">${escHtml(r.no_efataid)}</td>
+    </tr>`;
+  });
+
+  const printContent = `<!DOCTYPE html>
+    <html><head><meta charset="UTF-8">
+    <title>Laporan Cari Per Orang — ${tipe}</title>
+    <style>
+      @media print {
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @page { size: landscape; margin: 8mm; }
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1e293b;
+        padding: 10px; background: #fff; }
+      table { border-collapse: collapse; width: 100%; page-break-inside: auto; }
+      th, td { border: 1px solid #ccc; padding: 3px 5px; font-size: 8pt; }
+      th { background: #f0f4f8; font-weight: 700; text-align: center; }
+      .print-btn { position: fixed; top: 10px; right: 10px; padding: 8px 16px; background: #1a56db;
+        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 10pt; z-index: 999; }
+      @media print { .print-btn { display: none; } }
+    </style>
+    </head><body>
+    <button class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+
+    <div style="text-align:center;margin-bottom:12px;">
+      <h2 style="font-size:14pt;margin-bottom:2px;">Laporan Kehadiran Per Orang — ${tipe}</h2>
+      <div style="font-size:8pt;color:#666;">
+        Pencarian: "${escHtml(_searchPersonQuery)}"<br>
+        Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}<br>
+        Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${escHtml(currentUser?.username || '-')}
+        · Total: ${_searchPersonResults.length} record
+      </div>
+    </div>
+
+    <table>
+      <thead><tr>
+        <th style="width:30px;">No</th>
+        <th style="text-align:left;">Tanggal</th>
+        <th style="text-align:left;">Nama Sidang</th>
+        <th style="text-align:left;">Nama Lengkap</th>
+        <th style="text-align:left;">Nama Panggilan</th>
+        <th style="text-align:left;">No EfataID</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    </body></html>`;
+
+  const printWin = window.open('', '_blank');
+  if (printWin) {
+    printWin.document.write(printContent);
+    printWin.document.close();
+  } else {
+    toast('⚠️ Popup diblokir. Izinkan popup untuk cetak PDF.');
+  }
+}
+
+console.log('✅ PATCH Cari Per Orang loaded — Sidang & KTM');
 </script>
 </body>
 </html>
