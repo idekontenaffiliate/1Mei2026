@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 25 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 125 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbyQK
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwVa4AvHbhVtMrHgjT-KGQKKWbn13_zYYvV2sGNCUyX-kM5ObWgJ3H-9XOCX48jd2tx/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbzJ6TwkXrR93rd4UPdqvlpW4G9geYRf7FaTie6bo4pXz0w3J--mL_BKcXHLnHy2rtJ3/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -6719,6 +6719,7 @@ async function loadLaporanAbsensi() {
       <button onclick="loadLaporanAbsensi()" class="btn-action accent" style="margin-top:10px;">🔄 Coba Lagi</button></div>`;
   }
 }
+
 function lapSetTab(tab) {
   laporanAbsenState.activeTab = tab;
   laporanAbsenState.activeView = 'summary';
@@ -6726,8 +6727,81 @@ function lapSetTab(tab) {
   laporanAbsenState.dataKTM = null;
   laporanAbsenState.dataAnak = null;
   renderLaporanAbsensi();
+ 
+  // ★ AUTO-SHOW: Untuk tab anak & CGM, langsung tampilkan tombol sub-view
+  if (tab === 'anak') {
+    setTimeout(() => lapAutoShowAnakButtons(), 100);
+  }
+  if (tab === 'cgm') {
+    setTimeout(() => lapAutoShowCGMButtons(), 100);
+  }
+}
+
+// ★ AUTO-SHOW ANAK: Load kelas saja (cepat), langsung tampilkan tombol
+async function lapAutoShowAnakButtons() {
+  const tahun = document.getElementById('lap-tahun-anak')?.value || String(new Date().getFullYear());
+  laporanAbsenState.tahun = parseInt(tahun);
+ 
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+  el.innerHTML = '<div class="loading-shimmer"></div>';
+ 
+  try {
+    // Hanya load kelas (ringan & cepat)
+    const respKelas = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&tahun=' + tahun);
+    const resultKelas = await respKelas.json();
+ 
+    laporanAbsenState.dataAnak = {
+      summary: [],
+      prestasi: [],
+      setting_hadiah: [],
+      total_hadiah_rp: 0,
+      kelas: resultKelas.data || [],
+      tahun: tahun,
+      _activeSubView: 'ketidakhadiran', // ★ Default langsung ke ketidakhadiran
+    };
+ 
+    const vb = document.getElementById('lap-view-bar');
+    if (vb) vb.style.display = 'none';
+    lapRenderAnakReport(el, laporanAbsenState.dataAnak);
+ 
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+      <p>Gagal memuat kelas: ${escHtml(e.message)}</p></div>`;
+  }
 }
  
+// ★ AUTO-SHOW CGM: Load lokasi saja (cepat), langsung tampilkan tombol
+async function lapAutoShowCGMButtons() {
+  const tahun = document.getElementById('lap-tahun-anak')?.value || String(new Date().getFullYear());
+  laporanAbsenState.tahun = parseInt(tahun) || new Date().getFullYear();
+ 
+  const el = document.getElementById('laporan-result');
+  if (!el) return;
+  el.innerHTML = '<div class="loading-shimmer"></div>';
+ 
+  try {
+    const respK = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&jenis=cgm');
+    const resK = await respK.json();
+ 
+    laporanAbsenState.dataCGM = {
+      prestasi: [],
+      setting_hadiah: [],
+      total_hadiah_rp: 0,
+      lokasi: resK.data || [],
+      tahun: String(laporanAbsenState.tahun),
+      _activeSubView: 'search', // ★ Default ke cari anak
+    };
+ 
+    const vb = document.getElementById('lap-view-bar');
+    if (vb) vb.style.display = 'none';
+    patchRenderCGMReport(el, laporanAbsenState.dataCGM);
+ 
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>
+      <p>Gagal memuat lokasi CGM: ${escHtml(e.message)}</p></div>`;
+  }
+}   
 function lapSetView(view) {
   laporanAbsenState.activeView = view;
   lapRenderCurrentData();
@@ -6958,10 +7032,60 @@ function lapRenderAnakReport(el, data) {
     lapAnakRenderSummary(subEl, data);
   }
 }
-
-function lapAnakSetSubView(view) {
+ 
+// ★ LAZY-LOAD: Jika user klik Summary/Weekly/Search dan data poin
+//   belum ada isinya, load dulu baru render. 
+//   Ketidakhadiran load sendiri via lapAnakLoadKetidakhadiran().
+async function lapAnakSetSubView(view) {
   const data = laporanAbsenState.dataAnak;
   if (!data) return;
+ 
+  // Cek: apakah sub-view ini butuh data poin & data belum terisi?
+  const needsFullData = (view === 'summary' || view === 'weekly' || view === 'search');
+  const hasData = data.prestasi && data.prestasi.length > 0;
+ 
+  if (needsFullData && !hasData) {
+    // Tampilkan loading di sub-view area (tombol tetap terlihat)
+    const el = document.getElementById('laporan-result');
+    if (!el) return;
+    data._activeSubView = view;
+ 
+    // Render tombol-tombol dulu, loading di subview
+    lapRenderAnakReport(el, data);
+    const subEl = document.getElementById('lap-anak-subview');
+    if (subEl) subEl.innerHTML = '<div class="loading-shimmer"></div>' +
+      '<div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">' +
+      '⏳ Memuat data poin anak...</div>';
+ 
+    try {
+      const tahun = data.tahun || String(new Date().getFullYear());
+      await ensureJemaatLoaded();
+ 
+      // Load poin summary
+      const respSum = await fetch(APPS_SCRIPT_KELAS + '?action=get_poin_summary&tahun=' + tahun);
+      const resultSum = await respSum.json();
+ 
+      // Load prestasi
+      const respPres = await fetch(APPS_SCRIPT_KELAS + '?action=get_prestasi_anak&tahun=' + tahun);
+      const resultPres = await respPres.json();
+ 
+      // Update data
+      data.summary = resultSum.data || [];
+      data.prestasi = resultPres.data || [];
+      data.setting_hadiah = resultPres.setting_hadiah || [];
+      data.total_hadiah_rp = resultPres.total_hadiah_rp || 0;
+ 
+      // Re-render dengan data lengkap
+      lapRenderAnakReport(el, data);
+ 
+    } catch(e) {
+      if (subEl) subEl.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>' +
+        '<p>Gagal memuat data poin: ' + escHtml(e.message) + '</p></div>';
+    }
+    return;
+  }
+ 
+  // Data sudah ada atau tidak perlu (ketidakhadiran) → langsung render
   data._activeSubView = view;
   const el = document.getElementById('laporan-result');
   if (el) lapRenderAnakReport(el, data);
@@ -7461,63 +7585,61 @@ function lapRenderCurrentData() {
 // ══════════════════════════════════════════════════════════════════════
 // VIEW 1: SUMMARY (Ringkasan Count per Tanggal)
 // ══════════════════════════════════════════════════════════════════════
+
 function lapRenderSummarySidang(el, data) {
   let html = '';
-  let grandTotal = 0, grandEfata = 0, grandAnak = 0, grandTamu = 0;
+ 
+  // ★ UNIQUE COUNT: Kumpulkan orang unik lintas semua jenis sidang
+  const uniqueEfata = new Set();
+  const uniqueAnak = new Set();
+  const uniqueTamu = new Set();
+ 
   const teksLines = [
-    `LAPORAN ABSENSI SIDANG — SUMMARY`,
-    `Periode: ${formatTglDisplay(laporanAbsenState.tglAwal)} — ${formatTglDisplay(laporanAbsenState.tglAkhir)}`,
-    `Dicetak: ${new Date().toLocaleString('id-ID')} oleh ${currentUser?.username || '-'}`,
+    'LAPORAN ABSENSI SIDANG — SUMMARY',
+    'Periode: ' + formatTglDisplay(laporanAbsenState.tglAwal) + ' — ' + formatTglDisplay(laporanAbsenState.tglAkhir),
+    'Dicetak: ' + new Date().toLocaleString('id-ID') + ' oleh ' + (currentUser?.username || '-'),
     ''
   ];
  
-  Object.entries(data).sort().forEach(([jenis, sd]) => {
-    const sortedTgl = sd.tanggal_list.slice().sort((a, b) => {
-      const pa = a.split('/'), pb = b.split('/');
-      return new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+  Object.entries(data).sort().forEach(function([jenis, sd]) {
+    var sortedTgl = sd.tanggal_list.slice().sort(function(a, b) {
+      var pa = a.split('/'), pb = b.split('/');
+      return new Date(pa[2]+'-'+pa[1]+'-'+pa[0]) - new Date(pb[2]+'-'+pb[1]+'-'+pb[0]);
     });
  
-    // Hitung per-gugus jika Gugus
-    const hasGugus = (sd.sub_gugus_list || []).length > 0;
-    let jenisTotal = 0, jenisEfata = 0, jenisAnak = 0, jenisTamu = 0;
+    var hasGugus = (sd.sub_gugus_list || []).length > 0;
+    var jenisTotal = 0, jenisEfata = 0, jenisAnak = 0, jenisTamu = 0;
  
-    teksLines.push(`▸ ${jenis}`);
+    teksLines.push('▸ ' + jenis);
  
-    html += `<div style="background:var(--surface);border:1px solid var(--border);
-      border-radius:var(--radius);padding:14px;margin-bottom:10px;">
-      <div style="font-weight:700;font-size:.92rem;margin-bottom:8px;">⛪ ${escHtml(jenis)}</div>`;
+    html += '<div style="background:var(--surface);border:1px solid var(--border);' +
+      'border-radius:var(--radius);padding:14px;margin-bottom:10px;">' +
+      '<div style="font-weight:700;font-size:.92rem;margin-bottom:8px;">⛪ ' + escHtml(jenis) + '</div>';
  
-    // Sub-header gugus jika ada
     if (hasGugus && jenis === 'Gugus') {
-      html += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
-        ${sd.sub_gugus_list.map(g => `<span class="tag yellow" style="font-size:.65rem;">${escHtml(g)}</span>`).join('')}
-      </div>`;
+      html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">' +
+        sd.sub_gugus_list.map(function(g) { return '<span class="tag yellow" style="font-size:.65rem;">' + escHtml(g) + '</span>'; }).join('') +
+        '</div>';
     }
  
-    html += `<div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:400px;">
-        <thead><tr style="background:var(--surface2);">
-          <th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);
-            font-size:.6rem;color:var(--text3);">Tanggal</th>
-          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
-            font-size:.6rem;color:var(--accent);">EfataID</th>
-          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
-            font-size:.6rem;color:var(--accent3);">Anak</th>
-          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
-            font-size:.6rem;color:var(--yellow);">Tamu</th>
-          <th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);
-            font-size:.6rem;color:var(--green);">Total</th>
-        </tr></thead><tbody>`;
+    html += '<div style="overflow-x:auto;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:400px;">' +
+      '<thead><tr style="background:var(--surface2);">' +
+      '<th style="padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--text3);">Tanggal</th>' +
+      '<th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--accent);">EfataID</th>' +
+      '<th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--accent3);">Anak</th>' +
+      '<th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--yellow);">Tamu</th>' +
+      '<th style="padding:5px 7px;text-align:center;border-bottom:1px solid var(--border);font-size:.6rem;color:var(--green);">Total</th>' +
+      '</tr></thead><tbody>';
  
-    sortedTgl.forEach(tgl => {
-      const s = sd.summary_per_tgl?.[tgl] || { efata: 0, anak: 0, tamu: 0, total: 0 };
-      // Kalau summary_per_tgl kosong, hitung dari orang
-      let ef = s.efata, an = s.anak, tm = s.tamu, tot = s.total;
+    sortedTgl.forEach(function(tgl) {
+      var s = sd.summary_per_tgl?.[tgl] || { efata: 0, anak: 0, tamu: 0, total: 0 };
+      var ef = s.efata, an = s.anak, tm = s.tamu, tot = s.total;
       if (!tot && sd.orang) {
-        sd.orang.forEach(o => {
+        sd.orang.forEach(function(o) {
           if (o.hadir_tanggal.includes(tgl)) {
             tot++;
-            const kat = (o.kategori || '').toLowerCase();
+            var kat = (o.kategori || '').toLowerCase();
             if (kat === 'anak') an++;
             else if (kat === 'tamu' || kat === 'tamu luar' || (!o.no_efataid && kat !== 'anak')) tm++;
             else ef++;
@@ -7525,51 +7647,81 @@ function lapRenderSummarySidang(el, data) {
         });
       }
       jenisTotal += tot; jenisEfata += ef; jenisAnak += an; jenisTamu += tm;
-      teksLines.push(`  ${formatTglDisplay(tgl)}: Total ${tot} (EfataID ${ef}, Anak ${an}, Tamu ${tm})`);
-      html += `<tr style="border-bottom:1px solid var(--border);">
-        <td style="padding:4px 7px;font-weight:500;">${escHtml(formatTglDisplay(tgl))}</td>
-        <td style="padding:4px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${ef}</td>
-        <td style="padding:4px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${an}</td>
-        <td style="padding:4px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${tm}</td>
-        <td style="padding:4px 7px;text-align:center;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;">${tot}</td>
-      </tr>`;
+      teksLines.push('  ' + formatTglDisplay(tgl) + ': Total ' + tot + ' (EfataID ' + ef + ', Anak ' + an + ', Tamu ' + tm + ')');
+      html += '<tr style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:4px 7px;font-weight:500;">' + escHtml(formatTglDisplay(tgl)) + '</td>' +
+        '<td style="padding:4px 7px;text-align:center;color:var(--accent);font-family:\'JetBrains Mono\',monospace;">' + ef + '</td>' +
+        '<td style="padding:4px 7px;text-align:center;color:var(--accent3);font-family:\'JetBrains Mono\',monospace;">' + an + '</td>' +
+        '<td style="padding:4px 7px;text-align:center;color:var(--yellow);font-family:\'JetBrains Mono\',monospace;">' + tm + '</td>' +
+        '<td style="padding:4px 7px;text-align:center;color:var(--green);font-weight:700;font-family:\'JetBrains Mono\',monospace;">' + tot + '</td>' +
+        '</tr>';
     });
  
-    grandTotal += jenisTotal; grandEfata += jenisEfata; grandAnak += jenisAnak; grandTamu += jenisTamu;
-    teksLines.push(`  TOTAL ${jenis}: ${jenisTotal} (EfataID ${jenisEfata}, Anak ${jenisAnak}, Tamu ${jenisTamu})`, '');
+    teksLines.push('  TOTAL ' + jenis + ': ' + jenisTotal + ' (EfataID ' + jenisEfata + ', Anak ' + jenisAnak + ', Tamu ' + jenisTamu + ')', '');
  
-    html += `<tr style="background:var(--surface2);font-weight:700;">
-      <td style="padding:5px 7px;">TOTAL</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--accent);font-family:'JetBrains Mono',monospace;">${jenisEfata}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--accent3);font-family:'JetBrains Mono',monospace;">${jenisAnak}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--yellow);font-family:'JetBrains Mono',monospace;">${jenisTamu}</td>
-      <td style="padding:5px 7px;text-align:center;color:var(--green);font-family:'JetBrains Mono',monospace;">${jenisTotal}</td>
-    </tr></tbody></table></div></div>`;
+    html += '<tr style="background:var(--surface2);font-weight:700;">' +
+      '<td style="padding:5px 7px;">TOTAL</td>' +
+      '<td style="padding:5px 7px;text-align:center;color:var(--accent);font-family:\'JetBrains Mono\',monospace;">' + jenisEfata + '</td>' +
+      '<td style="padding:5px 7px;text-align:center;color:var(--accent3);font-family:\'JetBrains Mono\',monospace;">' + jenisAnak + '</td>' +
+      '<td style="padding:5px 7px;text-align:center;color:var(--yellow);font-family:\'JetBrains Mono\',monospace;">' + jenisTamu + '</td>' +
+      '<td style="padding:5px 7px;text-align:center;color:var(--green);font-family:\'JetBrains Mono\',monospace;">' + jenisTotal + '</td>' +
+      '</tr></tbody></table></div></div>';
+ 
+    // ★ KUMPULKAN ORANG UNIK dari jenis sidang ini
+    if (sd.orang) {
+      sd.orang.forEach(function(o) {
+        // Hanya hitung yang pernah hadir minimal 1x
+        if (!o.hadir_tanggal || !o.hadir_tanggal.length) return;
+        var ef = (o.no_efataid || '').trim();
+        var nm = (o.nama || '').trim();
+        var key = ef ? 'EF:' + ef.toLowerCase() : 'NM:' + nm.toLowerCase();
+        var kat = (o.kategori || '').toLowerCase();
+ 
+        if (kat === 'anak') {
+          uniqueAnak.add(key);
+        } else if (kat === 'tamu' || kat === 'tamu luar' || (!ef && kat !== 'anak')) {
+          uniqueTamu.add(key);
+        } else {
+          uniqueEfata.add(key);
+        }
+      });
+    }
   });
  
-  // Grand total card
-  const grandHtml = `
-    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);
-      padding:14px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-size:.78rem;font-weight:700;color:var(--text3);">
-          🏆 GRAND TOTAL — ${escHtml(formatTglDisplay(laporanAbsenState.tglAwal))} s/d ${escHtml(formatTglDisplay(laporanAbsenState.tglAkhir))}
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
-        ${[[grandTotal, 'Total', 'var(--green)', 'rgba(16,185,129,.1)'],
-          [grandEfata, 'EfataID', 'var(--accent)', 'rgba(59,130,246,.1)'],
-          [grandAnak, 'Anak', 'var(--accent3)', 'rgba(139,92,246,.1)'],
-          [grandTamu, 'Tamu', 'var(--yellow)', 'rgba(245,158,11,.1)'],
-        ].map(([v, l, c, bg]) => `
-          <div style="background:${bg};border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:${c};">${v}</div>
-            <div style="font-size:.58rem;color:${c};">${l}</div>
-          </div>`).join('')}
-      </div>
-    </div>`;
+  // ★ GRAND TOTAL = JUMLAH ORANG UNIK (tidak double-count)
+  var grandTotal = uniqueEfata.size + uniqueAnak.size + uniqueTamu.size;
+  var grandEfata = uniqueEfata.size;
+  var grandAnak = uniqueAnak.size;
+  var grandTamu = uniqueTamu.size;
  
-  teksLines.push(`GRAND TOTAL: ${grandTotal} (EfataID ${grandEfata}, Anak ${grandAnak}, Tamu ${grandTamu})`);
+  // Grand total card
+  var grandItems = [
+    [grandTotal, 'Total Unik', 'var(--green)', 'rgba(16,185,129,.1)'],
+    [grandEfata, 'EfataID', 'var(--accent)', 'rgba(59,130,246,.1)'],
+    [grandAnak, 'Anak', 'var(--accent3)', 'rgba(139,92,246,.1)'],
+    [grandTamu, 'Tamu', 'var(--yellow)', 'rgba(245,158,11,.1)']
+  ];
+  var grandBoxes = grandItems.map(function(item) {
+    return '<div style="background:' + item[3] + ';border-radius:8px;padding:8px;text-align:center;">' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.3rem;font-weight:700;color:' + item[2] + ';">' + item[0] + '</div>' +
+      '<div style="font-size:.58rem;color:' + item[2] + ';">' + item[1] + '</div>' +
+      '</div>';
+  }).join('');
+ 
+  var grandHtml = '<div style="background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);' +
+    'padding:14px;margin-bottom:12px;">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+    '<div style="font-size:.78rem;font-weight:700;color:var(--text3);">' +
+    '🏆 GRAND TOTAL (Unik) — ' + escHtml(formatTglDisplay(laporanAbsenState.tglAwal)) + ' s/d ' + escHtml(formatTglDisplay(laporanAbsenState.tglAkhir)) +
+    '</div></div>' +
+    '<div style="font-size:.62rem;color:var(--text3);margin-bottom:8px;font-style:italic;">' +
+    '* Dihitung per orang unik — jemaat yang hadir di beberapa sidang hanya dihitung 1×' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">' +
+    grandBoxes + '</div></div>';
+ 
+  teksLines.push('GRAND TOTAL (Unik): ' + grandTotal + ' orang (EfataID ' + grandEfata + ', Anak ' + grandAnak + ', Tamu ' + grandTamu + ')');
+  teksLines.push('* Dihitung per orang unik, tidak double-count lintas sidang');
   laporanAbsenState._teksLaporan = teksLines.join('\n');
  
   el.innerHTML = grandHtml + html;
@@ -11750,11 +11902,49 @@ function patchRenderCGMReport(el, data) {
   else patchCGMSummaryUI(sub, data);
 }
 
-function patchCGMSubView(v) {
-  const d = laporanAbsenState.dataCGM; if(!d) return;
+ 
+// ★ LAZY-LOAD CGM: Jika user klik Summary dan data prestasi belum 
+//   terisi, load dulu. Search sudah load sendiri.
+async function patchCGMSubView(v) {
+  const d = laporanAbsenState.dataCGM;
+  if (!d) return;
+ 
+  // Cek: klik Summary tapi data prestasi kosong → perlu load
+  if (v === 'summary' && (!d.prestasi || !d.prestasi.length)) {
+    const el = document.getElementById('laporan-result');
+    if (!el) return;
+    d._activeSubView = v;
+ 
+    // Render tombol dulu, loading di sub area
+    patchRenderCGMReport(el, d);
+    const sub = document.getElementById('lap-cgm-sub');
+    if (sub) sub.innerHTML = '<div class="loading-shimmer"></div>' +
+      '<div style="text-align:center;font-size:.78rem;color:var(--text3);padding:8px;">' +
+      '⏳ Memuat data prestasi CGM...</div>';
+ 
+    try {
+      const tahun = d.tahun || String(new Date().getFullYear());
+      const respP = await fetch(APPS_SCRIPT_KELAS + '?action=get_prestasi_cgm&tahun=' + tahun);
+      const resP = await respP.json();
+ 
+      d.prestasi = resP.data || [];
+      d.setting_hadiah = resP.setting_hadiah || [];
+      d.total_hadiah_rp = resP.total_hadiah_rp || 0;
+ 
+      const el2 = document.getElementById('laporan-result');
+      if (el2) patchRenderCGMReport(el2, d);
+ 
+    } catch(e) {
+      if (sub) sub.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>' +
+        '<p>Gagal: ' + escHtml(e.message) + '</p></div>';
+    }
+    return;
+  }
+ 
+  // Data sudah ada → langsung render
   d._activeSubView = v;
   const el = document.getElementById('laporan-result');
-  if(el) patchRenderCGMReport(el, d);
+  if (el) patchRenderCGMReport(el, d);
 }
 
 function patchCGMSummaryUI(el, data) {
