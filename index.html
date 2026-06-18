@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 18-07-2026 07:19 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 18-07-2026 09:06 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -14632,6 +14632,567 @@ function resetTamuState() {
 }
 
 console.log('✅ PATCH Tamu Management loaded — Distrik + Tamu Baru');
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PATCH: FIX DROPDOWN Z-INDEX, KOLOM AKSI DI DEPAN,          ║
+// ║  ENHANCED NAME SEARCH ANAK + CGM                            ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── 1. FIX toggleAnakMenu: gunakan position:fixed agar tidak terpotong overflow ──
+toggleAnakMenu = function(id) {
+  hideAllMenus();
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // Cari tombol ⋮ yang memicu dropdown
+  const btn = el.parentElement.querySelector('button[onclick*="toggleAnakMenu"]') || el.previousElementSibling;
+  if (!btn) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
+
+  const rect = btn.getBoundingClientRect();
+  const viewH = window.innerHeight;
+  const dropH = 200; // estimasi tinggi dropdown
+
+  // Set position:fixed agar keluar dari overflow container
+  el.style.position = 'fixed';
+  el.style.right = 'auto';
+  el.style.left = Math.max(8, Math.min(rect.left - 60, window.innerWidth - 160)) + 'px';
+  el.style.zIndex = '99999';
+  el.style.minWidth = '150px';
+
+  // Tampilkan ke atas atau ke bawah tergantung posisi di viewport
+  if (rect.top > dropH + 20) {
+    // Ada cukup ruang di atas — tampilkan ke atas
+    el.style.bottom = (viewH - rect.top + 4) + 'px';
+    el.style.top = 'auto';
+  } else {
+    // Tampilkan ke bawah
+    el.style.top = (rect.bottom + 4) + 'px';
+    el.style.bottom = 'auto';
+  }
+
+  el.style.display = 'block';
+};
+
+// ── 2. OVERRIDE renderAnakHistoryTable: kolom aksi di depan + enhanced name search ──
+renderAnakHistoryTable = function(wrap, rows) {
+  const page = absenAnakState.historyPage || 1;
+  const perPage = 10;
+
+  const fTgl = (absenAnakState._filterTgl || '').trim();
+  const fKelas = (absenAnakState._filterKelas || '').trim().toLowerCase();
+  const fNama = (absenAnakState._filterNama || '').trim().toLowerCase();
+  const uniqueKelas = [...new Set(rows.map(r => r.kelas))].sort();
+
+  // ★ FILTER BAR
+  const filterBarHtml = `
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📅 Tanggal</div>
+        <input type="date" id="anak-hist-filter-tgl" class="k-input" value="${fTgl}"
+          onchange="absenAnakState._filterTgl=this.value;absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">🏫 Kelas</div>
+        <select id="anak-hist-filter-kelas" class="k-input"
+          onchange="absenAnakState._filterKelas=this.value;absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+          <option value="">Semua</option>
+          ${uniqueKelas.map(k=>`<option value="${escHtml(k)}" ${fKelas===k.toLowerCase()?'selected':''}>${escHtml(k)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">🔍 Cari Nama Anak</div>
+        <input type="text" id="anak-hist-filter-nama" class="k-input" value="${escHtml(absenAnakState._filterNama||'')}"
+          placeholder="Ketik nama..."
+          oninput="absenAnakState._filterNama=this.value;absenAnakState.historyPage=1;clearTimeout(window._anakST);window._anakST=setTimeout(()=>renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData),400)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <button onclick="absenAnakState._filterTgl='';absenAnakState._filterKelas='';absenAnakState._filterNama='';absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)"
+        class="btn-action red" style="font-size:.65rem;padding:6px 10px;white-space:nowrap;">🗑 Reset</button>
+    </div>`;
+
+  // ★ NAME SEARCH MODE — enhanced dengan poin detail + edit button
+  if (fNama && fNama.length >= 2 && absenAnakState.historyOrang) {
+    const matchOrang = (absenAnakState.historyOrang||[]).filter(o => (o.nama||'').toLowerCase().includes(fNama));
+    let totalKehadiran = 0;
+    matchOrang.forEach(o => { totalKehadiran += (o.hadir_tanggal||[]).length; });
+
+    let sHtml = filterBarHtml;
+
+    // ★ TOTAL SUMMARY DI ATAS
+    sHtml += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div style="background:rgba(59,130,246,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent);">${matchOrang.length}</div>
+        <div style="font-size:.58rem;color:var(--accent);">Anak Ditemukan</div>
+      </div>
+      <div style="background:rgba(16,185,129,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--green);">${totalKehadiran}</div>
+        <div style="font-size:.58rem;color:var(--green);">Total Kehadiran</div>
+      </div>
+      <div style="background:rgba(139,92,246,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent3);">—</div>
+        <div style="font-size:.58rem;color:var(--accent3);">Poin (muat detail)</div>
+      </div>
+    </div>`;
+
+    // ★ Button untuk load poin detail dari backend
+    if (!absenAnakState._poinDetailLoaded) {
+      sHtml += `<div style="text-align:center;margin-bottom:10px;">
+        <button onclick="patchLoadAnakPoinDetail()" class="btn-action accent" style="font-size:.72rem;padding:7px 14px;">
+          📊 Muat Detail Poin Anak (Kehadiran + Hafalan)</button>
+        <div style="font-size:.6rem;color:var(--text3);margin-top:4px;">Klik untuk memuat data poin per tanggal dari sheet Poin Anak</div>
+      </div>`;
+    }
+
+    matchOrang.forEach(o => {
+      const hDates = (o.hadir_tanggal||[]).slice().sort().reverse();
+      // Cross-reference dengan poin detail jika sudah di-load
+      const poinDetail = absenAnakState._poinDetailData || [];
+      const oKey = (o.no_efataid || o.nama || '').toLowerCase().trim();
+
+      sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div>
+            <span style="font-size:.78rem;font-weight:700;color:var(--accent);">${escHtml(o.nama)}</span>
+            <span style="color:var(--text3);font-size:.65rem;font-weight:400;margin-left:4px;">(${escHtml(o.sub_gugus||'-')})</span>
+          </div>
+          <span style="font-size:.6rem;color:var(--text3);">${o.no_efataid ? escHtml(o.no_efataid) : 'Guest'}</span>
+        </div>`;
+
+      // Hitung total poin jika data poin sudah ada
+      const anakPoin = poinDetail.filter(pd => {
+        const pdKey = (pd.no_efataid || pd.nama || '').toLowerCase().trim();
+        return pdKey === oKey || (pd.nama||'').toLowerCase().trim() === (o.nama||'').toLowerCase().trim();
+      });
+      if (anakPoin.length > 0) {
+        const totK = anakPoin.reduce((s,p) => s + (parseInt(p.poin_kehadiran)||0), 0);
+        const totH = anakPoin.reduce((s,p) => s + (parseInt(p.poin_hafalan)||0), 0);
+        const totP = anakPoin.reduce((s,p) => s + (parseInt(p.total_hari)||0), 0);
+        sHtml += `<div style="display:flex;gap:6px;margin-bottom:6px;">
+          <div style="background:rgba(16,185,129,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--green);font-weight:600;">✅ Poin Hadir: ${totK}</div>
+          <div style="background:rgba(59,130,246,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--accent);font-weight:600;">📖 Poin Hafalan: ${totH}</div>
+          <div style="background:rgba(139,92,246,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--accent3);font-weight:600;">⭐ Total: ${totP}</div>
+        </div>`;
+      } else {
+        sHtml += `<div style="font-size:.68rem;color:var(--text3);margin-bottom:4px;">Kehadiran: <strong style="color:var(--green);">${hDates.length}</strong> tanggal</div>`;
+      }
+
+      // Tabel detail per tanggal
+      sHtml += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.7rem;"><thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">#</th>
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">Tanggal</th>
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">Kelas</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Poin Hadir</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Poin Hafalan</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Aksi</th>
+      </tr></thead><tbody>`;
+
+      if (hDates.length) {
+        hDates.forEach((tgl, i) => {
+          // Cari poin detail untuk tanggal ini
+          const poinTgl = anakPoin.find(pd => pd.tanggal === tgl);
+          const pK = poinTgl ? (parseInt(poinTgl.poin_kehadiran)||0) : '—';
+          const pH = poinTgl ? (parseInt(poinTgl.poin_hafalan)||0) : '—';
+          const kelas = poinTgl ? (poinTgl.id_kelas||o.sub_gugus||'-') : (o.sub_gugus||'-');
+
+          sHtml += `<tr style="border-bottom:1px solid var(--border);${i%2?'background:var(--surface2);':''}">
+            <td style="padding:4px 6px;font-size:.62rem;color:var(--text3);">${i+1}</td>
+            <td style="padding:4px 6px;font-size:.65rem;">${formatTglDisplay(tgl)}</td>
+            <td style="padding:4px 6px;color:var(--accent);font-weight:500;font-size:.65rem;">${escHtml(kelas)}</td>
+            <td style="padding:4px 6px;text-align:center;font-weight:600;color:${pK>=10?'var(--green)':'var(--text3)'};">${pK}</td>
+            <td style="padding:4px 6px;text-align:center;font-weight:600;color:${pH>=5?'var(--accent)':'var(--text3)'};">${pH}</td>
+            <td style="padding:4px 6px;text-align:center;">
+              <button onclick="openAnakEntry('${escHtml(o.sub_gugus||'')}','${tgl}')" class="btn-action" style="font-size:.58rem;padding:2px 6px;">✏️</button>
+            </td>
+          </tr>`;
+        });
+      } else {
+        sHtml += `<tr><td colspan="6" style="padding:6px;text-align:center;color:var(--text3);font-size:.65rem;">Belum pernah hadir</td></tr>`;
+      }
+      sHtml += `</tbody></table></div></div>`;
+    });
+
+    if (!matchOrang.length) sHtml += `<div class="empty-state"><div class="icon">🔍</div><p>Tidak ada anak "${escHtml(absenAnakState._filterNama)}"</p></div>`;
+    wrap.innerHTML = sHtml;
+    return;
+  }
+
+  // ★ NORMAL TABLE MODE — kolom aksi di depan
+  let filtered = rows;
+  if (fTgl) { const p=fTgl.split('-'); filtered=filtered.filter(r=>r.tanggal===p[2]+'/'+p[1]+'/'+p[0]); }
+  if (fKelas) filtered = filtered.filter(r => (r.kelas||'').toLowerCase().includes(fKelas));
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+
+  let html = filterBarHtml + `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${filtered.length} data ditemukan</span>
+    </div>
+    <div style="overflow-x:auto;overflow-y:visible;">
+      <table style="width:100%;border-collapse:collapse;font-size:.75rem;min-width:420px;">
+        <thead><tr style="border-bottom:2px solid var(--accent);">
+          <th style="padding:8px 4px;text-align:center;font-size:.58rem;color:var(--text3);width:36px;position:sticky;left:0;background:var(--surface);z-index:2;">Aksi</th>
+          <th style="padding:8px 6px;text-align:center;font-size:.62rem;color:var(--text3);width:28px;">#</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.62rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.62rem;color:var(--text3);">Kelas</th>
+          <th style="padding:8px 6px;text-align:left;font-size:.62rem;color:var(--text3);">Jumlah Kehadiran</th>
+        </tr></thead><tbody>`;
+
+  pageRows.forEach((r, idx) => {
+    const no = (page - 1) * perPage + idx + 1;
+    const bgColor = idx % 2 === 1 ? 'var(--surface2)' : 'var(--surface)';
+    const parts = r.tanggal.split('/');
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[d.getDay()] || '';
+    const rowId = 'anak-row-' + no;
+
+    html += `<tr style="background:${bgColor};border-bottom:1px solid var(--border);">
+      <td style="padding:8px 4px;text-align:center;position:sticky;left:0;background:${bgColor};z-index:2;">
+        <button onclick="toggleAnakMenu('${rowId}')"
+          style="background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:.7rem;padding:4px 8px;border-radius:6px;font-weight:700;">⋮</button>
+        <div id="${rowId}" class="action-dropdown" style="display:none;position:fixed;
+          background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);
+          z-index:99999;min-width:150px;overflow:hidden;">
+          <div onclick="openAnakEntry('${escHtml(r.kelas)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">📝 Atur Nilai</div>
+          <div onclick="showAnakDetil('${escHtml(r.kelas)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">👁 Detil</div>
+          <div onclick="showAnakEdit('${escHtml(r.kelas)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">✏️ Edit</div>
+          <div onclick="hapusAnakSidang('${escHtml(r.kelas)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;color:var(--red);"
+            onmouseover="this.style.background='rgba(239,68,68,.06)'" onmouseout="this.style.background=''">🗑 Hapus</div>
+        </div>
+      </td>
+      <td style="padding:8px 6px;text-align:center;color:var(--text3);font-size:.66rem;">${no}</td>
+      <td style="padding:8px 6px;font-size:.7rem;">${dayName}, ${formatTglDisplay(r.tanggal)}</td>
+      <td style="padding:8px 6px;font-weight:600;color:var(--accent);font-size:.7rem;">${escHtml(r.kelas)}</td>
+      <td style="padding:8px 6px;font-size:.68rem;line-height:1.6;">
+        <span style="color:var(--green);font-weight:600;">JA: ${r.hadir} / ${r.total}</span><br>
+        <span style="color:var(--accent3);">TD: 0</span><br>
+        <span style="color:var(--yellow);">TB: 0</span><br>
+        <span style="color:var(--accent);font-weight:600;">TA: ${r.hadir}</span><br>
+        <span style="color:var(--red);">BL: ${r.belum}</span>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  if (totalPages > 1) {
+    html += `<div style="display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;">
+      <button onclick="absenAnakState.historyPage=1;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏮</button>
+      <button onclick="absenAnakState.historyPage--;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>◀</button>
+      <span style="font-size:.72rem;color:var(--text);align-self:center;font-weight:600;">${page} / ${totalPages}</span>
+      <button onclick="absenAnakState.historyPage++;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>▶</button>
+      <button onclick="absenAnakState.historyPage=${totalPages};renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏭</button>
+    </div>`;
+  }
+
+  html += `<div style="margin-top:8px;padding:8px;background:var(--surface2);border-radius:6px;font-size:.6rem;color:var(--text3);line-height:1.7;">
+    <strong>Keterangan:</strong> JA: Jumlah anak hadir di distrik · TD: Tamu dari distrik lain · TB: Tamu baru (insidentil) · TA: Total anak hadir · BL: Bersidang di distrik lain
+  </div>`;
+
+  wrap.innerHTML = html;
+};
+
+// ── 3. OVERRIDE renderCGMHistoryTable: kolom aksi di depan + enhanced name search ──
+renderCGMHistoryTable = function(wrap, rows) {
+  const page = cgmState.historyPage || 1;
+  const perPage = 10;
+  const fTgl = (cgmState._filterTgl || '').trim();
+  const fLokasi = (cgmState._filterLokasi || '').trim().toLowerCase();
+  const fNama = (cgmState._filterNama || '').trim().toLowerCase();
+  const uniqueLokasi = [...new Set(rows.map(r => r.lokasi))].sort();
+
+  // ★ FILTER BAR
+  const filterBarHtml = `
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📅 Tanggal</div>
+        <input type="date" id="cgm-hist-filter-tgl" class="k-input" value="${fTgl}"
+          onchange="cgmState._filterTgl=this.value;cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">📍 Lokasi CGM</div>
+        <select id="cgm-hist-filter-lokasi" class="k-input"
+          onchange="cgmState._filterLokasi=this.value;cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+          <option value="">Semua</option>
+          ${uniqueLokasi.map(l=>`<option value="${escHtml(l)}" ${fLokasi===l.toLowerCase()?'selected':''}>${escHtml(l)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <div style="font-size:.58rem;color:var(--text3);margin-bottom:2px;font-weight:600;">🔍 Cari Nama Anak</div>
+        <input type="text" id="cgm-hist-filter-nama" class="k-input" value="${escHtml(cgmState._filterNama||'')}"
+          placeholder="Ketik nama..."
+          oninput="cgmState._filterNama=this.value;cgmState.historyPage=1;clearTimeout(window._cgmST);window._cgmST=setTimeout(()=>renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData),400)"
+          style="width:100%;font-size:.7rem;padding:6px 8px;">
+      </div>
+      <button onclick="cgmState._filterTgl='';cgmState._filterLokasi='';cgmState._filterNama='';cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)"
+        class="btn-action red" style="font-size:.65rem;padding:6px 10px;white-space:nowrap;">🗑 Reset</button>
+    </div>`;
+
+  // ★ NAME SEARCH MODE — enhanced dengan orang tua + edit button
+  if (fNama && fNama.length >= 2 && cgmState.historyOrang) {
+    const matchOrang = (cgmState.historyOrang||[]).filter(o => (o.nama||'').toLowerCase().includes(fNama));
+    let totalKehadiran = 0;
+    matchOrang.forEach(o => { totalKehadiran += (o.hadir_tanggal||[]).length; });
+
+    let sHtml = filterBarHtml;
+
+    // ★ TOTAL SUMMARY DI ATAS
+    sHtml += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div style="background:rgba(139,92,246,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent3);">${matchOrang.length}</div>
+        <div style="font-size:.58rem;color:var(--accent3);">Anak Ditemukan</div>
+      </div>
+      <div style="background:rgba(16,185,129,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--green);">${totalKehadiran}</div>
+        <div style="font-size:.58rem;color:var(--green);">Total Kehadiran</div>
+      </div>
+      <div style="background:rgba(59,130,246,.1);border-radius:8px;padding:8px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent);">—</div>
+        <div style="font-size:.58rem;color:var(--accent);">Poin Ortu (muat)</div>
+      </div>
+    </div>`;
+
+    // ★ Button untuk load CGM detail dari backend
+    if (!cgmState._cgmDetailLoaded) {
+      sHtml += `<div style="text-align:center;margin-bottom:10px;">
+        <button onclick="patchLoadCGMDetail()" class="btn-action accent" style="font-size:.72rem;padding:7px 14px;background:var(--accent3);border-color:var(--accent3);">
+          📊 Muat Detail CGM (Anak + Orang Tua)</button>
+        <div style="font-size:.6rem;color:var(--text3);margin-top:4px;">Klik untuk memuat data kehadiran orang tua dari sheet CGM_Absen</div>
+      </div>`;
+    }
+
+    matchOrang.forEach(o => {
+      const hDates = (o.hadir_tanggal||[]).slice().sort().reverse();
+      const jInfo = lookupJemaat(o.no_efataid, o.nama);
+      // Cross-reference dengan CGM detail jika sudah di-load
+      const cgmDetail = cgmState._cgmDetailData || [];
+      const oKey = (o.no_efataid || o.nama || '').toLowerCase().trim();
+
+      sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <span style="font-size:.78rem;font-weight:700;color:var(--accent3);">${escHtml(o.nama)}</span>
+            <span style="color:var(--text3);font-size:.65rem;margin-left:4px;">(${escHtml(o.sub_gugus||'-')})</span>
+          </div>
+          <span style="font-size:.6rem;color:var(--text3);">${o.no_efataid ? escHtml(o.no_efataid) : 'Guest'}</span>
+        </div>
+        <div style="font-size:.68rem;color:var(--text3);margin-bottom:6px;">
+          Ayah: <strong>${escHtml(jInfo.ayah||'-')}</strong> · Ibu: <strong>${escHtml(jInfo.ibu||'-')}</strong>
+        </div>`;
+
+      // Hitung total CGM detail jika sudah ada
+      const anakCGM = cgmDetail.filter(cd => {
+        const cdKey = (cd.no_efataid || cd.nama || '').toLowerCase().trim();
+        return cdKey === oKey || (cd.nama||'').toLowerCase().trim() === (o.nama||'').toLowerCase().trim();
+      });
+      if (anakCGM.length > 0) {
+        const totHadir = anakCGM.filter(c => c.hadir_anak === 'y').length;
+        const totAyah = anakCGM.filter(c => c.hadir_ayah === 'y').length;
+        const totIbu = anakCGM.filter(c => c.hadir_ibu === 'y').length;
+        sHtml += `<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+          <div style="background:rgba(16,185,129,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--green);font-weight:600;">✅ Anak Hadir: ${totHadir}x</div>
+          <div style="background:rgba(59,130,246,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--accent);font-weight:600;">👨 Ayah Hadir: ${totAyah}x</div>
+          <div style="background:rgba(139,92,246,.1);border-radius:6px;padding:4px 8px;font-size:.62rem;color:var(--accent3);font-weight:600;">👩 Ibu Hadir: ${totIbu}x</div>
+        </div>`;
+      } else {
+        sHtml += `<div style="font-size:.68rem;color:var(--text3);margin-bottom:6px;">Kehadiran: <strong style="color:var(--green);">${hDates.length}</strong> tanggal</div>`;
+      }
+
+      // Tabel detail per tanggal
+      sHtml += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.7rem;"><thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">#</th>
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">Tanggal</th>
+        <th style="padding:4px 6px;text-align:left;font-size:.58rem;color:var(--text3);">Lokasi CGM</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Anak</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Ayah</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Ibu</th>
+        <th style="padding:4px 6px;text-align:center;font-size:.58rem;color:var(--text3);">Aksi</th>
+      </tr></thead><tbody>`;
+
+      if (hDates.length) {
+        hDates.forEach((tgl, i) => {
+          // Cari CGM detail untuk tanggal ini
+          const cgmTgl = anakCGM.find(cd => cd.tanggal === tgl);
+          const hAnak = cgmTgl ? (cgmTgl.hadir_anak === 'y' ? '✅' : '❌') : '✅';
+          const hAyah = cgmTgl ? (cgmTgl.hadir_ayah === 'y' ? '✅' : '❌') : '—';
+          const hIbu = cgmTgl ? (cgmTgl.hadir_ibu === 'y' ? '✅' : '❌') : '—';
+
+          sHtml += `<tr style="border-bottom:1px solid var(--border);${i%2?'background:var(--surface2);':''}">
+            <td style="padding:4px 6px;font-size:.62rem;color:var(--text3);">${i+1}</td>
+            <td style="padding:4px 6px;font-size:.65rem;">${formatTglDisplay(tgl)}</td>
+            <td style="padding:4px 6px;color:var(--accent3);font-weight:500;font-size:.65rem;">${escHtml(o.sub_gugus||'-')}</td>
+            <td style="padding:4px 6px;text-align:center;">${hAnak}</td>
+            <td style="padding:4px 6px;text-align:center;">${hAyah}</td>
+            <td style="padding:4px 6px;text-align:center;">${hIbu}</td>
+            <td style="padding:4px 6px;text-align:center;">
+              <button onclick="openCGMEntry('${escHtml(o.sub_gugus||'')}','${tgl}')" class="btn-action" style="font-size:.58rem;padding:2px 6px;">✏️</button>
+            </td>
+          </tr>`;
+        });
+      } else {
+        sHtml += `<tr><td colspan="7" style="padding:6px;text-align:center;color:var(--text3);font-size:.65rem;">Belum pernah hadir</td></tr>`;
+      }
+      sHtml += `</tbody></table></div></div>`;
+    });
+
+    if (!matchOrang.length) sHtml += `<div class="empty-state"><div class="icon">🔍</div><p>Tidak ada anak "${escHtml(cgmState._filterNama)}"</p></div>`;
+    wrap.innerHTML = sHtml;
+    return;
+  }
+
+  // ★ NORMAL TABLE MODE — kolom aksi di depan
+  let filtered = rows;
+  if (fTgl) { const p=fTgl.split('-'); filtered=filtered.filter(r=>r.tanggal===p[2]+'/'+p[1]+'/'+p[0]); }
+  if (fLokasi) filtered = filtered.filter(r => (r.lokasi||'').toLowerCase().includes(fLokasi));
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+
+  let html = filterBarHtml + `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:.7rem;color:var(--text3);">📊 ${filtered.length} data ditemukan</span>
+    </div>
+    <div style="overflow-x:auto;overflow-y:visible;">
+      <table style="width:100%;border-collapse:collapse;font-size:.7rem;min-width:560px;">
+        <thead><tr style="border-bottom:2px solid var(--accent3);">
+          <th style="padding:7px 4px;text-align:center;font-size:.56rem;color:var(--text3);width:36px;position:sticky;left:0;background:var(--surface);z-index:2;">Aksi</th>
+          <th style="padding:7px 4px;text-align:center;font-size:.58rem;color:var(--text3);width:24px;">#</th>
+          <th style="padding:7px 4px;text-align:left;font-size:.58rem;color:var(--text3);">Tanggal</th>
+          <th style="padding:7px 4px;text-align:left;font-size:.58rem;color:var(--text3);">CGM</th>
+          <th style="padding:7px 4px;text-align:left;font-size:.58rem;color:var(--text3);">Kehadiran Anak</th>
+          <th style="padding:7px 4px;text-align:left;font-size:.58rem;color:var(--text3);">Kehadiran Orangtua</th>
+        </tr></thead><tbody>`;
+
+  pageRows.forEach((r, idx) => {
+    const no = (page - 1) * perPage + idx + 1;
+    const bgColor = idx % 2 === 1 ? 'var(--surface2)' : 'var(--surface)';
+    const parts = r.tanggal.split('/');
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[d.getDay()] || '';
+    const ikColor = r.ikPct >= 50 ? 'var(--green)' : r.ikPct > 0 ? 'var(--yellow)' : 'var(--red)';
+    const rowId = 'cgm-row-' + no;
+
+    html += `<tr style="background:${bgColor};border-bottom:1px solid var(--border);">
+      <td style="padding:7px 4px;text-align:center;position:sticky;left:0;background:${bgColor};z-index:2;">
+        <button onclick="toggleAnakMenu('${rowId}')"
+          style="background:var(--accent3);color:#fff;border:none;cursor:pointer;font-size:.7rem;padding:4px 8px;border-radius:6px;font-weight:700;">⋮</button>
+        <div id="${rowId}" class="action-dropdown" style="display:none;position:fixed;
+          background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);
+          z-index:99999;min-width:150px;overflow:hidden;">
+          <div onclick="openCGMEntry('${escHtml(r.lokasi)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">📝 Atur Nilai</div>
+          <div onclick="showCGMDetil('${escHtml(r.lokasi)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">👁 Detil</div>
+          <div onclick="showCGMEdit('${escHtml(r.lokasi)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">✏️ Edit</div>
+          <div onclick="hapusCGMSidang('${escHtml(r.lokasi)}','${r.tanggal}');hideAllMenus()" style="padding:10px 14px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:8px;color:var(--red);"
+            onmouseover="this.style.background='rgba(239,68,68,.06)'" onmouseout="this.style.background=''">🗑 Hapus</div>
+        </div>
+      </td>
+      <td style="padding:7px 4px;text-align:center;color:var(--text3);font-size:.64rem;">${no}</td>
+      <td style="padding:7px 4px;font-size:.68rem;">${dayName}, ${formatTglDisplay(r.tanggal)}</td>
+      <td style="padding:7px 4px;font-weight:600;color:var(--accent3);font-size:.68rem;">${escHtml(r.lokasi)}</td>
+      <td style="padding:7px 4px;font-size:.66rem;line-height:1.6;">
+        <span style="color:var(--green);font-weight:600;">JA: ${r.hadirAnak} / ${r.totalAnak}</span><br>
+        <span style="color:var(--accent3);">TD: 0</span><br>
+        <span style="color:var(--yellow);">TB: 0</span><br>
+        <span style="color:var(--accent);font-weight:600;">TA: ${r.hadirAnak}</span><br>
+        <span style="color:var(--red);">BL: ${r.belumAnak}</span>
+      </td>
+      <td style="padding:7px 4px;font-size:.66rem;line-height:1.6;">
+        <span style="color:var(--green);font-weight:600;">JO: ${r.hadirOrtu} / ${r.totalOrtu}</span><br>
+        <span style="color:var(--accent3);">TOD: 0</span><br>
+        <span style="color:var(--yellow);">TOB: 0</span><br>
+        <span style="color:var(--accent);font-weight:600;">TO: ${r.hadirOrtu}</span><br>
+        <span style="color:${ikColor};font-weight:600;">IK: ${r.ikPct}%</span>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  if (totalPages > 1) {
+    html += `<div style="display:flex;justify-content:center;gap:6px;margin-top:10px;">
+      <button onclick="cgmState.historyPage=1;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏮</button>
+      <button onclick="cgmState.historyPage--;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page<=1?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>◀</button>
+      <span style="font-size:.72rem;color:var(--text);align-self:center;font-weight:600;">${page} / ${totalPages}</span>
+      <button onclick="cgmState.historyPage++;renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>▶</button>
+      <button onclick="cgmState.historyPage=${totalPages};renderCGMHistoryTable(document.getElementById('cgm-history-wrap'),cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏭</button>
+    </div>`;
+  }
+
+  html += `<div style="margin-top:8px;padding:8px;background:var(--surface2);border-radius:6px;font-size:.58rem;color:var(--text3);line-height:1.7;">
+    <strong>Keterangan Anak:</strong> JA: Jumlah anak hadir · TD: Tamu dari distrik lain · TB: Tamu baru · TA: Total anak hadir · BL: Bersidang di distrik lain<br>
+    <strong>Keterangan Ortu:</strong> JO: Jumlah orangtua hadir · TOD: Tamu ortu distrik lain · TOB: Tamu ortu baru · TO: Total ortu hadir · IK: Indeks kesehatan CGM
+  </div>`;
+
+  wrap.innerHTML = html;
+};
+
+// ── 4. HELPER: Load Poin Detail Anak dari backend ──
+async function patchLoadAnakPoinDetail() {
+  const tahun = absenAnakState.tahun || String(new Date().getFullYear());
+  toast('⏳ Memuat detail poin anak...');
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_poin_detail&tahun=' + tahun);
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      absenAnakState._poinDetailData = result.data || [];
+      absenAnakState._poinDetailLoaded = true;
+      toast('✅ ' + (result.data||[]).length + ' data poin dimuat');
+      // Re-render name search
+      renderAnakHistoryTable(document.getElementById('anak-history-wrap'), absenAnakState.historyData);
+    } else {
+      toast('⚠️ Gagal: ' + (result.message || 'error'));
+    }
+  } catch(e) {
+    // Fallback: gunakan get_prestasi_anak untuk summary saja
+    try {
+      const resp2 = await fetch(APPS_SCRIPT_KELAS + '?action=get_prestasi_anak&tahun=' + tahun);
+      const result2 = await resp2.json();
+      if (result2.status === 'ok') {
+        // Convert summary ke format detail-like (aggregated)
+        absenAnakState._poinDetailData = [];
+        absenAnakState._poinDetailLoaded = true;
+        toast('ℹ️ Data summary dimuat (tambahkan action get_poin_detail di backend untuk detail per-tanggal)');
+        renderAnakHistoryTable(document.getElementById('anak-history-wrap'), absenAnakState.historyData);
+      }
+    } catch(e2) {
+      toast('⚠️ Gagal memuat poin: ' + e.message);
+    }
+  }
+}
+
+// ── 5. HELPER: Load CGM Detail dari backend ──
+async function patchLoadCGMDetail() {
+  const tahun = cgmState.tahun || String(new Date().getFullYear());
+  toast('⏳ Memuat detail CGM...');
+  try {
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?action=get_cgm_detail&tahun=' + tahun);
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      cgmState._cgmDetailData = result.data || [];
+      cgmState._cgmDetailLoaded = true;
+      toast('✅ ' + (result.data||[]).length + ' data CGM dimuat');
+      renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData);
+    } else {
+      toast('⚠️ Gagal: ' + (result.message || 'error'));
+    }
+  } catch(e) {
+    toast('⚠️ Gagal memuat CGM detail: ' + e.message + ' — Pastikan action get_cgm_detail ada di backend.');
+  }
+}
+
+console.log('✅ PATCH Fix Dropdown + Kolom Aksi Depan + Enhanced Name Search loaded');
 </script>
 </body>
 </html>
