@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 16:32 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 17:38 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbxbL
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwSu0whdeCIxM9NpQxvporlelxktDoCUtPywVo3L4i18r3gxwLcoy2CsL983aupIso_/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbys1ailzE1hivaNHaJXcGsmGnQBlFwxicj4Em976DG6Pe8Ia40sKD7U32iMgdoH1_Fr/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -10305,13 +10305,22 @@ async function renderAnakPoinContent() {
 
   await loadAnakHistory();
 }
+const cuteLoader = `
+  <div style="text-align:center; padding:40px 20px;">
+    <div style="font-size:4rem; animation: bounce 1s infinite alternate; display:inline-block;">👧👦</div>
+    <div style="font-weight:700; color:var(--accent); font-size:1.1rem; margin-bottom:5px; margin-top:10px;">Tunggu sebentar ya... 🏃💨</div>
+    <div style="font-size:0.8rem; color:var(--text3);">Sedang menyiapkan data yang luar biasa!<br>(Sekitar 1-4 detik karena menghitung seluruh data dari server Google)</div>
+  </div>
+  <style>@keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-15px); } }</style>
+`;   
 absenAnakState.sortDesc = true;
 cgmState.sortDesc = true;
   
 async function loadAnakHistory() {
   const wrap = document.getElementById('anak-history-wrap');
   if (!wrap) return;
-  wrap.innerHTML = '<div class="loading-shimmer"></div>';
+  wrap.innerHTML = cuteLoader; 
+  // wrap.innerHTML = '<div class="loading-shimmer"></div>';
   
   try {
     const userDistrik = currentUser?.distrik || '';
@@ -10344,7 +10353,39 @@ function renderAnakHistoryTable(wrap, rows) {
   const fKelas = (absenAnakState._filterKelas || '').trim().toLowerCase();
   const fNama = (absenAnakState._filterNama || '').trim().toLowerCase();
   const uniqueKelas = [...new Set(rows.map(r => r.kelas))].sort();
+  filtered.forEach(v => {
+    const namaListHtml = v.list_nama && v.list_nama.length > 0 
+      ? v.list_nama.join(', ') 
+      : '<span style="color:var(--text3);font-style:italic;">Belum ada data</span>';
 
+    sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:1rem;color:var(--text);">${formatTglDisplay(v.tanggal)}</div>
+          <div style="font-size:.78rem;color:var(--accent);font-weight:600;margin-top:2px;">🏫 Kelas: ${escHtml(v.kelas)}</div>
+        </div>
+        <div style="position:relative;">
+          <button onclick="toggleAnakMenu('menu-anak-${v.id_kelas}-${v.tanggal.replace(/\//g,'')}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;">⋮ Opsi</button>
+          
+          <div id="menu-anak-${v.id_kelas}-${v.tanggal.replace(/\//g,'')}" class="action-dropdown" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:2000000;min-width:140px;">
+            <div onclick="aturNilaiAnak('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai (Auto)</div>
+            <div onclick="loadAnakAbsenDetail('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil Poin</div>
+            <div onclick="openAnakEditModal('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Kelas/Tgl</div>
+            <div onclick="hapusAnakSidang('${escHtml(v.kelas)}', '${v.tanggal}', ${v.total_hadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <span style="background:rgba(16,185,129,.15);color:var(--green);padding:4px 8px;border-radius:6px;font-size:.7rem;font-weight:700;">Hadir: ${v.total_hadir} (Anak: ${v.hadir}, Tamu: ${v.tamu_distrik+v.tamu_baru})</span>
+        <span style="background:rgba(239,68,68,.15);color:var(--red);padding:4px 8px;border-radius:6px;font-size:.7rem;font-weight:700;">Belum: ${v.belum}</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--text2); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+        <div style="font-weight:700; color:var(--text); margin-bottom:4px;">Daftar Hadir:</div>
+        <div style="line-height:1.5;">${namaListHtml}</div>
+      </div>
+    </div>`;
+  });
+   
   // ★ FILTER BAR (always shown)
   const filterBarHtml = `
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end;">
@@ -10616,7 +10657,29 @@ function renderAnakEntryForm(container) {
     }, 300);
   } 
 }
+function formatTglToYMD(tgl) {
+  if(!tgl) return '';
+  const p = tgl.split('/');
+  if(p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+  return tgl;
+}
+// Aksi "Atur Nilai" Absensi Anak
+window.aturNilaiAnak = function(kelas, tanggal) {
+  absenAnakState.selectedKelas = kelas;
+  absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
+  absenAnakState._autoLoad = true; // Auto load list nama anak
+  absenAnakState.anakPageMode = 'form';
+  renderAnakPoinContent();
+};
 
+// Aksi "Atur Nilai" Absensi CGM
+window.aturNilaiCGM = function(lokasi, tanggal) {
+  cgmState.selectedKelas = lokasi;
+  cgmState.selectedTanggal = formatTglToYMD(tanggal);
+  cgmState._autoLoad = true; // Auto load list keluarga CGM
+  cgmState.cgmPageMode = 'form';
+  renderCGMPoinContent();
+};
 // ── SUNDAY WARNING HELPER ─────────────────────────────────────
 function checkSundayWarning(inputId, warnId) {
   const val = document.getElementById(inputId)?.value;
@@ -10660,6 +10723,7 @@ function renderCGMContent() {
 async function loadCGMHistory() {
   const wrap = document.getElementById('cgm-history-wrap');
   if (!wrap) return;
+  wrap.innerHTML = cuteLoader; 
   try {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
