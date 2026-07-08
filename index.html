@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 18-07-2026 10:15 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 15:14 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10305,75 +10305,36 @@ async function renderAnakPoinContent() {
 
   await loadAnakHistory();
 }
-
+absenAnakState.sortDesc = true;
+cgmState.sortDesc = true;
+  
 async function loadAnakHistory() {
   const wrap = document.getElementById('anak-history-wrap');
   if (!wrap) return;
+  wrap.innerHTML = '<div class="loading-shimmer"></div>';
+  
   try {
-    // Fetch recent 3 months of data
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-    const tglAwal = `${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}/${start.getFullYear()}`;
-    const tglAkhir = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-
-    // Filter by distrik for non-admin users
     const userDistrik = currentUser?.distrik || '';
     const params = new URLSearchParams({
-      action: 'get_laporan_detail', tgl_awal: tglAwal, tgl_akhir: tglAkhir, jenis_sidang: 'Anak-anak'
+      action: 'get_history_anak',
+      distrik: isAdminUser() ? '' : userDistrik
     });
-    if (userDistrik && !isAdminUser()) params.append('distrik', userDistrik);
 
-    const resp = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?' + params.toString());
-    const result = JSON.parse(await resp.text());
+    const resp = await fetch(APPS_SCRIPT_KELAS + '?' + params.toString());
+    const result = await resp.json();
 
-    if (result.status !== 'ok' || !result.data || !result.data['Anak-anak']) {
-      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data absensi anak-anak.</p></div>`;
+    if (result.status !== 'ok' || !result.data || !result.data.length) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Belum ada riwayat absensi anak.</p></div>`;
       return;
     }
 
-    const sd = result.data['Anak-anak'];
-    // Group by tanggal + sub_gugus (kelas)
-    const rows = [];
-    const tglList = sd.tanggal_list || [];
-    const orang = sd.orang || [];
-    const subGugusList = sd.sub_gugus_list || [];
-
-    // ★ Store orang data for name search
-    absenAnakState.historyOrang = orang;
-
-    tglList.forEach(tgl => {
-      const kelasSet = subGugusList.length > 0 ? subGugusList : [''];
-      kelasSet.forEach(kelas => {
-        let total = 0, hadir = 0, tamu = 0;
-        orang.forEach(o => {
-          if (kelas && o.sub_gugus !== kelas) return;
-          total++;
-          if ((o.hadir_tanggal || []).includes(tgl)) {
-            hadir++;
-            if (!o.no_efataid) tamu++;
-          }
-        });
-        if (total > 0 || hadir > 0) {
-          rows.push({ tanggal: tgl, kelas: kelas || '-', hadir, total, tamu, belum: total - hadir });
-        }
-      });
-    });
-
-    // Sort by date desc
-    rows.sort((a, b) => {
-      const pa = a.tanggal.split('/'), pb = b.tanggal.split('/');
-      return new Date(`${pb[2]}-${pb[1]}-${pb[0]}`) - new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
-    });
-
-    absenAnakState.historyData = rows;
-    renderAnakHistoryTable(wrap, rows);
+    absenAnakState.historyData = result.data;
+    renderAnakHistoryTable(wrap, absenAnakState.historyData);
 
   } catch(e) {
-    wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p>
-      <button onclick="loadAnakHistory()" class="btn-action accent" style="margin-top:8px;">🔄 Coba Lagi</button></div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p></div>`;
   }
-}
-
+}   
 function renderAnakHistoryTable(wrap, rows) {
   const page = absenAnakState.historyPage || 1;
   const perPage = 10;
@@ -13950,20 +13911,140 @@ async function renderCGMDetilView(container) {
   } catch(e) { document.getElementById('cgm-detil-content').innerHTML = `<p style="color:var(--red);">Gagal: ${e.message}</p>`; }
 }
 
+function getAnakDariDistrik(p) {
+  const distrik = (p.distrik || '').trim();
+  if (!distrik) return { status: 'error', message: 'Parameter distrik wajib' };
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const jSheet = ss.getSheetByName('Jemaat') || ss.getSheetByName('jemaat');
+  if (!jSheet) return { status: 'error', message: 'Sheet Jemaat tidak ditemukan' };
+
+  const jData = jSheet.getDataRange().getValues();
+  const jHdr = jData[0].map(h => String(h).trim().toLowerCase());
+
+  // Cari index secara dinamis dan aman
+  const dIdx = jHdr.findIndex(h => h.includes('distrik'));
+  const katIdx = jHdr.findIndex(h => h === 'kategori');
+  const namaIdx = jHdr.findIndex(h => h === 'nama lengkap' || h === 'nama panggilan');
+  const efaIdx = jHdr.findIndex(h => h.includes('efataid'));
+  const ayahIdx = jHdr.findIndex(h => h === 'nama ayah' || h === 'ayah');
+  const ibuIdx = jHdr.findIndex(h => h === 'nama ibu' || h === 'ibu');
+
+  const result = [];
+  for (let i = 1; i < jData.length; i++) {
+    const rowDistrik = dIdx >= 0 ? String(jData[i][dIdx]).trim() : '';
+    const rowKat = katIdx >= 0 ? String(jData[i][katIdx]).trim().toLowerCase() : '';
+
+    if (rowDistrik.toLowerCase() === distrik.toLowerCase() && rowKat === 'anak') {
+      result.push({
+        nama: namaIdx >= 0 ? String(jData[i][namaIdx]).trim() : '',
+        no_efataid: efaIdx >= 0 ? String(jData[i][efaIdx]).trim() : '',
+        nama_ayah: ayahIdx >= 0 ? String(jData[i][ayahIdx]).trim() : '',
+        nama_ibu: ibuIdx >= 0 ? String(jData[i][ibuIdx]).trim() : '',
+        distrik: rowDistrik,
+      });
+    }
+  }
+  return { status: 'ok', data: result, total: result.length };
+}
+// Tambahkan baris ini di dalam doGet(e):
+// else if (action === 'get_history_anak') result = getHistoryAnak(e.parameter);
+
+function getHistoryAnak(p) {
+  const distrikFilter = (p.distrik || '').toLowerCase();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetPoin = ss.getSheetByName('poin_anak');
+  const sheetTamu = ss.getSheetByName('tamu_absen_anak');
+  const sheetKelas = ss.getSheetByName('kelas');
+
+  // 1. Ambil data kelas (jenis=anak)
+  const kelasData = sheetKelas ? sheetKelas.getDataRange().getValues() : [];
+  const kelasMap = {};
+  if (kelasData.length > 1) {
+    const kHdr = kelasData[0].map(h => String(h).trim().toLowerCase());
+    const idI = kHdr.indexOf('id_kelas');
+    const nmI = kHdr.indexOf('nama_kelas');
+    const jnI = kHdr.indexOf('jenis');
+    const dsI = kHdr.indexOf('distrik');
+    kelasData.slice(1).forEach(r => {
+      if (String(r[jnI]).toLowerCase() === 'anak') {
+        kelasMap[r[idI]] = { nama: r[nmI], distrik: r[dsI] };
+      }
+    });
+  }
+
+  const rekap = {};
+
+  // 2. Rekap Poin Anak (Poin >= 10 dihitung hadir)
+  if (sheetPoin && sheetPoin.getLastRow() > 1) {
+    const d = sheetPoin.getDataRange().getValues();
+    const h = d[0].map(x => String(x).trim().toLowerCase());
+    const tglI = h.indexOf('tanggal');
+    const idI = h.indexOf('id_kelas');
+    const hdrI = h.indexOf('poin_kehadiran');
+    const dstI = h.indexOf('distrik');
+
+    d.slice(1).forEach(r => {
+      const idK = r[idI];
+      if (!kelasMap[idK]) return;
+      const dist = dstI >= 0 ? String(r[dstI]).toLowerCase() : String(kelasMap[idK].distrik).toLowerCase();
+      if (distrikFilter && dist !== distrikFilter) return;
+
+      const key = r[tglI] + '_' + idK;
+      if (!rekap[key]) rekap[key] = { tanggal: r[tglI], kelas: kelasMap[idK].nama, total: 0, hadir: 0, tamu: 0 };
+      rekap[key].total++;
+      if (parseInt(r[hdrI]) >= 10) rekap[key].hadir++;
+    });
+  }
+
+  // 3. Rekap Tamu Anak
+  if (sheetTamu && sheetTamu.getLastRow() > 1) {
+    const d = sheetTamu.getDataRange().getValues();
+    const h = d[0].map(x => String(x).trim().toLowerCase());
+    const tglI = h.indexOf('tanggal');
+    const idI = h.indexOf('id_kelas');
+    const dstI = h.indexOf('distrik');
+
+    d.slice(1).forEach(r => {
+      const idK = r[idI];
+      if (!kelasMap[idK]) return;
+      const dist = dstI >= 0 ? String(r[dstI]).toLowerCase() : String(kelasMap[idK].distrik).toLowerCase();
+      if (distrikFilter && dist !== distrikFilter) return;
+
+      const key = r[tglI] + '_' + idK;
+      if (!rekap[key]) rekap[key] = { tanggal: r[tglI], kelas: kelasMap[idK].nama, total: 0, hadir: 0, tamu: 0 };
+      rekap[key].total++;
+      rekap[key].hadir++;
+      rekap[key].tamu++;
+    });
+  }
+
+  const result = Object.values(rekap).map(v => {
+    v.belum = v.total - v.hadir;
+    return v;
+  });
+
+  return { status: 'ok', data: result };
+}   
 // ── EDIT VIEW: Anak (change tanggal/kelas) ──────────────────
+
 async function renderAnakEditView(container) {
   const kelas = absenAnakState._editKelas;
   const tanggal = absenAnakState._editTanggal;
-  await ensureJemaatLoaded();
-  if (!absenAnakState.kelasData.length) {
-    try { const r = await fetch(APPS_SCRIPT_KELAS+'?action=get_kelas&aktif=y'); const j = await r.json(); absenAnakState.kelasData = j.data||[]; } catch(e){}
-  }
+
+  // Pastikan hanya memuat kelas dengan jenis = anak
+  try { 
+    const r = await fetch(APPS_SCRIPT_KELAS + '?action=get_kelas&aktif=y&jenis=anak'); 
+    const j = await r.json(); 
+    absenAnakState.kelasData = j.data || []; 
+  } catch(e){}
+
   const kelasOptions = absenAnakState.kelasData.map(k =>
     `<option value="${escHtml(k.nama_kelas)}" ${k.nama_kelas===kelas?'selected':''}>${escHtml(k.distrik||'')} — ${escHtml(k.nama_kelas)}</option>`
   ).join('');
 
   container.innerHTML = `
-    <button onclick="absenAnakState.anakPageMode='history';renderAnakPoinContent()" class="btn-action" style="margin-bottom:12px;padding:8px 14px;">◀</button>
+    <button onclick="absenAnakState.anakPageMode='history';renderAnakPoinContent()" class="btn-action" style="margin-bottom:12px;padding:8px 14px;">◀ Kembali</button>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
       <div style="font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:14px;">Edit Sidang Anak-Anak</div>
       <div style="margin-bottom:12px;">
@@ -13976,10 +14057,21 @@ async function renderAnakEditView(container) {
       </div>
       <div style="display:flex;gap:8px;">
         <button onclick="saveAnakEdit('${escHtml(kelas)}','${tanggal}')" class="btn-action accent" style="padding:10px 20px;font-weight:700;">💾 Simpan</button>
-        <button onclick="absenAnakState.anakPageMode='history';renderAnakPoinContent()" class="btn-action red" style="padding:10px 20px;">Batal</button>
       </div>
     </div>`;
 }
+
+// 4. Tambahkan tombol SORT pada fungsi renderAnakHistoryTable
+// Sisipkan button di bagian const filterBarHtml
+`<button onclick="absenAnakState.sortDesc = !absenAnakState.sortDesc; absenAnakState.historyPage=1; renderAnakHistoryTable(document.getElementById('anak-history-wrap'), absenAnakState.historyData)" class="btn-action" style="font-size:.65rem;padding:6px 10px;">↕ Sort Tgl</button>`
+
+// Dan pada baris bawahnya sebelum ".slice", tambahkan sorting:
+filtered.sort((a, b) => {
+  const pa = a.tanggal.split('/'), pb = b.tanggal.split('/');
+  const da = new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
+  const db = new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+  return absenAnakState.sortDesc ? db - da : da - db;
+});   
 
 function saveAnakEdit(oldKelas, oldTanggal) {
   const newTgl = formatDateFromInput(document.getElementById('edit-anak-tgl')?.value);
