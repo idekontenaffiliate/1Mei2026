@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 15:14 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 16:28 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10609,13 +10609,12 @@ function renderAnakEntryForm(container) {
   // ★ Auto-load jika dipanggil dari Atur Nilai
   if (absenAnakState._autoLoad) {
     absenAnakState._autoLoad = false;
-    (async () => {
-      await loadDaftarKelasAnak(); // ensure kelas loaded
+    setTimeout(() => {
       const sel = document.getElementById('anak-kelas');
       if (sel && absenAnakState.selectedKelas) sel.value = absenAnakState.selectedKelas;
-      loadAbsensiAnak();
-    })();
-  }
+      loadAbsensiAnak(); // Langsung eksekusi pemanggilan nama anak
+    }, 300);
+  } 
 }
 
 // ── SUNDAY WARNING HELPER ─────────────────────────────────────
@@ -10990,15 +10989,15 @@ function renderCGMEntryForm(container) {
   setTimeout(() => checkSundayWarning('cgm-tanggal', 'cgm-sunday-warn'), 200);
 
   // ★ Auto-load jika dipanggil dari Atur Nilai
+  
   if (cgmState._autoLoad) {
     cgmState._autoLoad = false;
-    (async () => {
-      await loadDaftarKelasCGM();
+    setTimeout(() => {
       const sel = document.getElementById('cgm-kelas');
       if (sel && cgmState.selectedKelas) sel.value = cgmState.selectedKelas;
-      loadCGM();
-    })();
-  }
+      loadCGM(); // Langsung eksekusi pemanggilan keluarga CGM
+    }, 300);
+  } 
 }
 
 // ── CGM: Load Lokasi CGM (bukan kelas) ───────────
@@ -13656,7 +13655,33 @@ console.log('✅ PATCH Advance Search v2 loaded — Anak, CGM, Anak+CGM');
 // ╚══════════════════════════════════════════════════════════════╝
 
 // ── ACTION MENU TOGGLE ──────────────────────────────────────
-function toggleAnakMenu(id) { hideAllMenus(); const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'block':'none'; }
+// function toggleAnakMenu(id) { hideAllMenus(); const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'block':'none'; }
+toggleAnakMenu = function(id) {
+  hideAllMenus();
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const btn = el.parentElement.querySelector('button[onclick*="toggleAnakMenu"]');
+  if (!btn) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
+
+  const rect = btn.getBoundingClientRect();
+  
+  // Menggunakan position fixed agar melayang di atas segalanya (tidak terpotong tabel)
+  el.style.position = 'fixed';
+  el.style.zIndex = '999999';
+  el.style.left = Math.max(10, rect.left - 120) + 'px'; // Geser ke kiri sedikit
+  
+  // Deteksi apakah ruang di bawah cukup
+  if (rect.bottom + 180 > window.innerHeight) {
+    el.style.top = 'auto';
+    el.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
+  } else {
+    el.style.top = (rect.bottom + 5) + 'px';
+    el.style.bottom = 'auto';
+  }
+
+  el.style.display = 'block';
+};   
 function hideAllMenus() { document.querySelectorAll('.action-dropdown').forEach(e => e.style.display='none'); }
 document.addEventListener('click', e => { if (!e.target.closest('.action-dropdown') && !e.target.closest('[onclick*="toggleAnakMenu"]')) hideAllMenus(); });
 
@@ -13689,73 +13714,47 @@ function showCGMEdit(lokasi, tanggal) {
 }
 
 // ── HAPUS ───────────────────────────────────────────────────
-async function hapusAnakSidang(kelas, tanggal) {
-  if (!confirm(`Hapus data sidang anak kelas "${kelas}" tanggal ${formatTglDisplay(tanggal)}?\n\nSemua data absensi dan nilai untuk kelas & tanggal ini akan dihapus.`)) return;
 
-  toast('🔍 Memeriksa data...');
-  // Find id_kelas from name
-  if (!absenAnakState.kelasData.length) {
-    try { const r = await fetch(APPS_SCRIPT_KELAS+'?action=get_kelas&aktif=y'); const j = await r.json(); absenAnakState.kelasData = j.data||[]; } catch(e){}
+// ── FIX LOGIKA HAPUS ANAK (Cegah jika sudah diabsen) ──
+async function hapusAnakSidang(kelas, tanggal, hadirCount) {
+  if (hadirCount > 0) {
+    return toast('❌ DITOLAK: Tidak bisa menghapus karena sudah ada ' + hadirCount + ' anak yang diabsen hadir pada tanggal ini!');
   }
+  if (!confirm(`Hapus data sidang anak kelas "${kelas}" tanggal ${formatTglDisplay(tanggal)}?`)) return;
+
+  toast('🗑 Menghapus data...');
   const kelasObj = absenAnakState.kelasData.find(k => k.nama_kelas === kelas);
   const idKelas = kelasObj?.id_kelas || '';
 
-  toast('🗑 Menghapus data...');
-  let msgs = [];
-
-  // 1. Hapus dari Sidang sheet (APPS_SCRIPT_ABSENSI_SIDANG)
-  try {
-    const r1 = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=delete_absen&jenis_sidang=Anak-anak&tanggal=' + encodeURIComponent(tanggal) + '&sub_gugus=' + encodeURIComponent(kelas));
-    const res1 = await r1.json();
-    if (res1.status === 'ok') msgs.push(res1.deleted + ' absensi sidang');
-  } catch(e) { console.warn('delete sidang error:', e); }
-
-  // 2. Hapus dari Poin_Anak + Tamu_Absen_Anak (APPS_SCRIPT_KELAS)
   if (idKelas) {
     try {
-      const r2 = await fetch(APPS_SCRIPT_KELAS + '?action=hapus_poin_anak&id_kelas=' + encodeURIComponent(idKelas) + '&tanggal=' + encodeURIComponent(tanggal));
-      const res2 = await r2.json();
-      if (res2.status === 'ok') msgs.push((res2.poin_deleted||0) + ' poin, ' + (res2.tamu_deleted||0) + ' tamu');
-    } catch(e) { console.warn('delete poin error:', e); }
+      await fetch(APPS_SCRIPT_KELAS + '?action=hapus_poin_anak&id_kelas=' + encodeURIComponent(idKelas) + '&tanggal=' + encodeURIComponent(tanggal));
+    } catch(e) {}
   }
+  toast('✅ Data berhasil dihapus');
+  absenAnakState.historyPage = 1;
+  loadAnakHistory();
+}   
 
-  toast('✅ Dihapus: ' + (msgs.join(', ') || 'selesai'));
-  absenAnakState.anakPageMode = 'history';
-  renderAnakPoinContent();
-}
-
-async function hapusCGMSidang(lokasi, tanggal) {
-  if (!confirm(`Hapus data CGM "${lokasi}" tanggal ${formatTglDisplay(tanggal)}?\n\nSemua data absensi CGM untuk lokasi & tanggal ini akan dihapus.`)) return;
-
-  if (!cgmState.kelasData.length) {
-    try { const r = await fetch(APPS_SCRIPT_KELAS+'?action=get_kelas&aktif=y&jenis=cgm'); const j = await r.json(); cgmState.kelasData = j.data||[]; } catch(e){}
+async function hapusCGMSidang(lokasi, tanggal, hadirCount) {
+  if (hadirCount > 0) {
+    return toast('❌ DITOLAK: Tidak bisa menghapus karena sudah ada data yang diabsen hadir pada lokasi ini!');
   }
+  if (!confirm(`Hapus data CGM "${lokasi}" tanggal ${formatTglDisplay(tanggal)}?`)) return;
+
+  toast('🗑 Menghapus data...');
   const kelasObj = cgmState.kelasData.find(k => k.nama_kelas === lokasi);
   const idCgm = kelasObj?.id_kelas || '';
 
-  toast('🗑 Menghapus data...');
-  let msgs = [];
-
-  // 1. Hapus dari Sidang sheet
-  try {
-    const r1 = await fetch(APPS_SCRIPT_ABSENSI_SIDANG + '?action=delete_absen&jenis_sidang=CGM&tanggal=' + encodeURIComponent(tanggal) + '&sub_gugus=' + encodeURIComponent(lokasi));
-    const res1 = await r1.json();
-    if (res1.status === 'ok') msgs.push(res1.deleted + ' absensi sidang');
-  } catch(e) { console.warn('delete sidang error:', e); }
-
-  // 2. Hapus dari CGM_Absen + Tamu_Absen_CGM
   if (idCgm) {
     try {
-      const r2 = await fetch(APPS_SCRIPT_KELAS + '?action=hapus_cgm_absen&id_cgm=' + encodeURIComponent(idCgm) + '&tanggal=' + encodeURIComponent(tanggal));
-      const res2 = await r2.json();
-      if (res2.status === 'ok') msgs.push((res2.cgm_deleted||0) + ' CGM, ' + (res2.tamu_deleted||0) + ' tamu');
-    } catch(e) { console.warn('delete cgm error:', e); }
+      await fetch(APPS_SCRIPT_KELAS + '?action=hapus_cgm_absen&id_cgm=' + encodeURIComponent(idCgm) + '&tanggal=' + encodeURIComponent(tanggal));
+    } catch(e) {}
   }
-
-  toast('✅ Dihapus: ' + (msgs.join(', ') || 'selesai'));
-  cgmState.cgmPageMode = 'history';
-  renderCGMContent();
-}
+  toast('✅ Data berhasil dihapus');
+  cgmState.historyPage = 1;
+  loadCGMHistory();
+}   
 
 // ── Extend renderAnakPoinContent for detil/edit modes ───────
 const _origRenderAnakPoin = renderAnakPoinContent;
@@ -14432,9 +14431,9 @@ function bolehSettingHadiah() {
 
 // ── Check if user is Gembala (not Gembala Distrik)
 function isGembalaOnly() {
-  const l = getLevelCode();
-  return l === 'Gembala';
-}
+  const level = getLevelCode();
+  return level === 'Gembala'; // Murni Gembala (Bukan Gembala Distrik)
+}   
 
 // ── bolehLihatKTM: not Gembala
 function bolehLihatKTMMenu() {
