@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 13:05 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 13:19 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10576,71 +10576,91 @@ function renderAnakEntryForm(container) {
 // Konversi format tanggal menjadi YYYY-MM-DD
 
 // Fungsi utilitas format tanggal
+
 function formatTglToYMD(tgl) {
   if (!tgl) return '';
   if (tgl.includes('-')) return tgl; 
   const p = tgl.split('/');
-  if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+  if (p.length === 3) {
+    // Tambahkan angka 0 di depan jika angkanya cuma 1 digit (misal: 9 jadi 09)
+    const d = p[0].padStart(2, '0');
+    const m = p[1].padStart(2, '0');
+    const y = p[2];
+    return `${y}-${m}-${d}`; 
+  }
   return tgl;
-}
+}   
 
 // ── 1. ATUR NILAI ANAK ──
 window.aturNilaiAnak = function(id_kelas, nama_kelas, tanggal) {
+  // Pindah ke mode form terlebih dahulu
   absenAnakState.anakPageMode = 'form';
-  absenAnakState.selectedKelas = id_kelas; // Menggunakan ID Kelas (Bukan Nama)
+  absenAnakState.selectedKelas = id_kelas;
   absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
   
+  // Render tampilan form
   renderAnakPoinContent(); 
   
-  let tick = 0;
-  const guardInterval = setInterval(() => {
+  // Beri jeda sejenak (300ms) agar HTML form selesai dimuat di layar, lalu isi datanya
+  setTimeout(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
-    if (selKelas && inputTgl) {
-      inputTgl.value = absenAnakState.selectedTanggal;
-      // Paksa masukkan ID Kelas agar server mengenali saat pencarian
+    // Set ID Kelas
+    if (selKelas) {
+      // Jika pilihan kelas belum diload oleh server, sisipkan sementara
       if (!Array.from(selKelas.options).some(opt => opt.value === id_kelas)) {
          selKelas.insertAdjacentHTML('beforeend', `<option value="${id_kelas}">${nama_kelas}</option>`);
       }
       selKelas.value = id_kelas;
     }
     
-    tick++;
-    if (tick > 10) { // Beri waktu DOM 1 detik
-      clearInterval(guardInterval);
-      if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak();
+    // Set Tanggal
+    if (inputTgl) {
+      inputTgl.value = absenAnakState.selectedTanggal;
     }
-  }, 100);
+    
+    // Panggil fungsi pencarian (persis seperti saat mengklik tombol "Cari" di menu Tambah)
+    if (typeof loadAbsensiAnak === 'function') {
+      loadAbsensiAnak();
+    }
+  }, 300);
 };
+   
 
 // ── 2. ATUR NILAI CGM ──
 window.aturNilaiCGM = function(id_cgm, nama_lokasi, tanggal) {
+  // Pindah ke mode form
   cgmState.cgmPageMode = 'form';
-  cgmState.selectedKelas = id_cgm; // Menggunakan ID CGM (Bukan Nama)
+  cgmState.selectedKelas = id_cgm;
   cgmState.selectedTanggal = formatTglToYMD(tanggal);
   
+  // Render tampilan form
   renderCGMPoinContent(); 
   
-  let tick = 0;
-  const guardInterval = setInterval(() => {
+  // Beri jeda sejenak agar form dirender sempurna
+  setTimeout(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
-    if (selLokasi && inputTgl) {
-      inputTgl.value = cgmState.selectedTanggal;
+    // Set ID Lokasi CGM
+    if (selLokasi) {
       if (!Array.from(selLokasi.options).some(opt => opt.value === id_cgm)) {
          selLokasi.insertAdjacentHTML('beforeend', `<option value="${id_cgm}">${nama_lokasi}</option>`);
       }
       selLokasi.value = id_cgm;
     }
     
-    tick++;
-    if (tick > 10) {
-      clearInterval(guardInterval);
-      if (typeof loadCGM === 'function') loadCGM();
+    // Set Tanggal
+    if (inputTgl) {
+      inputTgl.value = cgmState.selectedTanggal;
     }
-  }, 100);
+    
+    // Panggil fungsi pencarian (persis seperti klik tombol di menu Tambah)
+    if (typeof loadCGM === 'function') {
+      loadCGM();
+    }
+  }, 300);
 };
 
 // ── 3. FUNGSI EDIT KELAS & TANGGAL ──
