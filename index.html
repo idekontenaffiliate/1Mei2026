@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 10:38 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 08-07-2026 16:32 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbxbL
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbys1ailzE1hivaNHaJXcGsmGnQBlFwxicj4Em976DG6Pe8Ia40sKD7U32iMgdoH1_Fr/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbwSu0whdeCIxM9NpQxvporlelxktDoCUtPywVo3L4i18r3gxwLcoy2CsL983aupIso_/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -10305,22 +10305,13 @@ async function renderAnakPoinContent() {
 
   await loadAnakHistory();
 }
-const cuteLoader = `
-  <div style="text-align:center; padding:40px 20px;">
-    <div style="font-size:4rem; animation: bounce 1s infinite alternate; display:inline-block;">👧👦</div>
-    <div style="font-weight:700; color:var(--accent); font-size:1.1rem; margin-bottom:5px; margin-top:10px;">Tunggu sebentar ya... 🏃💨</div>
-    <div style="font-size:0.8rem; color:var(--text3);">Sedang menyiapkan data yang luar biasa!<br>(Sekitar 1-4 detik karena menghitung seluruh data dari server Google)</div>
-  </div>
-  <style>@keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-15px); } }</style>
-`;   
 absenAnakState.sortDesc = true;
 cgmState.sortDesc = true;
   
 async function loadAnakHistory() {
   const wrap = document.getElementById('anak-history-wrap');
   if (!wrap) return;
-  wrap.innerHTML = cuteLoader; 
-  // wrap.innerHTML = '<div class="loading-shimmer"></div>';
+  wrap.innerHTML = '<div class="loading-shimmer"></div>';
   
   try {
     const userDistrik = currentUser?.distrik || '';
@@ -10344,7 +10335,6 @@ async function loadAnakHistory() {
     wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p></div>`;
   }
 }   
-
 function renderAnakHistoryTable(wrap, rows) {
   const page = absenAnakState.historyPage || 1;
   const perPage = 10;
@@ -10488,9 +10478,16 @@ function renderAnakHistoryTable(wrap, rows) {
       <button onclick="absenAnakState.historyPage++;renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>▶</button>
       <button onclick="absenAnakState.historyPage=${totalPages};renderAnakHistoryTable(document.getElementById('anak-history-wrap'),absenAnakState.historyData)" class="btn-action" style="font-size:.7rem;padding:5px 8px;" ${page>=totalPages?'disabled style="opacity:.4;font-size:.7rem;padding:5px 8px;"':''}>⏭</button>
     </div>`;
-  }   
+  }
 
-   
+  // Legend
+  html += `<div style="margin-top:8px;padding:8px;background:var(--surface2);border-radius:6px;font-size:.6rem;color:var(--text3);line-height:1.7;">
+    <strong>Keterangan:</strong> JA: Jumlah anak hadir di distrik · TD: Tamu dari distrik lain · TB: Tamu baru (insidentil) · TA: Total anak hadir · BL: Bersidang di distrik lain
+  </div>`;
+
+  wrap.innerHTML = html;
+}
+
 async function openAnakEntry(kelas, tanggal) {
   // Pre-load kelas data if needed
   if (!absenAnakState.kelasData.length) {
@@ -10619,57 +10616,8 @@ function renderAnakEntryForm(container) {
     }, 300);
   } 
 }
-// Konversi format DD/MM/YYYY menjadi YYYY-MM-DD untuk input form HTML
-// Konversi format DD/MM/YYYY menjadi YYYY-MM-DD
-// Konversi format DD/MM/YYYY menjadi YYYY-MM-DD untuk input form HTML
-function formatTglToYMD(tgl) {
-  if(!tgl) return '';
-  const p = tgl.split('/');
-  if(p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
-  return tgl;
-}
 
-// Aksi "Atur Nilai" Absensi Anak
-window.aturNilaiAnak = function(kelas, tanggal) {
-  absenAnakState.anakPageMode = 'form';
-  renderAnakPoinContent(); // Pindah ke halaman form
-  
-  // Tunggu sejenak agar HTML Form selesai digambar, lalu otomatis isi datanya
-  setTimeout(() => {
-    const selKelas = document.getElementById('anak-kelas');
-    const inputTgl = document.getElementById('anak-tgl');
-    
-    if (selKelas) selKelas.value = kelas;
-    if (inputTgl) inputTgl.value = formatTglToYMD(tanggal);
-    
-    // Langsung eksekusi pemanggilan nama anak supaya siap diedit & disave
-    if (typeof loadAbsensiAnak === 'function') {
-      loadAbsensiAnak();
-    }
-  }, 400);
-};
-
-// Aksi "Atur Nilai" Absensi CGM
-window.aturNilaiCGM = function(lokasi, tanggal) {
-  cgmState.cgmPageMode = 'form';
-  renderCGMPoinContent(); // Pindah ke halaman form
-  
-  // Tunggu sejenak agar HTML Form selesai digambar, lalu otomatis isi datanya
-  setTimeout(() => {
-    const selLokasi = document.getElementById('cgm-kelas');
-    const inputTgl = document.getElementById('cgm-tgl');
-    
-    if (selLokasi) selLokasi.value = lokasi;
-    if (inputTgl) inputTgl.value = formatTglToYMD(tanggal);
-    
-    // Langsung eksekusi pemanggilan keluarga CGM supaya siap diedit & disave
-    if (typeof loadCGM === 'function') {
-      loadCGM();
-    }
-  }, 400);
-};
-   
-};// ── SUNDAY WARNING HELPER ─────────────────────────────────────
+// ── SUNDAY WARNING HELPER ─────────────────────────────────────
 function checkSundayWarning(inputId, warnId) {
   const val = document.getElementById(inputId)?.value;
   const warn = document.getElementById(warnId);
@@ -10712,7 +10660,6 @@ function renderCGMContent() {
 async function loadCGMHistory() {
   const wrap = document.getElementById('cgm-history-wrap');
   if (!wrap) return;
-  wrap.innerHTML = cuteLoader; 
   try {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
