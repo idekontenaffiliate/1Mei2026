@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 14:15 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 14:31 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbxbL
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbys1ailzE1hivaNHaJXcGsmGnQBlFwxicj4Em976DG6Pe8Ia40sKD7U32iMgdoH1_Fr/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbyvYyF5tUZHLtDYWxK1z_Bws9Jl5RFhBsKm-SlML0TtVbJgUmGH3Qo_tVTJM9kl48vR/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -10577,7 +10577,7 @@ function renderAnakEntryForm(container) {
 
 // Fungsi utilitas format tanggal
 
-// 1. Fungsi Format Tanggal (Standar Input HTML Wajib YYYY-MM-DD)
+// Konversi format (Standar Input HTML Wajib YYYY-MM-DD)
 function formatTglToYMD(tgl) {
   if (!tgl) return '';
   if (tgl.includes('-')) return tgl; 
@@ -10588,78 +10588,77 @@ function formatTglToYMD(tgl) {
   return tgl;
 }
 
-// 2. Aksi "Atur Nilai" Absensi Anak
+// ── 1. ATUR NILAI ANAK (EDIT) ──
 window.aturNilaiAnak = function(id_kelas, nama_kelas, tanggal) {
-  // Simpan pengaturan ke memori sebelum layar berganti
+  const ymdDate = formatTglToYMD(tanggal);
+  
+  // Setel state Javascript agar Backend tahu data apa yang dicari
   absenAnakState.selectedKelas = id_kelas;
-  absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
+  absenAnakState.selectedTanggal = ymdDate;
   absenAnakState.anakPageMode = 'form';
   
-  // Perintahkan layar berganti ke Form
+  // Render/Gambar form di layar
   renderAnakPoinContent(); 
   
-  let attempts = 0;
-  // Pantau layar setiap 100ms sampai elemen Form benar-benar muncul dari server
-  const poll = setInterval(() => {
+  // Tunggu 500ms (setengah detik) sampai form dipastikan beres digambar browser
+  setTimeout(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
-    // Jika Form sudah selesai digambar di layar
-    if (selKelas && inputTgl) {
-      // Pastikan tanggal tersetting
-      inputTgl.value = absenAnakState.selectedTanggal;
-      
-      // Jika list dropdown kelas masih kosong karena delay server, sisipkan manual
+    // Tancapkan ID Kelas
+    if (selKelas) {
       if (!Array.from(selKelas.options).some(opt => opt.value === id_kelas)) {
-         selKelas.insertAdjacentHTML('beforeend', `<option value="${id_kelas}">${nama_kelas}</option>`);
+         selKelas.innerHTML += `<option value="${id_kelas}">${nama_kelas}</option>`;
       }
       selKelas.value = id_kelas;
-      
-      // Jika data berhasil "nyantol" di form, stop pemantauan dan gas muat data absen
-      if (selKelas.value === id_kelas && inputTgl.value === absenAnakState.selectedTanggal) {
-        clearInterval(poll);
-        // Jeda ekstra 200ms agar browser bernapas sebelum memanggil data
-        setTimeout(() => { if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak(); }, 200);
-      }
     }
     
-    attempts++;
-    if (attempts > 50) clearInterval(poll); // Stop memantau jika lebih dari 5 detik (mencegah lag)
-  }, 100);
+    // Tancapkan Tanggal
+    if (inputTgl) {
+      inputTgl.value = ymdDate;
+    }
+    
+    // Tarik data nilainya (panggil API Server)
+    if (typeof loadAbsensiAnak === 'function') {
+      loadAbsensiAnak(); 
+    } else {
+      toast('Fungsi loadAbsensiAnak tidak ditemukan');
+    }
+  }, 500); 
 };
 
-// 3. Aksi "Atur Nilai" Absensi CGM
+// ── 2. ATUR NILAI CGM (EDIT) ──
 window.aturNilaiCGM = function(id_cgm, nama_lokasi, tanggal) {
+  const ymdDate = formatTglToYMD(tanggal);
+  
   cgmState.selectedKelas = id_cgm;
-  cgmState.selectedTanggal = formatTglToYMD(tanggal);
+  cgmState.selectedTanggal = ymdDate;
   cgmState.cgmPageMode = 'form';
   
   renderCGMPoinContent(); 
   
-  let attempts = 0;
-  const poll = setInterval(() => {
+  setTimeout(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
-    if (selLokasi && inputTgl) {
-      inputTgl.value = cgmState.selectedTanggal;
-      
+    if (selLokasi) {
       if (!Array.from(selLokasi.options).some(opt => opt.value === id_cgm)) {
-         selLokasi.insertAdjacentHTML('beforeend', `<option value="${id_cgm}">${nama_lokasi}</option>`);
+         selLokasi.innerHTML += `<option value="${id_cgm}">${nama_lokasi}</option>`;
       }
       selLokasi.value = id_cgm;
-      
-      if (selLokasi.value === id_cgm && inputTgl.value === cgmState.selectedTanggal) {
-        clearInterval(poll);
-        setTimeout(() => { if (typeof loadCGM === 'function') loadCGM(); }, 200);
-      }
     }
     
-    attempts++;
-    if (attempts > 50) clearInterval(poll); 
-  }, 100);
+    if (inputTgl) {
+      inputTgl.value = ymdDate;
+    }
+    
+    if (typeof loadCGM === 'function') {
+      loadCGM();
+    } else {
+      toast('Fungsi loadCGM tidak ditemukan');
+    }
+  }, 500);
 };
-   
 
 // ── 3. FUNGSI EDIT KELAS & TANGGAL ──
 window.openAnakEditModal = function(id_kelas, tanggal) {
