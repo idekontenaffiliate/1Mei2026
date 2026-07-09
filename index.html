@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 12:25 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 12:42 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10570,6 +10570,8 @@ function renderAnakEntryForm(container) {
 // Konversi format DD/MM/YYYY menjadi YYYY-MM-DD untuk input form HTML
 
 // Konversi format tanggal menjadi YYYY-MM-DD
+
+// Fungsi utilitas format tanggal
 function formatTglToYMD(tgl) {
   if (!tgl) return '';
   if (tgl.includes('-')) return tgl; 
@@ -10578,62 +10580,79 @@ function formatTglToYMD(tgl) {
   return tgl;
 }
 
-// Aksi "Atur Nilai" Absensi Anak
+// ── LOGIKA ATUR NILAI ANAK ──
 window.aturNilaiAnak = function(kelas, tanggal) {
   absenAnakState.anakPageMode = 'form';
+  
+  // Simpan ke state global agar jika dirender ulang, nilainya tidak hilang
+  absenAnakState.selectedKelas = kelas;
+  absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
+  
   renderAnakPoinContent(); 
   
-  let attempts = 0;
-  const poll = setInterval(() => {
+  // Interval yang menjaga inputan dari reset API server selama 1 detik penuh
+  let tick = 0;
+  const guardInterval = setInterval(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
     if (selKelas && inputTgl) {
+      inputTgl.value = formatTglToYMD(tanggal);
+      
+      // Sisipkan kelas jika belum diload oleh API
       if (!Array.from(selKelas.options).some(opt => opt.value === kelas)) {
          selKelas.insertAdjacentHTML('beforeend', `<option value="${escHtml(kelas)}">${escHtml(kelas)}</option>`);
       }
       selKelas.value = kelas;
-      inputTgl.value = formatTglToYMD(tanggal);
-      
-      // Pastikan DOM sudah benar-benar menerima nilainya
-      if (selKelas.value === kelas && inputTgl.value === formatTglToYMD(tanggal)) {
-        clearInterval(poll);
-        // Delay ekstra 100ms agar internal form siap sepenuhnya
-        setTimeout(() => { if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak(); }, 100);
+    }
+    
+    tick++;
+    // Setelah 10x cek (sekitar 1 detik), eksekusi pencarian nama anak
+    if (tick > 10) {
+      clearInterval(guardInterval);
+      if (typeof loadAbsensiAnak === 'function') {
+        loadAbsensiAnak(); 
       }
     }
-    attempts++;
-    if (attempts > 50) clearInterval(poll); // Cegah looping tak terhingga
-  }, 50);
+  }, 100);
 };
 
-// Aksi "Atur Nilai" Absensi CGM
+// ── LOGIKA ATUR NILAI CGM ──
 window.aturNilaiCGM = function(lokasi, tanggal) {
   cgmState.cgmPageMode = 'form';
+  
+  // Simpan ke state global
+  cgmState.selectedKelas = lokasi;
+  cgmState.selectedTanggal = formatTglToYMD(tanggal);
+  
   renderCGMPoinContent(); 
   
-  let attempts = 0;
-  const poll = setInterval(() => {
+  let tick = 0;
+  const guardInterval = setInterval(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
     if (selLokasi && inputTgl) {
+      inputTgl.value = formatTglToYMD(tanggal);
+      
       if (!Array.from(selLokasi.options).some(opt => opt.value === lokasi)) {
          selLokasi.insertAdjacentHTML('beforeend', `<option value="${escHtml(lokasi)}">${escHtml(lokasi)}</option>`);
       }
       selLokasi.value = lokasi;
-      inputTgl.value = formatTglToYMD(tanggal);
-      
-      if (selLokasi.value === lokasi && inputTgl.value === formatTglToYMD(tanggal)) {
-        clearInterval(poll);
-        setTimeout(() => { if (typeof loadCGM === 'function') loadCGM(); }, 100);
+    }
+    
+    tick++;
+    if (tick > 10) {
+      clearInterval(guardInterval);
+      if (typeof loadCGM === 'function') {
+        loadCGM();
       }
     }
-    attempts++;
-    if (attempts > 50) clearInterval(poll);
-  }, 50);
+  }, 100);
 };
 
+
+   
 
    
 // ── SUNDAY WARNING HELPER ─────────────────────────────────────
@@ -14442,7 +14461,7 @@ function switchDashTab(tab) {
 // ║  Untuk Absensi Anak dan CGM                                  ║
 // ╚══════════════════════════════════════════════════════════════╝
 
-let _distrikList = null;
+var _distrikList = [];
 var _tamuDistrikData = []; // anak dari distrik lain yang ditambahkan
 var _tamuBaruData = [];    // tamu baru insidentil
 
