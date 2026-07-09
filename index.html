@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 11:10 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 11:35 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10381,7 +10381,6 @@ function renderAnakHistoryTable(wrap, data) {
   }
 
   filtered.forEach(v => {
-    // Susun nama anak menjadi string koma
     const namaListHtml = v.list_nama && v.list_nama.length > 0 
       ? v.list_nama.join(', ') 
       : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak</span>';
@@ -10412,7 +10411,7 @@ function renderAnakHistoryTable(wrap, data) {
       </div>
 
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>Anak:</strong> ${hadir}/${totalMaster}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>JA:</strong> ${hadir}/${totalMaster}</span>
         <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TD:</strong> ${tdCount}</span>
         <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TB:</strong> ${tbCount}</span>
         <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TA:</strong> ${totalAnakHadir}</span>
@@ -10426,18 +10425,19 @@ function renderAnakHistoryTable(wrap, data) {
     </div>`;
   });
 
-  // KETERANGAN PALING BAWAH
+  // INFO KETERANGAN PALING BAWAH
   sHtml += `<div style="font-size:0.75rem;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;margin-top:16px;line-height:1.6;border:1px solid var(--border);">
     <strong>Keterangan:</strong><br/>
-    JA: Jumlah anak hadir di distrik · <br/>
-    TD: Tamu dari distrik lain · <br/>
-    TB: Tamu baru (insidentil) · <br/>
-    TA: Total anak hadir · <br/>
+    JA: Jumlah anak hadir di distrik<br/>
+    TD: Tamu dari distrik lain<br/>
+    TB: Tamu baru (insidentil)<br/>
+    TA: Total anak hadir<br/>
     BL: Bersidang di distrik lain
   </div>`;
 
   wrap.innerHTML = sHtml;
 }
+
    
 async function openAnakEntry(kelas, tanggal) {
   // Pre-load kelas data if needed
@@ -10568,59 +10568,79 @@ function renderAnakEntryForm(container) {
   } 
 }
 // Konversi format DD/MM/YYYY menjadi YYYY-MM-DD untuk input form HTML
+
 function formatTglToYMD(tgl) {
-  if(!tgl) return '';
+  if (!tgl) return '';
+  if (tgl.includes('-')) return tgl; // Jika sudah format YYYY-MM-DD
   const p = tgl.split('/');
-  if(p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+  if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
   return tgl;
-}   
+}
 
 // Aksi "Atur Nilai" Absensi Anak
 window.aturNilaiAnak = function(kelas, tanggal) {
-  absenAnakState.selectedKelas = kelas; 
-  absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
   absenAnakState.anakPageMode = 'form';
   renderAnakPoinContent(); 
   
-  // Tunggu form selesai digambar, lalu paksakan nilai masuk
-  setTimeout(() => {
+  // Looping pengecekan memastikan elemen dropdown & input tanggal sudah dimuat di layar
+  let attempt = 0;
+  const tryAutoFill = setInterval(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
-    if (selKelas) {
+    if (selKelas && inputTgl) {
+      inputTgl.value = formatTglToYMD(tanggal);
+      
+      // Pastikan kelas yang diklik ada di dalam dropdown, jika belum ada, tambahkan paksa
+      let optionExists = Array.from(selKelas.options).some(opt => opt.value === kelas);
+      if (!optionExists) {
+         selKelas.insertAdjacentHTML('beforeend', `<option value="${escHtml(kelas)}">${escHtml(kelas)}</option>`);
+      }
       selKelas.value = kelas;
-      // Jika ternyata value tidak bisa diset (mungkin karena belum selesai fetch data)
-      if (!selKelas.value) {
-        selKelas.innerHTML += `<option value="${escHtml(kelas)}" selected>${escHtml(kelas)}</option>`;
-        selKelas.value = kelas;
+      
+      // Jika berhasil terisi, hentikan loop & eksekusi pencarian
+      if (selKelas.value && inputTgl.value) {
+         clearInterval(tryAutoFill);
+         if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak();
       }
     }
-    if (inputTgl) inputTgl.value = formatTglToYMD(tanggal);
-    
-    // Eksekusi pencarian otomatis
-    if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak();
-  }, 400);
+    attempt++;
+    if (attempt > 25) clearInterval(tryAutoFill); // Berhenti jika lebih dari 2.5 detik (mencegah loop tak terhingga)
+  }, 100);
 };
 
 // Aksi "Atur Nilai" Absensi CGM
 window.aturNilaiCGM = function(lokasi, tanggal) {
   cgmState.cgmPageMode = 'form';
-  renderCGMPoinContent(); // Pindah ke halaman form
+  renderCGMPoinContent(); 
   
-  // Tunggu sejenak agar HTML Form selesai digambar, lalu otomatis isi datanya
-  setTimeout(() => {
+  let attempt = 0;
+  const tryAutoFill = setInterval(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
-    if (selLokasi) selLokasi.value = lokasi;
-    if (inputTgl) inputTgl.value = formatTglToYMD(tanggal);
-    
-    // Langsung eksekusi pemanggilan keluarga CGM supaya siap diedit & disave
-    if (typeof loadCGM === 'function') {
-      loadCGM();
+    if (selLokasi && inputTgl) {
+      inputTgl.value = formatTglToYMD(tanggal);
+      
+      let optionExists = Array.from(selLokasi.options).some(opt => opt.value === lokasi);
+      if (!optionExists) {
+         selLokasi.insertAdjacentHTML('beforeend', `<option value="${escHtml(lokasi)}">${escHtml(lokasi)}</option>`);
+      }
+      selLokasi.value = lokasi;
+      
+      if (selLokasi.value && inputTgl.value) {
+         clearInterval(tryAutoFill);
+         if (typeof loadCGM === 'function') loadCGM();
+      }
     }
-  }, 400);
-};// ── SUNDAY WARNING HELPER ─────────────────────────────────────
+    attempt++;
+    if (attempt > 25) clearInterval(tryAutoFill);
+  }, 100);
+};
+
+
+   
+// ── SUNDAY WARNING HELPER ─────────────────────────────────────
 function checkSundayWarning(inputId, warnId) {
   const val = document.getElementById(inputId)?.value;
   const warn = document.getElementById(warnId);
