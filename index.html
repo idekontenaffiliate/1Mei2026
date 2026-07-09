@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 17:50 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 18:28 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -670,7 +670,7 @@ const APPS_SCRIPT_ABSENSI_SIDANG = "https://script.google.com/macros/s/AKfycbxbL
 const APPS_SCRIPT_PENJENGUKAN = "https://script.google.com/macros/s/AKfycbxLHpIWnEx8rwZecETrO7eIi21l2YlIL5hjxdwSfBCZWz9SQcYyByGzmRBVhEuycuraYw/exec";
 const APPS_SCRIPT_HISTORY = "https://script.google.com/macros/s/AKfycbzPcNn5AoCO53hTFgJWu7uJtHDja5xvX3x5cRnIYD_GKYOI_i3zI3HGH7mGS-AFgx95dA/exec";
 const APPS_SCRIPT_PENGUMUMAN = "https://script.google.com/macros/s/AKfycbyAVph0tVhnne8o99mCUmh9K9mfLSO7lrdjAn_xXQJNVrUF4ZkHV2nPPJE0r-YHfzjb/exec";
-const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycby4oePoJ_q41ktIwJUfUyPvBYpe1iTQT0xNkjbmra7w7dhH-vdKaLH8GIn9T0zWy1_i/exec";
+const APPS_SCRIPT_KELAS = "https://script.google.com/macros/s/AKfycbxhbmJFuue1TE9S3FatZkjMlaXLgv0r8FMbGwgkKnDLbcKhvhBueI_SBckmEqygRA/exec";
    
 const ADMIN_LEVELS=['Administrator','Penatua','Gembala Distrik'];
 
@@ -10344,11 +10344,9 @@ async function loadAnakHistory() {
     wrap.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Gagal memuat: ${escHtml(e.message)}</p></div>`;
   }
 }   
-
+   
 function renderAnakHistoryTable(wrap, data) {
   if (!wrap) return;
-  
-  // Set default pagination state jika belum ada
   absenAnakState.perPage = absenAnakState.perPage || 20;
   absenAnakState.currentPage = absenAnakState.currentPage || 1;
 
@@ -10356,26 +10354,18 @@ function renderAnakHistoryTable(wrap, data) {
   const fNama = (document.getElementById('filter-anak-nama')?.value || '').toLowerCase();
   
   if (fNama && fNama.length >= 2) {
-      filtered = filtered.filter(v => 
-          (v.list_nama || []).some(n => n.toLowerCase().includes(fNama)) ||
-          (v.kelas || '').toLowerCase().includes(fNama)
-      );
+      filtered = filtered.filter(v => (v.list_nama || []).some(n => n.toLowerCase().includes(fNama)) || (v.kelas || '').toLowerCase().includes(fNama));
   }
-  
   if (absenAnakState.sortDesc !== undefined) {
       filtered.sort((a, b) => {
         const pa = (a.tanggal||'').split('/'), pb = (b.tanggal||'').split('/');
         if (pa.length !== 3 || pb.length !== 3) return 0;
-        const da = new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
-        const db = new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
-        return absenAnakState.sortDesc ? db - da : da - db;
+        return absenAnakState.sortDesc ? new Date(`${pb[2]}-${pb[1]}-${pb[0]}`) - new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) : new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
       });
   }
 
-  // Logika Pagination
   const totalData = filtered.length;
   const totalPages = absenAnakState.perPage === 'all' ? 1 : Math.ceil(totalData / absenAnakState.perPage);
-  
   let paginatedData = filtered;
   if (absenAnakState.perPage !== 'all') {
     const start = (absenAnakState.currentPage - 1) * absenAnakState.perPage;
@@ -10394,17 +10384,15 @@ function renderAnakHistoryTable(wrap, data) {
         </select>
       </div>
       <div style="font-size:.8rem; color:var(--text2); font-weight:bold;">Total: ${totalData} Data</div>
-    </div>
-  `;
+    </div>`;
 
   if (paginatedData.length === 0) {
     wrap.innerHTML = sHtml + `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data riwayat absensi.</p></div>`;
     return;
   }
 
-  // Render Item
   paginatedData.forEach(v => {
-    const namaListHtml = v.list_nama && v.list_nama.length > 0 ? v.list_nama.join(', ') : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak</span>';
+    const namaListHtml = v.list_nama && v.list_nama.length > 0 ? v.list_nama.join(', ') : '<span style="color:var(--text3);font-style:italic;">Belum ada anak diabsen</span>';
     const tdCount = v.tamu_distrik || 0, tbCount = v.tamu_baru || 0, hadir = v.hadir || 0, totalMaster = v.total || 0;
     const totalAnakHadir = v.total_hadir || (hadir + tdCount + tbCount), belum = v.belum || 0;
     const safeKelas = escHtml(v.kelas).replace(/'/g, "\\'");
@@ -10419,16 +10407,18 @@ function renderAnakHistoryTable(wrap, data) {
           <button onclick="toggleAnakMenu('menu-anak-${v.id_kelas}-${(v.tanggal||'').replace(/\//g,'')}')" class="btn-action" style="padding:6px 10px;font-size:.75rem;">⋮ Opsi</button>
           <div id="menu-anak-${v.id_kelas}-${(v.tanggal||'').replace(/\//g,'')}" class="action-dropdown" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:2000000;min-width:140px;">
             <div onclick="aturNilaiAnak('${v.id_kelas}', '${safeKelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
+            <div onclick="loadAnakAbsenDetail('${v.id_kelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil Poin</div>
+            <div onclick="openAnakEditModal('${v.id_kelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Kelas/Tgl</div>
             <div onclick="hapusAnakSidang('${v.id_kelas}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
           </div>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>JA:</strong> ${hadir}/${totalMaster}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TD:</strong> ${tdCount}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TB:</strong> ${tbCount}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TA:</strong> ${totalAnakHadir}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>BL:</strong> ${belum}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>JA:</strong> ${hadir}/${totalMaster}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TD:</strong> ${tdCount}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TB:</strong> ${tbCount}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TA:</strong> ${totalAnakHadir}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>BL:</strong> ${belum}</span>
       </div>
       <div style="font-size:0.75rem; padding-top:8px; border-top:1px dashed var(--border);">
         <div style="font-weight:700; color:var(--text); margin-bottom:4px;">Daftar Anak & Tamu Hadir:</div>
@@ -10437,7 +10427,6 @@ function renderAnakHistoryTable(wrap, data) {
     </div>`;
   });
 
-  // Tombol Navigasi Pagination
   if (totalPages > 1) {
     sHtml += `<div style="display:flex; justify-content:center; gap:12px; align-items:center; margin-top:16px;">
       <button onclick="if(absenAnakState.currentPage > 1) { absenAnakState.currentPage--; renderAnakHistoryTable(document.getElementById('anak-history-wrap'), absenAnakState.historyData); }" class="btn-action" style="padding:6px 14px;" ${absenAnakState.currentPage === 1 ? 'disabled' : ''}>◀ Prev</button>
@@ -10445,13 +10434,10 @@ function renderAnakHistoryTable(wrap, data) {
       <button onclick="if(absenAnakState.currentPage < ${totalPages}) { absenAnakState.currentPage++; renderAnakHistoryTable(document.getElementById('anak-history-wrap'), absenAnakState.historyData); }" class="btn-action" style="padding:6px 14px;" ${absenAnakState.currentPage === totalPages ? 'disabled' : ''}>Next ▶</button>
     </div>`;
   }
-
-  sHtml += `<div style="font-size:0.7rem;color:var(--text2);background:var(--surface2);padding:10px;border-radius:8px;margin-top:16px;line-height:1.4;border:1px solid var(--border);">
-    <strong>Keterangan:</strong> JA: Jml anak hadir · TD: Tamu distrik lain · TB: Tamu baru · TA: Total anak hadir · BL: Belum diabsen
-  </div>`;
-
+  sHtml += `<div style="font-size:0.7rem;color:var(--text2);background:var(--surface2);padding:10px;border-radius:8px;margin-top:16px;line-height:1.4;border:1px solid var(--border);"><strong>Keterangan:</strong> JA: Jumlah anak hadir · TD: Tamu distrik lain · TB: Tamu baru · TA: Total anak hadir · BL: Bersidang di distrik lain</div>`;
   wrap.innerHTML = sHtml;
 }
+   
    
 async function openAnakEntry(kelas, tanggal) {
   // Pre-load kelas data if needed
@@ -10590,88 +10576,62 @@ function renderAnakEntryForm(container) {
 // Konversi format (Standar Input HTML Wajib YYYY-MM-DD)
 function formatTglToYMD(tgl) {
   if (!tgl) return '';
-  // Jika sudah format YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(tgl)) return tgl;
-  // Jika YYYY-M-D (perbaiki dengan nol)
-  if (tgl.includes('-')) {
-    const p = tgl.split('-');
-    return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
-  }
-  // Jika DD/MM/YYYY
-  if (tgl.includes('/')) {
-    const p = tgl.split('/');
-    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-  }
+  if (tgl.includes('-')) return tgl; 
+  const p = tgl.split('/');
+  if (p.length === 3) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
   return tgl;
 }
 
-// Atur Nilai Anak
+// 2. ATUR NILAI ANAK
 window.aturNilaiAnak = function(id_kelas, nama_kelas, tanggal) {
-  absenAnakState.anakPageMode = 'form';
   absenAnakState.selectedKelas = id_kelas;
   absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
+  absenAnakState.anakPageMode = 'form';
   
-  renderAnakPoinContent(); 
+  renderAnakPoinContent(); // Render form HTML-nya
   
-  let attempts = 0;
-  const poll = setInterval(() => {
+  // Beri jeda 200ms, lalu tancapkan nilainya dan load data!
+  setTimeout(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
-    if (selKelas && inputTgl) {
+    if (selKelas) {
       if (!Array.from(selKelas.options).some(opt => opt.value === id_kelas)) {
          selKelas.insertAdjacentHTML('beforeend', `<option value="${id_kelas}">${nama_kelas}</option>`);
       }
       selKelas.value = id_kelas;
-      inputTgl.value = absenAnakState.selectedTanggal;
-      
-      // Paksa validasi internal pada elemen DOM
-      selKelas.dispatchEvent(new Event('change'));
-      inputTgl.dispatchEvent(new Event('change'));
-      
-      if (selKelas.value === id_kelas && inputTgl.value === absenAnakState.selectedTanggal) {
-        clearInterval(poll);
-        setTimeout(() => { if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak(); }, 150);
-      }
     }
-    attempts++;
-    if (attempts > 50) clearInterval(poll); 
-  }, 100);
+    if (inputTgl) inputTgl.value = absenAnakState.selectedTanggal;
+    
+    // Panggil pencarian daftar anak
+    if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak();
+  }, 200);
 };
 
-// Atur Nilai CGM
+// 3. ATUR NILAI CGM
 window.aturNilaiCGM = function(id_cgm, nama_lokasi, tanggal) {
-  cgmState.cgmPageMode = 'form';
   cgmState.selectedKelas = id_cgm;
   cgmState.selectedTanggal = formatTglToYMD(tanggal);
+  cgmState.cgmPageMode = 'form';
   
-  renderCGMPoinContent(); 
+  renderCGMPoinContent(); // Render form HTML-nya
   
-  let attempts = 0;
-  const poll = setInterval(() => {
+  setTimeout(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
-    if (selLokasi && inputTgl) {
+    if (selLokasi) {
       if (!Array.from(selLokasi.options).some(opt => opt.value === id_cgm)) {
          selLokasi.insertAdjacentHTML('beforeend', `<option value="${id_cgm}">${nama_lokasi}</option>`);
       }
       selLokasi.value = id_cgm;
-      inputTgl.value = cgmState.selectedTanggal;
-      
-      selLokasi.dispatchEvent(new Event('change'));
-      inputTgl.dispatchEvent(new Event('change'));
-      
-      if (selLokasi.value === id_cgm && inputTgl.value === cgmState.selectedTanggal) {
-        clearInterval(poll);
-        setTimeout(() => { if (typeof loadCGM === 'function') loadCGM(); }, 150);
-      }
     }
-    attempts++;
-    if (attempts > 50) clearInterval(poll);
-  }, 100);
+    if (inputTgl) inputTgl.value = cgmState.selectedTanggal;
+    
+    // Panggil pencarian daftar anak CGM
+    if (typeof loadCGM === 'function') loadCGM();
+  }, 200);
 };
-
    
 // ── 3. FUNGSI EDIT KELAS & TANGGAL ──
 window.openAnakEditModal = function(id_kelas, tanggal) {
@@ -10824,60 +10784,56 @@ async function loadCGMHistory() {
 
 function renderCGMHistoryTable(wrap, data) {
   if (!wrap) return;
-  
+  cgmState.perPage = cgmState.perPage || 20;
+  cgmState.currentPage = cgmState.currentPage || 1;
+
   let filtered = data || [];
   const fNama = (document.getElementById('filter-cgm-nama')?.value || '').toLowerCase();
   
   if (fNama && fNama.length >= 2) {
-      filtered = filtered.filter(v => 
-          (v.list_nama || []).some(n => n.toLowerCase().includes(fNama)) ||
-          (v.lokasi || '').toLowerCase().includes(fNama)
-      );
+      filtered = filtered.filter(v => (v.list_nama || []).some(n => n.toLowerCase().includes(fNama)) || (v.lokasi || '').toLowerCase().includes(fNama));
   }
-  
   if (cgmState.sortDesc !== undefined) {
       filtered.sort((a, b) => {
         const pa = (a.tanggal||'').split('/'), pb = (b.tanggal||'').split('/');
         if (pa.length !== 3 || pb.length !== 3) return 0;
-        const da = new Date(`${pa[2]}-${pa[1]}-${pa[0]}`);
-        const db = new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
-        return cgmState.sortDesc ? db - da : da - db;
+        return cgmState.sortDesc ? new Date(`${pb[2]}-${pb[1]}-${pb[0]}`) - new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) : new Date(`${pa[2]}-${pa[1]}-${pa[0]}`) - new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
       });
   }
 
-  let sHtml = `
-    <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center;">
-      <button onclick="cgmState.sortDesc = !cgmState.sortDesc; cgmState.historyPage=1; renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:6px 12px;">↕ Urutkan Tanggal</button>
-      <div style="font-size:.8rem; color:var(--text2); font-weight:bold;">Total: ${filtered.length} Data</div>
-    </div>
-  `;
+  const totalData = filtered.length;
+  const totalPages = cgmState.perPage === 'all' ? 1 : Math.ceil(totalData / cgmState.perPage);
+  let paginatedData = filtered;
+  if (cgmState.perPage !== 'all') {
+    const start = (cgmState.currentPage - 1) * cgmState.perPage;
+    paginatedData = filtered.slice(start, start + parseInt(cgmState.perPage));
+  }
 
-  if (filtered.length === 0) {
-    wrap.innerHTML = sHtml + `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data riwayat absensi CGM.</p></div>`;
+  let sHtml = `
+    <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button onclick="cgmState.sortDesc = !cgmState.sortDesc; cgmState.currentPage=1; renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData)" class="btn-action" style="font-size:.7rem;padding:6px 12px;">↕ Urutkan Tgl</button>
+        <select onchange="cgmState.perPage = this.value === 'all' ? 'all' : parseInt(this.value); cgmState.currentPage = 1; renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData);" style="font-size:.7rem; padding:4px 8px; border-radius:4px; border:1px solid var(--border);">
+          <option value="20" ${cgmState.perPage == 20 ? 'selected':''}>Tampil 20</option>
+          <option value="50" ${cgmState.perPage == 50 ? 'selected':''}>Tampil 50</option>
+          <option value="100" ${cgmState.perPage == 100 ? 'selected':''}>Tampil 100</option>
+          <option value="all" ${cgmState.perPage === 'all' ? 'selected':''}>Semua</option>
+        </select>
+      </div>
+      <div style="font-size:.8rem; color:var(--text2); font-weight:bold;">Total: ${totalData} Data</div>
+    </div>`;
+
+  if (paginatedData.length === 0) {
+    wrap.innerHTML = sHtml + `<div class="empty-state"><div class="icon">📭</div><p>Belum ada data riwayat CGM.</p></div>`;
     return;
   }
 
-filtered.forEach(v => {
-    const namaListHtml = v.list_nama && v.list_nama.length > 0 
-      ? v.list_nama.join(', ') 
-      : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak/tamu yang diabsen</span>';
-
-    const hadirAnak = v.hadir_anak || 0;
-    const totalMaster = v.total || 0;
-    const tdAnak = v.tamu_distrik || 0; 
-    const tbAnak = v.tamu_baru || 0;
-    const totalAnakHadir = v.total_hadir_anak || (hadirAnak + tdAnak + tbAnak);
-    const belumAnak = v.belum_anak || Math.max(0, totalMaster - hadirAnak);
-
-    const hadirAyah = v.hadir_ayah || 0;
-    const hadirIbu = v.hadir_ibu || 0;
-    const jo = hadirAyah + hadirIbu;
-    const tod = v.tamu_ortu_distrik || 0;
-    const tob = v.tamu_ortu_baru || 0;
-    const to = jo + tod + tob;
-    const ik = v.ik_pct || 0;
-    
-    // Amankan string nama lokasi untuk parameter JavaScript
+  paginatedData.forEach(v => {
+    const namaListHtml = v.list_nama && v.list_nama.length > 0 ? v.list_nama.join(', ') : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak/tamu</span>';
+    const hadirAnak = v.hadir_anak || 0, totalMaster = v.total || 0, tdAnak = v.tamu_distrik || 0, tbAnak = v.tamu_baru || 0;
+    const totalAnakHadir = v.total_hadir_anak || (hadirAnak + tdAnak + tbAnak), belumAnak = v.belum_anak || Math.max(0, totalMaster - hadirAnak);
+    const hadirAyah = v.hadir_ayah || 0, hadirIbu = v.hadir_ibu || 0, jo = hadirAyah + hadirIbu;
+    const tod = v.tamu_ortu_distrik || 0, tob = v.tamu_ortu_baru || 0, to = jo + tod + tob, ik = v.ik_pct || 0;
     const safeLokasi = escHtml(v.lokasi).replace(/'/g, "\\'");
 
     sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
@@ -10888,7 +10844,6 @@ filtered.forEach(v => {
         </div>
         <div style="position:relative;">
           <button onclick="toggleAnakMenu('menu-cgm-${v.id_cgm}-${(v.tanggal||'').replace(/\//g,'')}')" class="btn-action" style="padding:6px 10px;font-size:.75rem;">⋮ Opsi</button>
-          
           <div id="menu-cgm-${v.id_cgm}-${(v.tanggal||'').replace(/\//g,'')}" class="action-dropdown" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:2000000;min-width:140px;">
             <div onclick="aturNilaiCGM('${v.id_cgm}', '${safeLokasi}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
             <div onclick="loadCGMAbsenDetail('${v.id_cgm}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil CGM</div>
@@ -10897,15 +10852,13 @@ filtered.forEach(v => {
           </div>
         </div>
       </div>
-
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>JA:</strong> ${hadirAnak}/${totalMaster}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TD:</strong> ${tdAnak}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TB:</strong> ${tbAnak}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TA:</strong> ${totalAnakHadir}</span>
-        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>BL:</strong> ${belumAnak}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>JA:</strong> ${hadirAnak}/${totalMaster}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TD:</strong> ${tdAnak}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TB:</strong> ${tbAnak}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>TA:</strong> ${totalAnakHadir}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;"><strong>BL:</strong> ${belumAnak}</span>
       </div>
-
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
         <span style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--accent);"><strong>JO:</strong> ${jo}</span>
         <span style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--accent);"><strong>TOD:</strong> ${tod}</span>
@@ -10913,22 +10866,21 @@ filtered.forEach(v => {
         <span style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--accent);"><strong>TO:</strong> ${to}</span>
         <span style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--green);"><strong>IK:</strong> ${ik}%</span>
       </div>
-
       <div style="font-size:0.75rem; padding-top:8px; border-top:1px dashed var(--border);">
         <div style="font-weight:700; color:var(--text); margin-bottom:4px;">Daftar Anak & Tamu Hadir:</div>
         <div style="line-height:1.5; color:var(--accent); font-weight:600;">${namaListHtml}</div>
       </div>
     </div>`;
   });
-   
-  // INFO KETERANGAN PALING BAWAH
-  sHtml += `<div style="font-size:0.75rem;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;margin-top:16px;line-height:1.6;border:1px solid var(--border);">
-    <strong>Keterangan Anak:</strong><br/>
-    JA: Jumlah anak hadir · TD: Tamu dari distrik lain · TB: Tamu baru · TA: Total anak hadir · BL: Bersidang di distrik lain<br/><br/>
-    <strong>Keterangan Ortu:</strong><br/>
-    JO: Jumlah orangtua hadir · TOD: Tamu ortu distrik lain · TOB: Tamu ortu baru · TO: Total ortu hadir · IK: Indeks kesehatan CGM
-  </div>`;
 
+  if (totalPages > 1) {
+    sHtml += `<div style="display:flex; justify-content:center; gap:12px; align-items:center; margin-top:16px;">
+      <button onclick="if(cgmState.currentPage > 1) { cgmState.currentPage--; renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData); }" class="btn-action" style="padding:6px 14px;" ${cgmState.currentPage === 1 ? 'disabled' : ''}>◀ Prev</button>
+      <span style="font-size:0.8rem; font-weight:bold;">Hal ${cgmState.currentPage} dari ${totalPages}</span>
+      <button onclick="if(cgmState.currentPage < ${totalPages}) { cgmState.currentPage++; renderCGMHistoryTable(document.getElementById('cgm-history-wrap'), cgmState.historyData); }" class="btn-action" style="padding:6px 14px;" ${cgmState.currentPage === totalPages ? 'disabled' : ''}>Next ▶</button>
+    </div>`;
+  }
+  sHtml += `<div style="font-size:0.7rem;color:var(--text2);background:var(--surface2);padding:10px;border-radius:8px;margin-top:16px;line-height:1.4;border:1px solid var(--border);"><strong>Keterangan Anak:</strong> JA: Jml anak hadir · TD: Tamu distrik lain · TB: Tamu baru · TA: Total anak hadir · BL: Bersidang di distrik lain<br/><br/><strong>Keterangan Ortu:</strong> JO: Jml ortu hadir · TOD: Tamu ortu distrik lain · TOB: Tamu ortu baru · TO: Total ortu hadir · IK: Indeks kesehatan CGM</div>`;
   wrap.innerHTML = sHtml;
 }
 
