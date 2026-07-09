@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 13:35 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 14:06 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10577,91 +10577,89 @@ function renderAnakEntryForm(container) {
 
 // Fungsi utilitas format tanggal
 
+// 1. Fungsi Format Tanggal (Standar Input HTML Wajib YYYY-MM-DD)
 function formatTglToYMD(tgl) {
   if (!tgl) return '';
   if (tgl.includes('-')) return tgl; 
   const p = tgl.split('/');
   if (p.length === 3) {
-    // Tambahkan angka 0 di depan jika angkanya cuma 1 digit (misal: 9 jadi 09)
-    const d = p[0].padStart(2, '0');
-    const m = p[1].padStart(2, '0');
-    const y = p[2];
-    return `${y}-${m}-${d}`; 
+    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
   }
   return tgl;
-}   
+}
 
-// ── 1. ATUR NILAI ANAK ──
+// 2. Aksi "Atur Nilai" Absensi Anak
 window.aturNilaiAnak = function(id_kelas, nama_kelas, tanggal) {
-  // Pindah ke mode form terlebih dahulu
-  absenAnakState.anakPageMode = 'form';
+  // Simpan pengaturan ke memori sebelum layar berganti
   absenAnakState.selectedKelas = id_kelas;
   absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
+  absenAnakState.anakPageMode = 'form';
   
-  // Render tampilan form
+  // Perintahkan layar berganti ke Form
   renderAnakPoinContent(); 
   
-  // Beri jeda sejenak (300ms) agar HTML form selesai dimuat di layar, lalu isi datanya
-  setTimeout(() => {
+  let attempts = 0;
+  // Pantau layar setiap 100ms sampai elemen Form benar-benar muncul dari server
+  const poll = setInterval(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
-    // Set ID Kelas
-    if (selKelas) {
-      // Jika pilihan kelas belum diload oleh server, sisipkan sementara
+    // Jika Form sudah selesai digambar di layar
+    if (selKelas && inputTgl) {
+      // Pastikan tanggal tersetting
+      inputTgl.value = absenAnakState.selectedTanggal;
+      
+      // Jika list dropdown kelas masih kosong karena delay server, sisipkan manual
       if (!Array.from(selKelas.options).some(opt => opt.value === id_kelas)) {
          selKelas.insertAdjacentHTML('beforeend', `<option value="${id_kelas}">${nama_kelas}</option>`);
       }
       selKelas.value = id_kelas;
+      
+      // Jika data berhasil "nyantol" di form, stop pemantauan dan gas muat data absen
+      if (selKelas.value === id_kelas && inputTgl.value === absenAnakState.selectedTanggal) {
+        clearInterval(poll);
+        // Jeda ekstra 200ms agar browser bernapas sebelum memanggil data
+        setTimeout(() => { if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak(); }, 200);
+      }
     }
     
-    // Set Tanggal
-    if (inputTgl) {
-      inputTgl.value = absenAnakState.selectedTanggal;
-    }
-    
-    // Panggil fungsi pencarian (persis seperti saat mengklik tombol "Cari" di menu Tambah)
-    if (typeof loadAbsensiAnak === 'function') {
-      loadAbsensiAnak();
-    }
-  }, 300);
+    attempts++;
+    if (attempts > 50) clearInterval(poll); // Stop memantau jika lebih dari 5 detik (mencegah lag)
+  }, 100);
 };
-   
 
-// ── 2. ATUR NILAI CGM ──
+// 3. Aksi "Atur Nilai" Absensi CGM
 window.aturNilaiCGM = function(id_cgm, nama_lokasi, tanggal) {
-  // Pindah ke mode form
-  cgmState.cgmPageMode = 'form';
   cgmState.selectedKelas = id_cgm;
   cgmState.selectedTanggal = formatTglToYMD(tanggal);
+  cgmState.cgmPageMode = 'form';
   
-  // Render tampilan form
   renderCGMPoinContent(); 
   
-  // Beri jeda sejenak agar form dirender sempurna
-  setTimeout(() => {
+  let attempts = 0;
+  const poll = setInterval(() => {
     const selLokasi = document.getElementById('cgm-kelas');
     const inputTgl = document.getElementById('cgm-tgl');
     
-    // Set ID Lokasi CGM
-    if (selLokasi) {
+    if (selLokasi && inputTgl) {
+      inputTgl.value = cgmState.selectedTanggal;
+      
       if (!Array.from(selLokasi.options).some(opt => opt.value === id_cgm)) {
          selLokasi.insertAdjacentHTML('beforeend', `<option value="${id_cgm}">${nama_lokasi}</option>`);
       }
       selLokasi.value = id_cgm;
+      
+      if (selLokasi.value === id_cgm && inputTgl.value === cgmState.selectedTanggal) {
+        clearInterval(poll);
+        setTimeout(() => { if (typeof loadCGM === 'function') loadCGM(); }, 200);
+      }
     }
     
-    // Set Tanggal
-    if (inputTgl) {
-      inputTgl.value = cgmState.selectedTanggal;
-    }
-    
-    // Panggil fungsi pencarian (persis seperti klik tombol di menu Tambah)
-    if (typeof loadCGM === 'function') {
-      loadCGM();
-    }
-  }, 300);
+    attempts++;
+    if (attempts > 50) clearInterval(poll); 
+  }, 100);
 };
+   
 
 // ── 3. FUNGSI EDIT KELAS & TANGGAL ──
 window.openAnakEditModal = function(id_kelas, tanggal) {
@@ -11318,6 +11316,7 @@ async function simpanCGM() {
     });
     const result = await resp.json();
     if (result.status === 'ok') {
+      toast('✅ Data CGM berhasil disimpan!'); 
       const lokasiNama = cgmState.kelasData.find(k => k.id_kelas === kelasId)?.nama_kelas || '';
       const tamuCount = result.tamu_saved || 0;
       let msg = `✅ ${result.saved||items.length} CGM tersimpan`;
@@ -11325,6 +11324,8 @@ async function simpanCGM() {
       msg += ` pada ${formatTglDisplay(tgl)} — ${lokasiNama}`;
       toast(msg);
       logHistory('CGM', 'simpan CGM', `${items.length} anak${tamuCount>0?', '+tamuCount+' tamu':''}, tgl: ${tgl}`);
+      if (typeof loadCGM === 'function') loadCGM();
+      cgmState.historyData = []; 
     } else {
       toast('❌ ' + (result.message || 'Gagal'));
     }
