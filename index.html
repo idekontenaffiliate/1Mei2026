@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 11:02 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 11:05 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10384,11 +10384,15 @@ function renderAnakHistoryTable(wrap, data) {
     // Susun nama anak menjadi string koma
     const namaListHtml = v.list_nama && v.list_nama.length > 0 
       ? v.list_nama.join(', ') 
-      : '<span style="color:var(--text3);font-style:italic;">Belum ada anak yang diabsen</span>';
+      : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak</span>';
 
-    const tamuCount = (v.tamu_distrik || 0) + (v.tamu_baru || 0);
+    const tdCount = v.tamu_distrik || 0;
+    const tbCount = v.tamu_baru || 0;
+    const hadir = v.hadir || 0;
+    const totalMaster = v.total || 0;
+    const totalAnakHadir = v.total_hadir || (hadir + tdCount + tbCount);
+    const belum = v.belum || 0;
 
-    // KEMBALIKAN KE TAMPILAN AWAL ASLI + DAFTAR NAMA
     sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
         <div>
@@ -10402,35 +10406,39 @@ function renderAnakHistoryTable(wrap, data) {
             <div onclick="aturNilaiAnak('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
             <div onclick="loadAnakAbsenDetail('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil Poin</div>
             <div onclick="openAnakEditModal('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Kelas/Tgl</div>
-            <div onclick="hapusAnakSidang('${escHtml(v.kelas)}', '${v.tanggal}', ${v.total_hadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
+            <div onclick="hapusAnakSidang('${escHtml(v.kelas)}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
           </div>
         </div>
       </div>
 
-      <div style="display:flex;gap:12px;margin-bottom:12px;">
-        <div style="flex:1;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-size:.7rem;color:var(--text3);margin-bottom:4px;">Hadir Total</div>
-          <div style="font-size:1.1rem;font-weight:700;color:var(--green);">${v.total_hadir}</div>
-        </div>
-        <div style="flex:1;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:8px;text-align:center;">
-          <div style="font-size:.7rem;color:var(--text3);margin-bottom:4px;">Belum Diabsen</div>
-          <div style="font-size:1.1rem;font-weight:700;color:var(--red);">${v.belum}</div>
-        </div>
-      </div>
-
-      <div style="font-size:.75rem;color:var(--text2);margin-bottom:10px;line-height:1.4;">
-        Dari total <b>${v.total || 0}</b> anak di kelas ini, <b>${v.hadir || 0}</b> anak sudah diabsen hadir, dan <b>${v.belum || 0}</b> anak belum diabsen. Terdapat <b>${tamuCount}</b> tamu pada hari ini.
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>Anak:</strong> ${hadir}/${totalMaster}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TD:</strong> ${tdCount}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TB:</strong> ${tbCount}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>TA:</strong> ${totalAnakHadir}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:0.75rem;color:var(--text);"><strong>BL:</strong> ${belum}</span>
       </div>
 
       <div style="font-size:0.75rem; padding-top:8px; border-top:1px dashed var(--border);">
-        <div style="font-weight:700; color:var(--text); margin-bottom:4px;">Daftar Hadir:</div>
+        <div style="font-weight:700; color:var(--text); margin-bottom:4px;">Daftar Anak & Tamu Hadir:</div>
         <div style="line-height:1.5; color:var(--accent); font-weight:600;">${namaListHtml}</div>
       </div>
     </div>`;
   });
 
+  // KETERANGAN PALING BAWAH
+  sHtml += `<div style="font-size:0.75rem;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;margin-top:16px;line-height:1.6;border:1px solid var(--border);">
+    <strong>Keterangan:</strong><br/>
+    JA: Jumlah anak hadir di distrik · <br/>
+    TD: Tamu dari distrik lain · <br/>
+    TB: Tamu baru (insidentil) · <br/>
+    TA: Total anak hadir · <br/>
+    BL: Bersidang di distrik lain
+  </div>`;
+
   wrap.innerHTML = sHtml;
 }
+   
 async function openAnakEntry(kelas, tanggal) {
   // Pre-load kelas data if needed
   if (!absenAnakState.kelasData.length) {
