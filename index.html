@@ -520,7 +520,7 @@ nav button:hover:not(.active){color:var(--text2);}
     <button class="login-btn" onclick="attemptLogin()">Masuk →</button>
     <div class="login-btn-gold"></div>
     <div class="login-error" id="login-error">❌ Username atau Password salah!</div>
-    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 12:42 for best layout @2026</span></div>
+    <div class="login-footer">Hubungi <strong>Admin</strong> untuk akses<br><span style="font-size:.65rem;opacity:.5;font-family:'JetBrains Mono',monospace;">ver 09-07-2026 12:56 for best layout @2026</span></div>
   </div>
 </div>
 
@@ -10380,7 +10380,7 @@ function renderAnakHistoryTable(wrap, data) {
     return;
   }
 
-  filtered.forEach(v => {
+ filtered.forEach(v => {
     const namaListHtml = v.list_nama && v.list_nama.length > 0 
       ? v.list_nama.join(', ') 
       : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak</span>';
@@ -10391,6 +10391,9 @@ function renderAnakHistoryTable(wrap, data) {
     const totalMaster = v.total || 0;
     const totalAnakHadir = v.total_hadir || (hadir + tdCount + tbCount);
     const belum = v.belum || 0;
+    
+    // Bersihkan nama kelas agar tidak memecah string saat dikirim ke JS
+    const safeKelas = escHtml(v.kelas).replace(/'/g, "\\'");
 
     sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
@@ -10402,10 +10405,10 @@ function renderAnakHistoryTable(wrap, data) {
           <button onclick="toggleAnakMenu('menu-anak-${v.id_kelas}-${(v.tanggal||'').replace(/\//g,'')}')" class="btn-action" style="padding:6px 10px;font-size:.75rem;">⋮ Opsi</button>
           
           <div id="menu-anak-${v.id_kelas}-${(v.tanggal||'').replace(/\//g,'')}" class="action-dropdown" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:2000000;min-width:140px;">
-            <div onclick="aturNilaiAnak('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
-            <div onclick="loadAnakAbsenDetail('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil Poin</div>
-            <div onclick="openAnakEditModal('${escHtml(v.kelas)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Kelas/Tgl</div>
-            <div onclick="hapusAnakSidang('${escHtml(v.kelas)}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
+            <div onclick="aturNilaiAnak('${v.id_kelas}', '${safeKelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
+            <div onclick="loadAnakAbsenDetail('${v.id_kelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil Poin</div>
+            <div onclick="openAnakEditModal('${v.id_kelas}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Kelas/Tgl</div>
+            <div onclick="hapusAnakSidang('${v.id_kelas}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
           </div>
         </div>
       </div>
@@ -10425,6 +10428,7 @@ function renderAnakHistoryTable(wrap, data) {
     </div>`;
   });
 
+   
   // INFO KETERANGAN PALING BAWAH
   sHtml += `<div style="font-size:0.75rem;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;margin-top:16px;line-height:1.6;border:1px solid var(--border);">
     <strong>Keterangan:</strong><br/>
@@ -10580,49 +10584,40 @@ function formatTglToYMD(tgl) {
   return tgl;
 }
 
-// ── LOGIKA ATUR NILAI ANAK ──
-window.aturNilaiAnak = function(kelas, tanggal) {
+// ── 1. ATUR NILAI ANAK ──
+window.aturNilaiAnak = function(id_kelas, nama_kelas, tanggal) {
   absenAnakState.anakPageMode = 'form';
-  
-  // Simpan ke state global agar jika dirender ulang, nilainya tidak hilang
-  absenAnakState.selectedKelas = kelas;
+  absenAnakState.selectedKelas = id_kelas; // Menggunakan ID Kelas (Bukan Nama)
   absenAnakState.selectedTanggal = formatTglToYMD(tanggal);
   
   renderAnakPoinContent(); 
   
-  // Interval yang menjaga inputan dari reset API server selama 1 detik penuh
   let tick = 0;
   const guardInterval = setInterval(() => {
     const selKelas = document.getElementById('anak-kelas');
     const inputTgl = document.getElementById('anak-tgl');
     
     if (selKelas && inputTgl) {
-      inputTgl.value = formatTglToYMD(tanggal);
-      
-      // Sisipkan kelas jika belum diload oleh API
-      if (!Array.from(selKelas.options).some(opt => opt.value === kelas)) {
-         selKelas.insertAdjacentHTML('beforeend', `<option value="${escHtml(kelas)}">${escHtml(kelas)}</option>`);
+      inputTgl.value = absenAnakState.selectedTanggal;
+      // Paksa masukkan ID Kelas agar server mengenali saat pencarian
+      if (!Array.from(selKelas.options).some(opt => opt.value === id_kelas)) {
+         selKelas.insertAdjacentHTML('beforeend', `<option value="${id_kelas}">${nama_kelas}</option>`);
       }
-      selKelas.value = kelas;
+      selKelas.value = id_kelas;
     }
     
     tick++;
-    // Setelah 10x cek (sekitar 1 detik), eksekusi pencarian nama anak
-    if (tick > 10) {
+    if (tick > 10) { // Beri waktu DOM 1 detik
       clearInterval(guardInterval);
-      if (typeof loadAbsensiAnak === 'function') {
-        loadAbsensiAnak(); 
-      }
+      if (typeof loadAbsensiAnak === 'function') loadAbsensiAnak();
     }
   }, 100);
 };
 
-// ── LOGIKA ATUR NILAI CGM ──
-window.aturNilaiCGM = function(lokasi, tanggal) {
+// ── 2. ATUR NILAI CGM ──
+window.aturNilaiCGM = function(id_cgm, nama_lokasi, tanggal) {
   cgmState.cgmPageMode = 'form';
-  
-  // Simpan ke state global
-  cgmState.selectedKelas = lokasi;
+  cgmState.selectedKelas = id_cgm; // Menggunakan ID CGM (Bukan Nama)
   cgmState.selectedTanggal = formatTglToYMD(tanggal);
   
   renderCGMPoinContent(); 
@@ -10633,26 +10628,50 @@ window.aturNilaiCGM = function(lokasi, tanggal) {
     const inputTgl = document.getElementById('cgm-tgl');
     
     if (selLokasi && inputTgl) {
-      inputTgl.value = formatTglToYMD(tanggal);
-      
-      if (!Array.from(selLokasi.options).some(opt => opt.value === lokasi)) {
-         selLokasi.insertAdjacentHTML('beforeend', `<option value="${escHtml(lokasi)}">${escHtml(lokasi)}</option>`);
+      inputTgl.value = cgmState.selectedTanggal;
+      if (!Array.from(selLokasi.options).some(opt => opt.value === id_cgm)) {
+         selLokasi.insertAdjacentHTML('beforeend', `<option value="${id_cgm}">${nama_lokasi}</option>`);
       }
-      selLokasi.value = lokasi;
+      selLokasi.value = id_cgm;
     }
     
     tick++;
     if (tick > 10) {
       clearInterval(guardInterval);
-      if (typeof loadCGM === 'function') {
-        loadCGM();
-      }
+      if (typeof loadCGM === 'function') loadCGM();
     }
   }, 100);
 };
 
+// ── 3. FUNGSI EDIT KELAS & TANGGAL ──
+window.openAnakEditModal = function(id_kelas, tanggal) {
+  absenAnakState._editKelas = id_kelas;
+  absenAnakState._editTanggal = tanggal;
+  absenAnakState.anakPageMode = 'edit';
+  renderAnakPoinContent();
+};
 
+window.openCGMEditModal = function(id_cgm, tanggal) {
+  cgmState._editKelas = id_cgm;
+  cgmState._editTanggal = tanggal;
+  cgmState.cgmPageMode = 'edit';
+  renderCGMPoinContent();
+};
+
+// ── 4. FUNGSI DETIL POIN POPUP ──
+window.loadAnakAbsenDetail = function(id_kelas, tanggal) {
+  const d = absenAnakState.historyData.find(x => x.id_kelas === id_kelas && x.tanggal === tanggal);
+  if (!d) return alert('Detail tidak ditemukan');
+  alert(`📌 DETAIL ABSENSI ANAK\n\nKelas: ${d.kelas}\nTanggal: ${d.tanggal}\n\nHadir: ${d.hadir}\nTamu Distrik: ${d.tamu_distrik}\nTamu Baru: ${d.tamu_baru}\nBelum Diabsen: ${d.belum}\n\nDaftar Anak:\n${d.list_nama.join(', ')}`);
+};
+
+window.loadCGMAbsenDetail = function(id_cgm, tanggal) {
+  const d = cgmState.historyData.find(x => x.id_cgm === id_cgm && x.tanggal === tanggal);
+  if (!d) return alert('Detail tidak ditemukan');
+  alert(`📌 DETAIL ABSENSI CGM\n\nLokasi: ${d.lokasi}\nTanggal: ${d.tanggal}\n\nAnak Hadir: ${d.total_hadir_anak}\nAyah Hadir: ${d.hadir_ayah}\nIbu Hadir: ${d.hadir_ibu}\n\nDaftar Anak:\n${d.list_nama.join(', ')}`);
+};
    
+
 
    
 // ── SUNDAY WARNING HELPER ─────────────────────────────────────
@@ -10808,12 +10827,11 @@ function renderCGMHistoryTable(wrap, data) {
     return;
   }
 
-  filtered.forEach(v => {
+filtered.forEach(v => {
     const namaListHtml = v.list_nama && v.list_nama.length > 0 
       ? v.list_nama.join(', ') 
       : '<span style="color:var(--text3);font-style:italic;">Belum ada data anak/tamu yang diabsen</span>';
 
-    // Kalkulasi Anak
     const hadirAnak = v.hadir_anak || 0;
     const totalMaster = v.total || 0;
     const tdAnak = v.tamu_distrik || 0; 
@@ -10821,7 +10839,6 @@ function renderCGMHistoryTable(wrap, data) {
     const totalAnakHadir = v.total_hadir_anak || (hadirAnak + tdAnak + tbAnak);
     const belumAnak = v.belum_anak || Math.max(0, totalMaster - hadirAnak);
 
-    // Kalkulasi Ortu
     const hadirAyah = v.hadir_ayah || 0;
     const hadirIbu = v.hadir_ibu || 0;
     const jo = hadirAyah + hadirIbu;
@@ -10829,6 +10846,9 @@ function renderCGMHistoryTable(wrap, data) {
     const tob = v.tamu_ortu_baru || 0;
     const to = jo + tod + tob;
     const ik = v.ik_pct || 0;
+    
+    // Amankan string nama lokasi untuk parameter JavaScript
+    const safeLokasi = escHtml(v.lokasi).replace(/'/g, "\\'");
 
     sHtml += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
@@ -10840,10 +10860,10 @@ function renderCGMHistoryTable(wrap, data) {
           <button onclick="toggleAnakMenu('menu-cgm-${v.id_cgm}-${(v.tanggal||'').replace(/\//g,'')}')" class="btn-action" style="padding:6px 10px;font-size:.75rem;">⋮ Opsi</button>
           
           <div id="menu-cgm-${v.id_cgm}-${(v.tanggal||'').replace(/\//g,'')}" class="action-dropdown" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:2000000;min-width:140px;">
-            <div onclick="aturNilaiCGM('${escHtml(v.lokasi)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
-            <div onclick="loadCGMAbsenDetail('${escHtml(v.lokasi)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil CGM</div>
-            <div onclick="openCGMEditModal('${escHtml(v.lokasi)}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Lokasi/Tgl</div>
-            <div onclick="hapusCGMSidang('${escHtml(v.lokasi)}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
+            <div onclick="aturNilaiCGM('${v.id_cgm}', '${safeLokasi}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">📝 Atur Nilai</div>
+            <div onclick="loadCGMAbsenDetail('${v.id_cgm}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">🔍 Detil CGM</div>
+            <div onclick="openCGMEditModal('${v.id_cgm}', '${v.tanggal}')" style="padding:8px 10px;font-size:.75rem;cursor:pointer;border-bottom:1px solid var(--border);">✏️ Edit Lokasi/Tgl</div>
+            <div onclick="hapusCGMSidang('${v.id_cgm}', '${v.tanggal}', ${totalAnakHadir})" style="padding:8px 10px;font-size:.75rem;cursor:pointer;color:var(--red);">🗑 Hapus Data</div>
           </div>
         </div>
       </div>
@@ -10870,7 +10890,7 @@ function renderCGMHistoryTable(wrap, data) {
       </div>
     </div>`;
   });
-
+   
   // INFO KETERANGAN PALING BAWAH
   sHtml += `<div style="font-size:0.75rem;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;margin-top:16px;line-height:1.6;border:1px solid var(--border);">
     <strong>Keterangan Anak:</strong><br/>
